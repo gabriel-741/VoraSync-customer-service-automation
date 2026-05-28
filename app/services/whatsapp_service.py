@@ -10,7 +10,7 @@ log = get_logger(__name__)
 async def send_message(to: str, body: str) -> bool:
     log.info("🔥 ENTROU NO WHATSAPP SERVICE")
 
-    url = f"{settings.BASE_URL}/api/message/sendText"
+    url = f"{settings.BASE_URL}/message/sendText/{settings.INSTANCE}"
 
     payload = {
         "number": to,

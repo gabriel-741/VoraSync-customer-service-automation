@@ -2,7 +2,7 @@
 
 from pydantic_settings import BaseSettings
 
-class settings(BaseSettings):
+class Settings(BaseSettings):
     DATABASE_URL: str
     APP_ENV: str = "production"
 
@@ -15,4 +15,4 @@ class settings(BaseSettings):
         "extra": "ignore"
     }
 
-settings = settings()
+settings = Settings()
