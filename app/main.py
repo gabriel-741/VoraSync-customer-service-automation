@@ -2,7 +2,9 @@
 
 from fastapi import FastAPI
 
-from app.routes import webhook, auth, bots, debug
+from app.routes import webhook, auth, bots
+
+
 
 from app.database.connection import engine
 from app.database.models import Base
@@ -22,7 +24,6 @@ app = FastAPI(
 app.include_router(webhook.router)
 app.include_router(auth.router)
 app.include_router(bots.router)
-app.include_router(debug.router)
 
 
 # HEALTH CHECK
