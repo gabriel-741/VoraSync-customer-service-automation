@@ -1,4 +1,4 @@
-#app/schemas/message_schemas.py
+#app/schemas/message_schema.py
 
 from pydantic import BaseModel
 

@@ -7,13 +7,22 @@ from app.utils.logger import get_logger
 log = get_logger(__name__)
 
 
+
 async def send_message(to: str, body: str) -> bool:
     log.info("🔥 ENTROU NO WHATSAPP SERVICE")
+
+    clean_number = (
+        to.replace("@s.whatsapp.net", "")
+          .replace("@g.us", "")
+    )
+
+    log.info(f"📞 Número original: {to}")
+    log.info(f"📞 Número limpo: {clean_number}")
 
     url = f"{settings.BASE_URL}/message/sendText/{settings.INSTANCE}"
 
     payload = {
-        "number": to,
+        "number": clean_number,
         "text": body
     }
 
@@ -24,13 +33,22 @@ async def send_message(to: str, body: str) -> bool:
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(url, json=payload, headers=headers)
+            response = await client.post(
+                url,
+                json=payload,
+                headers=headers
+            )
 
         log.info(f"📡 STATUS: {response.status_code}")
         log.info(f"📡 RESPONSE: {response.text}")
 
-        return response.status_code == 200
+        from app.services.debug_state import DEBUG_STATE
 
+        DEBUG_STATE["last_whatsapp_status"] = response.status_code
+        DEBUG_STATE["last_whatsapp_response"] = response.text
+
+        return response.status_code in [200, 201]
+    
     except Exception as e:
         log.error(f"❌ ERRO EVOLUTION: {e}")
         return False

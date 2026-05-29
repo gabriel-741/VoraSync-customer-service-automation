@@ -22,6 +22,12 @@ async def process_message(data: dict, db: Session) -> str:
     response = await generate_response(message)
     log.info(f"🤖 Resposta da IA: {response}")
 
+    from app.services.debug_state import DEBUG_STATE
+    
+    DEBUG_STATE["last_sender"] = sender
+    DEBUG_STATE["last_message"] = message
+    DEBUG_STATE["last_response"] = response
+
     # 2. Banco
     log.info("💾 Salvando no banco...")
 
