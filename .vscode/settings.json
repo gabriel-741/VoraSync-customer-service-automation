@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "5.161.231.75",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "VSdb01",
+            "database": "postgresvora",
+            "username": "postgres"
+        }
+    ]
+}

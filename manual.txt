@@ -1,0 +1,63 @@
+├── app/
+│
+│   ├── main.py
+│   │
+│   ├── routes/
+│   │   ├── webhook.py
+│   │   ├── auth.py
+│   │   └── bots.py
+│   │   └── debug.py
+│   │
+│   │
+│   ├── services/
+│   │   ├── ai_service.py
+│   │   ├── whatsapp_service.py
+│   │   └── message_service.py
+│   │   └── debug_state.py
+│   │
+│   │
+│   ├── database/
+│   │   ├── connection.py
+│   │   └── models.py
+│   │
+│   ├── schemas/
+│   │   └── message_schema.py
+│   │
+│   ├── core/
+│   │   └── config.py
+│   │
+│   └── utils/
+│       └── logger.py
+│
+├── requirements.txt
+├── .env
+├── Dockerfile
+└── docker-compose.yml
+
+
+
+Pasta	    Responsabilidade
+
+routes	    recebe requisições
+services	lógica do sistema
+database	PostgreSQL
+schemas	    validação
+core	    configs
+utils	    ferramentas auxiliares
+
+postgresql+psycopg2://wzuser:2411%23Gab@5.161.231.75:3000/w
+
+
+INSERT INTO tenants (
+    name,
+    email,
+    whatsapp_instance,
+    api_key
+)
+VALUES (
+    'Empresa XPTO',
+    'contato@empresa.com',
+    'empresa_xpto',
+    'apikey_empresa_xpto'
+);
+
