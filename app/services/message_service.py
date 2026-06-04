@@ -1,4 +1,4 @@
-
+#app/services/message_service.py
 
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,7 @@ from app.database.models import (
     ConversationStatusEnum
 )
 
-from app.services.ia_service import generate_response
+
 from app.services.whatsapp_service import send_message
 from app.utils.logger import get_logger
 from sqlalchemy import func 

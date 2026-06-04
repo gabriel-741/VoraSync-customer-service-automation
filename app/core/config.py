@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     BASE_URL: str
     INSTANCE: str
 
+    OPENAI_API_KEY: str
+
     model_config = {
         "env_file": ".env",
         "extra": "ignore"
