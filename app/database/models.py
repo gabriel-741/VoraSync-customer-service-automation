@@ -9,6 +9,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 import enum
 
+from sqlalchemy.dialects.postgresql import JSONB
+
 Base = declarative_base()
 
 
@@ -77,6 +79,8 @@ class Contact(Base):
     name         = Column(String)
     first_seen_at = Column(DateTime, server_default=func.now())
     last_seen_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    profile = Column(JSONB, default=dict)
 
     tenant        = relationship("Tenant",       back_populates="contacts")
     conversations = relationship("Conversation", back_populates="contact")

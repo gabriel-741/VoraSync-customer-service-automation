@@ -61,3 +61,49 @@ VALUES (
     'apikey_empresa_xpto'
 );
 
+
+Módulos básicos
+
+Todo cliente recebe:
+
+WhatsApp
+IA
+Histórico
+CRM básico
+Cadastro de clientes
+Módulo Agenda
+
+Opcional:
+
+Horários
+Agendamentos
+Cancelamentos
+Módulo Estoque
+
+Opcional:
+
+Produtos
+Quantidade
+Reservas
+Módulo Orçamentos
+
+Opcional:
+
+Geração de proposta
+Aprovação
+Conversão em pedido
+Módulo Financeiro
+
+Opcional:
+
+PIX
+Cobranças
+Status de pagamento
+Módulo ERP
+
+Opcional:
+
+Integração Omie
+Bling
+Tiny
+Sistema próprio
