@@ -97,17 +97,10 @@ async def process_message(
     count = get_monthly_message_count(tenant.id, db)
     limit = tenant.max_messages_month or 0
 
-    log.info(f"📊 Mensagens este mês: {count}/{limit}")
-
     if count >= limit:
-        log.warning(f"🚫 Tenant {tenant.id} atingiu limite mensal")
-        await send_message(
-            sender,
-            "Nosso atendimento atingiu o limite de mensagens do mês. Entre em contato conosco.",
-            api_key=tenant.api_key,
-            instance=tenant.whatsapp_instance
+        log.warning(
+            f"🚨 Tenant {tenant.id} acima do limite mensal ({count}/{limit})"
         )
-        return None   # ← para o fluxo aqui
 
     # =========================
     # CONTACT
