@@ -1,38 +1,54 @@
-├── app/
+VORASYNC/
 │
+├── app/
+│   │
 │   ├── main.py
 │   │
-│   ├── routes/
-│   │   ├── webhook.py
-│   │   ├── auth.py
-│   │   └── bots.py
-│   │   └── debug.py
-│   │
-│   │
-│   ├── services/
-│   │   ├── ai_service.py
-│   │   ├── whatsapp_service.py
-│   │   └── message_service.py
-│   │   └── debug_state.py
-│   │
+│   ├── core/
+│   │   └── config.py
 │   │
 │   ├── database/
 │   │   ├── connection.py
 │   │   └── models.py
 │   │
+│   ├── routes/
+│   │   ├── auth.py
+│   │   ├── bots.py
+│   │   ├── debug.py
+│   │   ├── ia_router.py
+│   │   └── webhook.py
+│   │
 │   ├── schemas/
 │   │   └── message_schema.py
 │   │
-│   ├── core/
-│   │   └── config.py
+│   ├── services/
+│   │   ├── debug_state.py
+│   │   ├── ia_router.py
+│   │   ├── ia_service.py
+│   │   ├── message_service.py
+│   │   ├── openai_provider.py
+│   │   └── whatsapp_service.py
 │   │
-│   └── utils/
-│       └── logger.py
+│   ├── utils/
+│   │   └── __init__.py
+│   │
+│   └── __pycache__/
 │
-├── requirements.txt
+├── evolution/
+│
+├── lanepage/
+│   └── lanepage.html
+│
 ├── .env
+├── .gitignore
+├── docker-compose.yml
 ├── Dockerfile
-└── docker-compose.yml
+├── manual.txt
+├── README.md
+├── requirements.txt
+├── SELECT_1.sql
+├── test_db.py
+└── VSdb01.session.sql
 
 
 

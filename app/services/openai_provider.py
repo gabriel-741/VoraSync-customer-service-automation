@@ -4,6 +4,7 @@ from openai import AsyncOpenAI
 from app.core.config import settings
 from app.utils.logger import get_logger
 
+
 log = get_logger(__name__)
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -39,24 +40,44 @@ async def call_openai(
     )
     return response.choices[0].message.content.strip()
 
-async def extract_profile(message: str, current_profile: dict) -> dict:
-    prompt = f"""
-Analise a mensagem e extraia informações pessoais relevantes.
-Perfil atual: {current_profile}
-Mensagem: "{message}"
+import json
 
-Retorne APENAS um JSON com os campos atualizados ou novos.
-Campos possíveis: nome, cidade, empresa, interesse, horario_preferido, orcamento.
-Se não houver informação nova, retorne o perfil atual sem alteração.
-Retorne SOMENTE o JSON, sem explicação.
-"""
-    response = await client.chat.completions.create(
-        model="gpt-4o-mini",   # sempre o mais barato para extração
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=150
-    )
-    import json
+async def smart_extract_profile(message: str, current_profile: dict) -> dict:
+    """
+    Uma única chamada barata que decide E extrai ao mesmo tempo.
+    Usa JSON mode — sem erros de parsing.
+    """
     try:
-        return json.loads(response.choices[0].message.content.strip())
-    except:
-        return current_profile   # se falhar, mantém o perfil anterior
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[{
+                "role": "user",
+                "content": f"""
+Analise a mensagem e retorne um JSON com exatamente dois campos:
+- "has_new_info": true ou false
+- "profile": perfil atualizado com os novos dados (ou o perfil atual se não houver nada novo)
+
+Considere informação útil: nome, cidade, empresa, cargo, interesse, orçamento, preferências.
+Ignore completamente: saudações, confirmações, respostas curtas, expressões de tempo vagas, opiniões sem dados concretos.
+
+Perfil atual: {json.dumps(current_profile, ensure_ascii=False)}
+Mensagem: "{message}"
+"""
+            }],
+            max_tokens=200,
+            temperature=0
+        )
+
+        result = json.loads(response.choices[0].message.content)
+
+        if result.get("has_new_info"):
+            log.info(f"[PROFILE] Nova info extraída: {result.get('profile')}")
+            return result.get("profile", current_profile)
+
+        log.info("[PROFILE] Nenhuma info nova detectada.")
+        return current_profile
+
+    except Exception as e:
+        log.error(f"[PROFILE] Erro na extração: {e}")
+        return current_profile   # nunca quebra o fluxo principal

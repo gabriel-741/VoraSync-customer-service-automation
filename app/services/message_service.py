@@ -40,24 +40,17 @@ def get_monthly_message_count(tenant_id: int, db: Session) -> int:
 # BACKGROUND — ATUALIZA PERFIL
 # ========================
 
-async def update_contact_profile(contact_id: int, message: str, classification: str):
-    """Só extrai perfil se a mensagem tiver conteúdo relevante."""
-
-    if classification in ["greeting", "simple", "human", "empty"]:
-        log.info(f"[PROFILE] Ignorado para classificação: {classification}")
-        return
-
+async def update_contact_profile(contact_id: int, message: str):
     from app.database.connection import SessionLocal
-    from app.services.openai_provider import extract_profile
+    from app.services.openai_provider import smart_extract_profile
 
     db = SessionLocal()
     try:
         contact = db.query(Contact).filter(Contact.id == contact_id).first()
         if contact:
-            new_profile = await extract_profile(message, contact.profile or {})
+            new_profile = await smart_extract_profile(message, contact.profile or {})
             contact.profile = new_profile
             db.commit()
-            log.info(f"[PROFILE] Atualizado para contact {contact_id}: {new_profile}")
     finally:
         db.close()
 
@@ -229,11 +222,12 @@ async def process_message(
     # BACKGROUND — atualiza perfil depois
     # =========================
 
+
     background_tasks.add_task(
-        update_contact_profile,
-        contact.id,
-        text,
-        classification
+        
+    update_contact_profile,
+    contact.id,
+    text
     )
 
     return response

@@ -8,18 +8,15 @@ log = get_logger(__name__)
 
 DEFAULT_PROMPT = """
 Você é um assistente virtual simpático e profissional.
-Responda de forma direta e clara em português brasileiro.
-Se não souber responder, diga que não sabe e sugira digitar 'humano'.
+Responda sempre em português brasileiro de forma clara e direta.
+Se não souber responder algo específico, diga que não sabe e ofereça ajuda alternativa.
+Nunca transfira para um humano antes de tentar ajudar com informações sobre planos, preços e serviços.
+Só sugira falar com um humano se o cliente insistir ou se for algo que realmente não consegue resolver.
 """
 
 MODELS = {
     "simple":  "gpt-4o-mini",
     "complex": "gpt-4.1-mini",
-}
-
-QUICK_REPLIES = {
-    "greeting": "Olá! Como posso te ajudar hoje?",
-    "human":    "Claro! Vou te transferir para um atendente. Um momento.",
 }
 
 async def handle_message(
@@ -28,30 +25,22 @@ async def handle_message(
     model: str | None = None,
     recent_messages: list = [],
     contact_profile: dict = {}
-) -> tuple[str | None, str]:
+) -> tuple[str | None, dict]:
     """
     Retorna (resposta, classificação)
+    A IA sempre responde — sem atalhos que quebram contexto.
     """
 
     if not message.strip():
-        return None, "empty"
+        return None, {"should_update_profile": False, "model_tier": "simple"}
 
     classification = classify_message(message)
     log.info(f"[IA] classificação: {classification}")
 
-    # resposta rápida — zero tokens
-    if classification in QUICK_REPLIES:
-        return QUICK_REPLIES[classification], classification
-
     prompt = system_prompt or DEFAULT_PROMPT
-    selected_model = model or MODELS["simple"]
 
-    # mensagem simples — IA leve sem contexto
-    if classification == "simple":
-        response = await call_openai(message, "gpt-4o-mini", prompt)
-        return response, classification
+    selected_model = model or MODELS.get(classification["model_tier"], MODELS["simple"])
 
-    # faq ou ai — IA com contexto completo
     response = await call_openai(
         message,
         selected_model,
@@ -59,4 +48,5 @@ async def handle_message(
         recent_messages,
         contact_profile
     )
+
     return response, classification
