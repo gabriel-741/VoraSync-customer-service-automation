@@ -43,10 +43,7 @@ async def handle_message(
         f"[IA] classificação: {classification}"
     )
 
-    prompt = DEFAULT_PROMPT
-
-    if system_prompt:
-        prompt += "\n\n" + system_prompt
+    prompt = system_prompt if system_prompt else DEFAULT_PROMPT
 
     selected_model = (
         model

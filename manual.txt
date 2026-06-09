@@ -61,65 +61,38 @@ schemas	    validação
 core	    configs
 utils	    ferramentas auxiliares
 
-postgresql+psycopg2://wzuser:2411%23Gab@5.161.231.75:3000/w
+Notas por categoria
+Arquitetura: 7/10
+Separação de responsabilidades bem feita, multi-tenancy correto, background tasks implementados. O que derruba a nota: sem sistema de filas para alto volume, sem retry logic em falhas, sem connection pooling configurado.
+Sistema de IA: 7.5/10
+smart_extract_profile com JSON mode é produção. Contexto recente + perfil persistente é a abordagem certa. O que falta: memory_summary para conversas longas e tratamento de conversas que mudam de assunto.
+Custo-benefício: 8/10
+gpt-4o-mini como padrão, extração em background, merge inteligente de perfil. Está bem pensado. O que ainda gasta token desnecessário: sem cache para perguntas repetidas de FAQ.
+Escalabilidade: 4.5/10
+Esse é o ponto mais fraco. Um único container, sem fila de mensagens, sem rate limiting, sem monitoramento. Funciona bem até ~50 clientes ativos. Acima disso começa a ter problemas.
+Segurança: 4/10
+API keys em texto puro no banco, sem validação de assinatura do webhook da Evolution, sem rate limiting nos endpoints, sem sanitização de input.
+Qualidade do código: 7/10
+Legível, bem comentado, logs úteis. Bugs pontuais que foram corrigidos ao longo do processo.
 
+O que está pronto:
 
-INSERT INTO tenants (
-    name,
-    email,
-    whatsapp_instance,
-    api_key
-)
-VALUES (
-    'Empresa XPTO',
-    'contato@empresa.com',
-    'empresa_xpto',
-    'apikey_empresa_xpto'
-);
+Backend core funcionando
+Webhook recebendo mensagens reais
+IA com contexto e memória
+Multi-tenancy básico
+Limite mensal de mensagens
+Deploy profissional com domínio
 
+O que falta para ser um SaaS vendável:
 
-Módulos básicos
-
-Todo cliente recebe:
-
-WhatsApp
-IA
-Histórico
-CRM básico
-Cadastro de clientes
-Módulo Agenda
-
-Opcional:
-
-Horários
-Agendamentos
-Cancelamentos
-Módulo Estoque
-
-Opcional:
-
-Produtos
-Quantidade
-Reservas
-Módulo Orçamentos
-
-Opcional:
-
-Geração de proposta
-Aprovação
-Conversão em pedido
-Módulo Financeiro
-
-Opcional:
-
-PIX
-Cobranças
-Status de pagamento
-Módulo ERP
-
-Opcional:
-
-Integração Omie
-Bling
-Tiny
-Sistema próprio
+Autenticação — login, JWT, controle de acesso
+API de gestão — CRUD de tenants, configurações
+Dashboard — painel para operar clientes
+Pagamentos — Stripe ou Asaas para cobrar planos
+Onboarding — fluxo para novo cliente se cadastrar
+Handoff humano — transferência real para atendente
+Monitoramento — Sentry para erros, alertas
+Testes — nenhum teste automatizado ainda
+Segurança — validação de webhook, rate limiting
+Documentação — para você operar e para clientes

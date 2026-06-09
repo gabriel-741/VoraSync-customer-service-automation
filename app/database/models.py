@@ -60,6 +60,7 @@ class Tenant(Base):
     bot_name      = Column(String, default="Assistente")
     system_prompt = Column(String, nullable=True)
     ai_model      = Column(String, default="gpt-4o-mini")
+    webhook_secret = Column(String, nullable=True)
 
     contacts      = relationship("Contact",      back_populates="tenant")
     conversations = relationship("Conversation", back_populates="tenant")

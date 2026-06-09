@@ -102,10 +102,16 @@ async def process_message(
     count = get_monthly_message_count(tenant.id, db)
     limit = tenant.max_messages_month or 0
 
+# como deve ficar
     if count >= limit:
-        log.warning(
-            f"🚨 Tenant {tenant.id} acima do limite mensal ({count}/{limit})"
+        log.warning(f"🚨 Tenant {tenant.id} acima do limite ({count}/{limit})")
+        await send_message(
+            sender,
+            "Atendimento indisponível no momento. Entre em contato conosco.",
+            api_key=tenant.api_key,
+            instance=tenant.whatsapp_instance
         )
+        return None   # ← para aqui
 
     # =========================
     # CONTACT
@@ -236,11 +242,10 @@ async def process_message(
 
 
     background_tasks.add_task(
-
-    update_contact_profile,
-    contact.id,
-    text,
-    recent_messages[-5:]
+        update_contact_profile,
+        contact.id,
+        text,
+        recent_messages[-5:]
     )
 
     return response
