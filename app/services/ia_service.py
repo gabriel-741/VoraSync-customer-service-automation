@@ -15,38 +15,53 @@ Só sugira falar com um humano se o cliente insistir ou se for algo que realment
 """
 
 MODELS = {
-    "simple":  "gpt-4o-mini",
+    "simple": "gpt-4o-mini",
     "complex": "gpt-4.1-mini",
 }
+
 
 async def handle_message(
     message: str,
     system_prompt: str | None = None,
     model: str | None = None,
-    recent_messages: list = [],
-    contact_profile: dict = {}
+    recent_messages: list | None = None,
+    contact_profile: dict | None = None
 ) -> tuple[str | None, dict]:
-    """
-    Retorna (resposta, classificação)
-    A IA sempre responde — sem atalhos que quebram contexto.
-    """
 
     if not message.strip():
-        return None, {"should_update_profile": False, "model_tier": "simple"}
+        return None, {
+            "should_update_profile": False,
+            "model_tier": "simple"
+        }
+
+    recent_messages = recent_messages or []
+    contact_profile = contact_profile or {}
 
     classification = classify_message(message)
-    log.info(f"[IA] classificação: {classification}")
 
-    prompt = system_prompt or DEFAULT_PROMPT
+    log.info(
+        f"[IA] classificação: {classification}"
+    )
 
-    selected_model = model or MODELS.get(classification["model_tier"], MODELS["simple"])
+    prompt = DEFAULT_PROMPT
+
+    if system_prompt:
+        prompt += "\n\n" + system_prompt
+
+    selected_model = (
+        model
+        or MODELS.get(
+            classification["model_tier"],
+            MODELS["simple"]
+        )
+    )
 
     response = await call_openai(
-        message,
-        selected_model,
-        prompt,
-        recent_messages,
-        contact_profile
+        message=message,
+        model=selected_model,
+        system_prompt=prompt,
+        recent_messages=recent_messages,
+        contact_profile=contact_profile
     )
 
     return response, classification

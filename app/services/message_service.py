@@ -40,7 +40,11 @@ def get_monthly_message_count(tenant_id: int, db: Session) -> int:
 # BACKGROUND — ATUALIZA PERFIL
 # ========================
 
-async def update_contact_profile(contact_id: int, message: str):
+async def update_contact_profile(
+    contact_id: int,
+    message: str,
+    recent_messages: list
+):
     from app.database.connection import SessionLocal
     from app.services.openai_provider import smart_extract_profile
 
@@ -48,8 +52,16 @@ async def update_contact_profile(contact_id: int, message: str):
     try:
         contact = db.query(Contact).filter(Contact.id == contact_id).first()
         if contact:
-            new_profile = await smart_extract_profile(message, contact.profile or {})
-            contact.profile = new_profile
+            new_profile = await smart_extract_profile(message, contact.profile or {}, recent_messages)
+            
+            merged_profile = {
+                **(contact.profile or {}),
+                **new_profile
+            }
+
+            contact.profile = merged_profile
+
+
             db.commit()
     finally:
         db.close()
@@ -224,10 +236,11 @@ async def process_message(
 
 
     background_tasks.add_task(
-        
+
     update_contact_profile,
     contact.id,
-    text
+    text,
+    recent_messages[-5:]
     )
 
     return response
