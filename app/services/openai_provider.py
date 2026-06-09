@@ -70,7 +70,7 @@ async def call_openai(
         model=model,
         messages=messages,
         max_tokens=500,
-        temperature=0.7
+        temperature=0.3
     )
 
     return response.choices[0].message.content.strip()
