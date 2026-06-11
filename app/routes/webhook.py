@@ -28,6 +28,9 @@ async def webhook_evolution(
         body = await request.body()
         signature = request.headers.get("X-Signature")
 
+        log.info(f"X-Signature recebida: {signature}")
+        log.info(f"Headers recebidos: {dict(request.headers)}")
+
         if not body:
             log.warning("Empty body received")
             return {"ignored": True, "reason": "empty body"}
