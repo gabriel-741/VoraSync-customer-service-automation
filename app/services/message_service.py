@@ -49,20 +49,27 @@ async def update_contact_profile(
     from app.services.openai_provider import smart_extract_profile
 
     db = SessionLocal()
+
     try:
-        contact = db.query(Contact).filter(Contact.id == contact_id).first()
+
+        contact = (
+            db.query(Contact)
+            .filter(Contact.id == contact_id)
+            .first()
+        )
+
         if contact:
-            new_profile = await smart_extract_profile(message, contact.profile or {}, recent_messages)
-            
-            merged_profile = {
-                **(contact.profile or {}),
-                **new_profile
-            }
 
-            contact.profile = merged_profile
+            new_profile = await smart_extract_profile(
+                message,
+                contact.profile or {},
+                recent_messages
+            )
 
+            contact.profile = new_profile
 
             db.commit()
+
     finally:
         db.close()
 

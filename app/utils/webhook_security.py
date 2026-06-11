@@ -6,7 +6,12 @@ import hashlib
 
 
 def verify_signature(body: bytes, signature: str, secret: str) -> bool:
-    if not signature or not secret:
+    # sem secret configurado → passa (modo permissivo)
+    # quando configurar o secret → valida
+    if not secret:
+        return True
+
+    if not signature:
         return False
 
     if isinstance(body, str):
@@ -19,5 +24,4 @@ def verify_signature(body: bytes, signature: str, secret: str) -> bool:
     ).hexdigest()
 
     signature = signature.replace("sha256=", "").strip()
-
     return hmac.compare_digest(expected, signature)

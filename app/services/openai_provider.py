@@ -5,34 +5,12 @@ from openai import AsyncOpenAI
 from app.core.config import settings
 from app.utils.logger import get_logger
 from app.services.profile_manager import normalize_profile
+from app.services.profile_manager import ALLOWED_FIELDS, normalize_profile
 
 
 log = get_logger(__name__)
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-
-# =========================
-# CAMPOS PERMITIDOS (GLOBAL SAFE)
-# =========================
-ALLOWED_FIELDS = {
-    "nome",
-    "empresa",
-    "segmento",
-    "cargo",
-    "cidade",
-    "orcamento",
-    "interesse",
-    "necessidades",
-    "objecoes",
-    "etapa_venda",
-    "tamanho_empresa",
-    "decisor",
-    "prazo_decisao",
-    "produto_atual",
-    "processo_atual",
-    "urgencia",
-    "resumo_cliente",
-}
 
 
 # =========================
@@ -49,7 +27,9 @@ async def call_openai(
 
     # 🔥 CORRIGIDO (ERA {})
     recent_messages = recent_messages or []
-    contact_profile = contact_profile or {}
+    contact_profile = normalize_profile(
+        contact_profile or {}
+)
 
     # =========================
     # PROFILE LEVE (ECONOMIA DE TOKENS)
@@ -224,7 +204,7 @@ MENSAGEM:
         merged = current_profile.copy()
 
         for key, value in extracted_profile.items():
-
+            
             # segurança
             if key not in ALLOWED_FIELDS:
                 continue
