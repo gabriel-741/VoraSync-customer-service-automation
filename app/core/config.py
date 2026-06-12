@@ -7,9 +7,12 @@ class Settings(BaseSettings):
     APP_ENV: str = "production"
 
     BASE_URL: str
+    
     INSTANCE: str
 
     OPENAI_API_KEY: str
+
+    WEBHOOK_TOKEN: str
 
     model_config = {
         "env_file": ".env",

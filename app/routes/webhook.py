@@ -4,11 +4,12 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.database.connection import get_db
 from app.services.message_service import process_message
 from app.utils.logger import get_logger
 from app.database.models import Tenant
-from app.utils.webhook_security import verify_signature
+#from app.utils.webhook_security import verify_signature
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/webhook", tags=["Webhook"])
@@ -22,36 +23,62 @@ async def webhook_evolution(
 ):
 
     try:
-        # =========================
-        # 1. LER BODY BRUTO
-        # =========================
-        body = await request.body()
-        signature = request.headers.get("X-Signature")
 
-        log.info(f"X-Signature recebida: {signature}")
-        log.info(f"Headers recebidos: {dict(request.headers)}")
+        # =========================
+        # 1. TOKEN DE SEGURANÇA
+        # =========================
+
+        token = request.query_params.get("token")
+
+        if token != settings.WEBHOOK_TOKEN:
+            log.warning("Invalid webhook token")
+            return {
+                "ignored": True,
+                "reason": "invalid token"
+            }
+
+        # =========================
+        # 2. LER BODY
+        # =========================
+
+        body = await request.body()
 
         if not body:
             log.warning("Empty body received")
-            return {"ignored": True, "reason": "empty body"}
+            return {
+                "ignored": True,
+                "reason": "empty body"
+            }
 
         # =========================
-        # 2. PARSE JSON (SEGURO)
+        # 3. PARSE JSON
         # =========================
+
         try:
             data = json.loads(body.decode("utf-8"))
         except Exception:
             log.error("Invalid JSON received")
-            return {"ignored": True, "reason": "invalid json"}
+            return {
+                "ignored": True,
+                "reason": "invalid json"
+            }
+
+        # =========================
+        # 4. INSTANCE
+        # =========================
 
         instance = data.get("instance")
 
         if not instance:
-            return {"ignored": True, "reason": "missing instance"}
+            return {
+                "ignored": True,
+                "reason": "missing instance"
+            }
 
         # =========================
-        # 3. BUSCAR TENANT
+        # 5. TENANT
         # =========================
+
         tenant = (
             db.query(Tenant)
             .filter(Tenant.whatsapp_instance == instance)
@@ -59,49 +86,80 @@ async def webhook_evolution(
         )
 
         if not tenant:
-            return {"ignored": True, "reason": "tenant not found"}
+            return {
+                "ignored": True,
+                "reason": "tenant not found"
+            }
 
         # =========================
-        # 4. SEGURANÇA WEBHOOK (HMAC)
+        # 6. TENANT ATIVO
         # =========================
-        if not verify_signature(
-            body,
-            signature,
-            tenant.webhook_secret
-        ):
-            log.warning("Invalid webhook signature")
-            return {"ignored": True, "reason": "invalid signature"}
+
+        if tenant.status != "active":
+            log.warning(
+                f"Tenant {tenant.id} inativo: {tenant.status}"
+            )
+
+            return {
+                "ignored": True,
+                "reason": "tenant inactive"
+            }
 
         # =========================
-        # 5. FILTRO DE EVENTO
+        # 7. EVENTO
         # =========================
+
         if data.get("event") != "messages.upsert":
-            return {"ignored": True, "reason": "invalid event"}
+            return {
+                "ignored": True,
+                "reason": "invalid event"
+            }
 
         inner = data.get("data") or {}
         key = inner.get("key") or {}
 
-        # ignorar mensagens do próprio bot
+        # =========================
+        # IGNORA MENSAGENS DO BOT
+        # =========================
+
         if key.get("fromMe"):
-            return {"ignored": True, "reason": "fromMe"}
+            return {
+                "ignored": True,
+                "reason": "fromMe"
+            }
 
         sender = key.get("remoteJid")
+
         if not sender:
-            return {"ignored": True, "reason": "missing sender"}
+            return {
+                "ignored": True,
+                "reason": "missing sender"
+            }
+
+        # =========================
+        # TEXTO
+        # =========================
 
         message_obj = inner.get("message") or {}
 
         message = (
             message_obj.get("conversation")
-            or message_obj.get("extendedTextMessage", {}).get("text")
+            or message_obj.get(
+                "extendedTextMessage",
+                {}
+            ).get("text")
         )
 
         if not message:
-            return {"ignored": True, "reason": "empty message"}
+            return {
+                "ignored": True,
+                "reason": "empty message"
+            }
 
         # =========================
-        # 6. PAYLOAD FINAL
+        # PAYLOAD
         # =========================
+
         payload = {
             "sender": sender,
             "message": message,
@@ -111,8 +169,9 @@ async def webhook_evolution(
         }
 
         # =========================
-        # 7. PROCESSAMENTO
+        # PROCESSAMENTO
         # =========================
+
         response = await process_message(
             payload,
             db,
@@ -125,7 +184,11 @@ async def webhook_evolution(
         }
 
     except Exception as e:
-        log.error(f"Webhook Evolution error: {e}")
+
+        log.error(
+            f"Webhook Evolution error: {e}"
+        )
+
         raise HTTPException(
             status_code=500,
             detail="Erro no webhook Evolution"
