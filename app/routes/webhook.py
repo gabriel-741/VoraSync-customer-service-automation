@@ -20,15 +20,27 @@ async def webhook_evolution(
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
+
+
+
 ):
 
     try:
+
+        
 
         # =========================
         # 1. TOKEN DE SEGURANÇA
         # =========================
 
         token = request.query_params.get("token")
+
+        log.info("===== DEBUG WEBHOOK TOKEN =====")
+        log.info(f"🔐 TOKEN RECEBIDO: {token}")
+        log.info(f"🔐 TOKEN ESPERADO: {settings.WEBHOOK_TOKEN}")
+        log.info(f"🔐 MATCH: {token == settings.WEBHOOK_TOKEN}")
+        log.info("================================")
+
 
         if token != settings.WEBHOOK_TOKEN:
             log.warning("Invalid webhook token")
