@@ -110,7 +110,7 @@ async def process_message(
     limit = tenant.max_messages_month or 0
 
 # como deve ficar
-    if count >= limit:
+    if limit is not None and count >= limit:
         log.warning(f"🚨 Tenant {tenant.id} acima do limite ({count}/{limit})")
         await send_message(
             sender,
