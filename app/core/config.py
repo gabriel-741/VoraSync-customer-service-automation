@@ -7,13 +7,15 @@ class Settings(BaseSettings):
     APP_ENV: str = "production"
 
     BASE_URL: str
-    
+
     INSTANCE: str
 
     OPENAI_API_KEY: str
 
     WEBHOOK_TOKEN: str
 
+    REDIS_URL: str = "redis://localhost:6379/1"  
+    
     model_config = {
         "env_file": ".env",
         "extra": "ignore"

@@ -3,10 +3,9 @@
 from fastapi import FastAPI
 
 from app.routes import webhook, auth, bots
-
 from app.database.connection import engine
 from app.database.models import Base
-
+from app.database.redis import get_redis, close_redis
 
 # cria tabelas automaticamente
 Base.metadata.create_all(bind=engine)
@@ -22,6 +21,14 @@ app = FastAPI(
 app.include_router(webhook.router)
 app.include_router(auth.router)
 app.include_router(bots.router)
+
+@app.on_event("startup")
+async def startup():
+    await get_redis()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await close_redis()
 
 
 # HEALTH CHECK

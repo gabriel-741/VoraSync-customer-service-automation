@@ -6,3 +6,4 @@ python-dotenv
 pydantic-settings
 httpx
 openai
+redis[asyncio]

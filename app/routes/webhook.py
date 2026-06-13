@@ -3,12 +3,15 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.database.connection import get_db
 from app.services.message_service import process_message
 from app.utils.logger import get_logger
 from app.database.models import Tenant
+from app.database.redis import get_redis
+from app.utils.rate_limiter import check_rate_limit
 #from app.utils.webhook_security import verify_signature
 
 log = get_logger(__name__)
@@ -118,7 +121,35 @@ async def webhook_evolution(
             }
 
         # =========================
-        # 7. EVENTO
+        # 7. RATE LIMITING
+        # =========================
+
+        redis = await get_redis()
+        client_ip = request.client.host
+
+        # Camada 1 — IP global
+        allowed, info = await check_rate_limit(redis, "endpoint", client_ip)
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={"error": "Too many requests"},
+                headers={"Retry-After": str(info.get("retry_after", 60))}
+            )
+
+        # Camada 2 — por tenant
+        allowed, info = await check_rate_limit(redis, "tenant", str(tenant.id))
+        if not allowed:
+            log.warning(f"Rate limit tenant {tenant.id}")
+            return JSONResponse(
+                status_code=429,
+                content={"error": "Tenant rate limit exceeded"},
+                headers={"Retry-After": str(info.get("retry_after", 60))}
+            )
+        
+        
+
+        # =========================
+        # 8. EVENTO
         # =========================
 
         if data.get("event") != "messages.upsert":
@@ -148,6 +179,14 @@ async def webhook_evolution(
                 "reason": "missing sender"
             }
 
+        # Camada 3 — por contato (agora sender existe)
+        allowed, info = await check_rate_limit(redis, "contact", f"{tenant.id}:{sender}")
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={"error": "Contact rate limit exceeded"},
+                headers={"Retry-After": str(info.get("retry_after", 60))}
+            )
         # =========================
         # TEXTO
         # =========================
