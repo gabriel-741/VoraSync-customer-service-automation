@@ -19,7 +19,7 @@ app = FastAPI(
 
 # ROTAS
 app.include_router(webhook.router)
-app.include_router(auth.router)""
+app.include_router(auth.router)
 app.include_router(bots.router)
 app.include_router(admin.router)
 
