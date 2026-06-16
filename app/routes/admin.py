@@ -8,6 +8,8 @@ from sqlalchemy import func
 
 from app.database.connection import SessionLocal
 
+from app.database.models import Contact
+
 from app.database.models import (
     Contact,
     Conversation,
@@ -18,6 +20,10 @@ router = APIRouter(
     prefix="/admin",
     tags=["Admin"]
 )
+
+# =========================
+# DASHBOARD STATS
+# =========================
 
 @router.get("/stats")
 async def stats(
@@ -37,7 +43,7 @@ async def stats(
         conversations = (
             db.query(func.count(Conversation.id))
             .filter(Conversation.tenant_id == tenant.id)
-            .scalar()   
+            .scalar()
         )
 
         messages = (
@@ -54,6 +60,41 @@ async def stats(
             "messages_month": messages,
             "plan": tenant.plan.value
         }
+
+    finally:
+        db.close()
+
+
+# =========================
+# CONTACTS
+# =========================
+
+@router.get("/contacts")
+async def contacts(
+    tenant=Depends(get_current_tenant)
+):
+
+    db = SessionLocal()
+
+    try:
+
+        contacts = (
+            db.query(Contact)
+            .filter(Contact.tenant_id == tenant.id)
+            .all()
+        )
+
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "phone": c.phone,
+                "first_seen": c.first_seen_at,
+                "last_seen": c.last_seen_at,
+                "profile": c.profile or {}
+            }
+            for c in contacts
+        ]
 
     finally:
         db.close()
