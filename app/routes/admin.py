@@ -37,7 +37,7 @@ async def stats(
         conversations = (
             db.query(func.count(Conversation.id))
             .filter(Conversation.tenant_id == tenant.id)
-            .scalar()
+            .scalar()   
         )
 
         messages = (
