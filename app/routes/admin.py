@@ -8,7 +8,9 @@ from sqlalchemy import func
 
 from app.database.connection import SessionLocal
 
-from app.database.models import Contact
+from app.database.models import Contact, Tenant
+
+from fastapi import Body
 
 from app.database.models import (
     Contact,
@@ -95,6 +97,58 @@ async def contacts(
             }
             for c in contacts
         ]
+
+    finally:
+        db.close()
+
+# =========================
+# MODIFY CONFIG
+# =========================
+
+@router.get("/settings")
+async def get_settings(
+    tenant=Depends(get_current_tenant)
+):
+    return {
+        "bot_name": tenant.bot_name,
+        "system_prompt": tenant.system_prompt,
+        "ai_model": tenant.ai_model
+    }
+
+
+# =========================
+# CONFIG
+# =========================
+
+@router.patch("/settings")
+async def update_settings(
+    payload: dict = Body(...),
+    tenant=Depends(get_current_tenant)
+):
+    db = SessionLocal()
+
+    try:
+
+        current_tenant = (
+            db.query(Tenant)
+            .filter(Tenant.id == tenant.id)
+            .first()
+        )
+
+        if "bot_name" in payload:
+            current_tenant.bot_name = payload["bot_name"]
+
+        if "system_prompt" in payload:
+            current_tenant.system_prompt = payload["system_prompt"]
+
+        if "ai_model" in payload:
+            current_tenant.ai_model = payload["ai_model"]
+
+        db.commit()
+
+        return {
+            "success": True
+        }
 
     finally:
         db.close()
