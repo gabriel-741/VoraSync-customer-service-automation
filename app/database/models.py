@@ -4,7 +4,7 @@
 
 from sqlalchemy import (
     Column, Integer, String, DateTime,
-    ForeignKey, Enum, func, BigInteger
+    ForeignKey, Enum, func, BigInteger, Boolean
 )
 from sqlalchemy.orm import declarative_base, relationship
 import enum
@@ -99,6 +99,7 @@ class Conversation(Base):
     tenant_id  = Column(Integer, ForeignKey("tenants.id"), nullable=False)
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
     status     = Column(Enum(ConversationStatusEnum), default=ConversationStatusEnum.open)
+    human_mode = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
     closed_at  = Column(DateTime, nullable=True)
 
