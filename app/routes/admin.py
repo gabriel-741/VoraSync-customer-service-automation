@@ -8,15 +8,19 @@ from sqlalchemy import func
 
 from app.database.connection import SessionLocal
 
-from app.database.models import Contact, Tenant
-
-from fastapi import Body
-
 from app.database.models import (
+    Tenant,
     Contact,
     Conversation,
     Message
 )
+
+from app.schemas.admin_schema import (
+    SettingsUpdate,
+    SettingsResponse
+)
+
+
 
 router = APIRouter(
     prefix="/admin",
@@ -105,24 +109,9 @@ async def contacts(
 # MODIFY CONFIG
 # =========================
 
-@router.get("/settings")
-async def get_settings(
-    tenant=Depends(get_current_tenant)
-):
-    return {
-        "bot_name": tenant.bot_name,
-        "system_prompt": tenant.system_prompt,
-        "ai_model": tenant.ai_model
-    }
-
-
-# =========================
-# CONFIG
-# =========================
-
 @router.patch("/settings")
 async def update_settings(
-    payload: dict = Body(...),
+    payload: SettingsUpdate,
     tenant=Depends(get_current_tenant)
 ):
     db = SessionLocal()
@@ -135,14 +124,14 @@ async def update_settings(
             .first()
         )
 
-        if "bot_name" in payload:
-            current_tenant.bot_name = payload["bot_name"]
+        if payload.bot_name is not None:
+            current_tenant.bot_name = payload.bot_name
 
-        if "system_prompt" in payload:
-            current_tenant.system_prompt = payload["system_prompt"]
+        if payload.system_prompt is not None:
+            current_tenant.system_prompt = payload.system_prompt
 
-        if "ai_model" in payload:
-            current_tenant.ai_model = payload["ai_model"]
+        if payload.ai_model is not None:
+            current_tenant.ai_model = payload.ai_model
 
         db.commit()
 
@@ -152,3 +141,20 @@ async def update_settings(
 
     finally:
         db.close()
+
+# =========================
+# CONFIG
+# =========================
+
+@router.get(
+    "/settings",
+    response_model=SettingsResponse
+)
+async def get_settings(
+    tenant=Depends(get_current_tenant)
+):
+    return {
+        "bot_name": tenant.bot_name,
+        "system_prompt": tenant.system_prompt,
+        "ai_model": tenant.ai_model
+    }
