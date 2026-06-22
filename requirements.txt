@@ -7,3 +7,4 @@ pydantic-settings
 httpx
 openai
 redis[asyncio]
+email-validator
