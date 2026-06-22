@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Vorasync — Painel do Cliente</title>
+<style>
+  * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+  body { background: #0f1115; color: #e6e6e6; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 16px; color: #9aa3b2; margin-top: 32px; }
+  .card { background: #181b22; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  input, button, textarea, select {
+    background: #0f1115; color: #fff; border: 1px solid #2a2e38;
+    border-radius: 6px; padding: 8px 10px; margin: 4px 0; width: 100%;
+  }
+  button { background: #4f7cff; cursor: pointer; border: none; font-weight: 600; width: auto; padding: 8px 16px; }
+  button:hover { background: #3f63d6; }
+  button.danger { background: #c0392b; }
+  button.ghost { background: transparent; border: 1px solid #4f7cff; color: #4f7cff; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat-box { background: #1c2029; border-radius: 8px; padding: 16px; text-align: center; }
+  .stat-box .num { font-size: 26px; font-weight: 700; }
+  .stat-box .label { font-size: 12px; color: #9aa3b2; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { padding: 8px; border-bottom: 1px solid #2a2e38; text-align: left; font-size: 13px; }
+  .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+  .badge-human { background: #ff9800; color: #000; }
+  .badge-ai { background: #4caf50; color: #000; }
+  .badge-waiting { background: #2196f3; color: #000; }
+  .badge-blocked { background: #c0392b; color: #fff; }
+  .summary-box { background: #1c2029; border-left: 3px solid #ff9800; padding: 12px; margin-top: 8px; font-size: 13px; }
+  .hidden { display: none; }
+  .actions button { width: auto; margin-right: 6px; padding: 4px 10px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div id="login" class="card">
+  <h1>🔐 Painel do Cliente</h1>
+  <input id="apiKey" type="password" placeholder="Sua API Key">
+  <button onclick="saveKey()">Entrar</button>
+</div>
+
+<div id="app" class="hidden">
+  <h1>📊 Dashboard</h1>
+  <div class="card stats" id="statsBox"></div>
+
+  <h2>💬 Conversas</h2>
+  <div class="card">
+    <button class="ghost" onclick="loadConversations()">🔄 Atualizar</button>
+    <table id="conversationsTable">
+      <thead>
+        <tr><th>Contato</th><th>Estado</th><th>Score</th><th>Resumo do Handoff</th><th>Ações</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>👥 Contatos</h2>
+  <div class="card">
+    <button class="ghost" onclick="loadContacts()">🔄 Atualizar</button>
+    <table id="contactsTable">
+      <thead>
+        <tr><th>Nome</th><th>Telefone</th><th>Último contato</th><th>Bloqueado</th><th>Ações</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>⚙️ Configurações do Bot</h2>
+  <div class="card">
+    <label>Nome do bot</label>
+    <input id="s_botname">
+    <label>Modelo de IA</label>
+    <select id="s_model">
+      <option value="gpt-4o-mini">gpt-4o-mini (rápido e econômico)</option>
+      <option value="gpt-4.1-mini">gpt-4.1-mini (mais avançado)</option>
+    </select>
+    <label>Personalidade / Instruções do bot</label>
+    <textarea id="s_prompt" rows="6"></textarea>
+    <button onclick="saveSettings()">Salvar Configurações</button>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+function saveKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) return alert('Informe sua API Key');
+  localStorage.setItem('clientApiKey', key);
+  startApp();
+}
+
+function getKey() { return localStorage.getItem('clientApiKey'); }
+
+async function api(path, method = 'GET', body = null) {
+  const res = await fetch(API + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'x-api-key': getKey() },
+    body: body ? JSON.stringify(body) : null
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || res.statusText);
+  }
+  return res.json();
+}
+
+function startApp() {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  loadStats();
+  loadConversations();
+  loadContacts();
+  loadSettings();
+}
+
+async function loadStats() {
+  try {
+    const s = await api('/admin/stats');
+    document.getElementById('statsBox').innerHTML = `
+      <div class="stat-box"><div class="num">${s.contacts}</div><div class="label">Contatos</div></div>
+      <div class="stat-box"><div class="num">${s.conversations}</div><div class="label">Conversas</div></div>
+      <div class="stat-box"><div class="num">${s.messages_month}</div><div class="label">Mensagens/mês</div></div>
+      <div class="stat-box"><div class="num">${s.plan}</div><div class="label">Plano</div></div>
+    `;
+  } catch (e) { alert('Erro ao carregar stats: ' + e.message); }
+}
+
+function stateBadge(state) {
+  const map = {
+    ai_active: '<span class="badge badge-ai">IA ativa</span>',
+    human_active: '<span class="badge badge-human">Humano ativo</span>',
+    awaiting_handoff_confirmation: '<span class="badge badge-waiting">Aguardando confirmação</span>',
+    cooldown: '<span class="badge badge-waiting">Cooldown</span>',
+  };
+  return map[state] || state;
+}
+
+async function loadConversations() {
+  try {
+    const list = await api('/admin/conversations');
+    const tbody = document.querySelector('#conversationsTable tbody');
+    tbody.innerHTML = '';
+    list.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${c.contact_name || '(sem nome)'}<br><small>${c.phone}</small></td>
+        <td>${stateBadge(c.state)}</td>
+        <td>${c.handoff_score ?? '-'}</td>
+        <td>${c.handoff_summary ? `<div class="summary-box">${c.handoff_summary}</div>` : '-'}</td>
+        <td class="actions">
+          ${c.state !== 'human_active'
+            ? `<button onclick="takeover(${c.id})">Assumir</button>`
+            : `<button class="danger" onclick="release(${c.id})">Devolver p/ IA</button>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) { alert('Erro ao carregar conversas: ' + e.message); }
+}
+
+async function takeover(id) {
+  try { await api(`/admin/conversations/${id}/takeover`, 'POST'); loadConversations(); }
+  catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function release(id) {
+  if (!confirm('Devolver esta conversa para a IA?')) return;
+  try { await api(`/admin/conversations/${id}/release`, 'POST'); loadConversations(); }
+  catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function loadContacts() {
+  try {
+    const result = await api('/admin/contacts?limit=50');
+    const tbody = document.querySelector('#contactsTable tbody');
+    tbody.innerHTML = '';
+    result.data.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${c.name || '(sem nome)'}</td>
+        <td>${c.phone}</td>
+        <td>${c.last_seen ? new Date(c.last_seen).toLocaleString('pt-BR') : '-'}</td>
+        <td>${c.ai_blocked ? '<span class="badge badge-blocked">Bloqueado</span>' : '-'}</td>
+        <td class="actions">
+          ${c.ai_blocked
+            ? `<button onclick="unblockContact(${c.id})">Desbloquear</button>`
+            : `<button class="danger" onclick="blockContact(${c.id})">Bloquear IA</button>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) { alert('Erro ao carregar contatos: ' + e.message); }
+}
+
+async function blockContact(id) {
+  if (!confirm('Bloquear a IA para este número? Ele só será atendido manualmente.')) return;
+  try { await api(`/admin/contacts/${id}/block`, 'POST'); loadContacts(); }
+  catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function unblockContact(id) {
+  try { await api(`/admin/contacts/${id}/unblock`, 'POST'); loadContacts(); }
+  catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function loadSettings() {
+  try {
+    const s = await api('/admin/settings');
+    document.getElementById('s_botname').value = s.bot_name || '';
+    document.getElementById('s_model').value = s.ai_model || 'gpt-4o-mini';
+    document.getElementById('s_prompt').value = s.system_prompt || '';
+  } catch (e) { alert('Erro ao carregar configurações: ' + e.message); }
+}
+
+async function saveSettings() {
+  const payload = {
+    bot_name: document.getElementById('s_botname').value,
+    ai_model: document.getElementById('s_model').value,
+    system_prompt: document.getElementById('s_prompt').value,
+  };
+  try {
+    await api('/admin/settings', 'PATCH', payload);
+    alert('Configurações salvas!');
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+if (getKey()) startApp();
+</script>
+</body>
+</html>

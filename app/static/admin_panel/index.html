@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Vorasync — Admin</title>
+<style>
+  * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+  body { background: #0f1115; color: #e6e6e6; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; }
+  .card { background: #181b22; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  input, select, button, textarea {
+    background: #0f1115; color: #fff; border: 1px solid #2a2e38;
+    border-radius: 6px; padding: 8px 10px; margin: 4px 0; width: 100%;
+  }
+  button { background: #4f7cff; cursor: pointer; border: none; font-weight: 600; }
+  button:hover { background: #3f63d6; }
+  button.danger { background: #c0392b; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { padding: 8px; border-bottom: 1px solid #2a2e38; text-align: left; font-size: 13px; }
+  .status-active { color: #4caf50; }
+  .status-suspended { color: #ff9800; }
+  .status-cancelled { color: #f44336; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div id="login" class="card">
+  <h1>🔐 Vorasync — Painel Admin</h1>
+  <input id="adminKey" type="password" placeholder="X-Admin-Key">
+  <button onclick="saveKey()">Entrar</button>
+</div>
+
+<div id="app" class="hidden">
+  <h1>📋 Tenants</h1>
+  <div class="card">
+    <button onclick="loadTenants()">🔄 Atualizar lista</button>
+    <table id="tenantsTable">
+      <thead>
+        <tr><th>ID</th><th>Nome</th><th>Plano</th><th>Status</th><th>Msgs/mês</th><th>Contatos</th><th>Ações</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h1>➕ Novo Cliente</h1>
+  <div class="card">
+    <div class="grid2">
+      <input id="r_name" placeholder="Nome da empresa">
+      <input id="r_email" placeholder="Email">
+      <input id="r_instance" placeholder="whatsapp_instance (Evolution)">
+      <input id="r_number" placeholder="Número WhatsApp (opcional)">
+      <select id="r_plan">
+        <option value="basic">Basic — 1.000 msgs/mês</option>
+        <option value="pro">Pro — 5.000 msgs/mês</option>
+        <option value="enterprise">Enterprise — ilimitado</option>
+      </select>
+      <input id="r_botname" placeholder="Nome do bot" value="Assistente">
+    </div>
+    <textarea id="r_prompt" rows="4" placeholder="System prompt do bot (personalidade)"></textarea>
+    <button onclick="registerTenant()">Cadastrar Cliente</button>
+    <div id="registerResult"></div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+function saveKey() {
+  const key = document.getElementById('adminKey').value.trim();
+  if (!key) return alert('Informe a chave');
+  sessionStorage.setItem('adminKey', key);
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  loadTenants();
+}
+
+function getKey() { return sessionStorage.getItem('adminKey'); }
+
+async function api(path, method = 'GET', body = null) {
+  const res = await fetch(API + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': getKey() },
+    body: body ? JSON.stringify(body) : null
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || res.statusText);
+  }
+  return res.json();
+}
+
+async function loadTenants() {
+  try {
+    const tenants = await api('/super-admin/tenants');
+    const tbody = document.querySelector('#tenantsTable tbody');
+    tbody.innerHTML = '';
+    tenants.forEach(t => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${t.id}</td>
+        <td>${t.name}<br><small>${t.email}</small></td>
+        <td>${t.plan}</td>
+        <td class="status-${t.status}">${t.status}</td>
+        <td>${t.messages_month}/${t.max_messages_month}</td>
+        <td>${t.contacts}</td>
+        <td>
+          ${t.status === 'active'
+            ? `<button class="danger" onclick="changeStatus(${t.id}, 'suspended')">Suspender</button>`
+            : `<button onclick="changeStatus(${t.id}, 'active')">Ativar</button>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    alert('Erro ao carregar tenants: ' + e.message);
+  }
+}
+
+async function changeStatus(id, status) {
+  if (!confirm(`Confirmar mudança de status para "${status}"?`)) return;
+  try {
+    await api(`/super-admin/tenants/${id}/status?status=${status}`, 'PATCH');
+    loadTenants();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+async function registerTenant() {
+  const payload = {
+    name: document.getElementById('r_name').value,
+    email: document.getElementById('r_email').value,
+    whatsapp_instance: document.getElementById('r_instance').value,
+    whatsapp_number: document.getElementById('r_number').value || null,
+    plan: document.getElementById('r_plan').value,
+    bot_name: document.getElementById('r_botname').value,
+    system_prompt: document.getElementById('r_prompt').value || null,
+  };
+
+  try {
+    const result = await api('/super-admin/tenants/register', 'POST', payload);
+    document.getElementById('registerResult').innerHTML = `
+      <div class="card" style="margin-top:12px; background:#1d2b1d;">
+        <strong>✅ Cliente criado!</strong><br>
+        <strong>API Key (copie agora, não será mostrada de novo):</strong><br>
+        <code style="word-break:break-all;">${result.api_key}</code><br><br>
+        <strong>Webhook URL:</strong><br>
+        <code style="word-break:break-all;">${result.webhook_url}</code>
+      </div>
+    `;
+    loadTenants();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+// auto-login se já tiver chave salva
+if (getKey()) {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  loadTenants();
+}
+</script>
+</body>
+</html>
