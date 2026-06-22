@@ -11,6 +11,7 @@ from app.database.models import (
 )
 from app.services.ia_service import handle_message
 from app.services.whatsapp_service import send_message
+from app.services.intent_analyzer import analyze_intent
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -54,9 +55,18 @@ async def update_contact_profile(
 
         contact = (
             db.query(Contact)
-            .filter(Contact.id == contact_id)
+            .filter(Contact.id == contact_id )
             .first()
         )
+
+        if contact and contact.ai_blocked:
+            log.info(
+                f"🚫 IA bloqueada para contato {contact.id}"
+            )
+
+            return None
+        
+        
 
         if contact:
 
@@ -125,9 +135,18 @@ async def process_message(
 
     contact = (
         db.query(Contact)
-        .filter(Contact.tenant_id == tenant.id, Contact.phone == sender)
+        .filter(Contact.tenant_id == tenant.id, 
+                Contact.phone == sender
+                )
         .first()
     )
+    if contact and contact.ai_blocked:
+
+        log.info(
+            f"🚫 IA bloqueada para contato {contact.id}"
+        )
+
+        return None
 
     if not contact:
         contact = Contact(
@@ -168,6 +187,7 @@ async def process_message(
         db.refresh(conversation)
         log.info(f"✅ Conversation criada: {conversation.id}")
 
+
     # =========================
     # HISTÓRICO RECENTE
     # =========================
@@ -202,6 +222,17 @@ async def process_message(
     log.info("✅ Mensagem inbound salva")
 
     # =========================
+    # HUMAN MODE
+    # =========================
+
+    if conversation.human_mode:
+        log.info(
+            f"🤝 Human mode ativo na conversa {conversation.id}"
+        )
+
+        return None
+
+    # =========================
     # IA
     # =========================
 
@@ -215,6 +246,22 @@ async def process_message(
 
     if response is None:
         return None
+    # =========================
+    # CLASSIFICADOR DE HANDOFF
+    # =========================
+
+
+    intent = await analyze_intent(
+    text,
+    recent_messages=recent_messages
+    )
+    if intent["wants_human"]:
+        conversation.handoff_score += 100
+
+    if intent["confusion"] and intent["confidence"] > 0.75:
+        conversation.handoff_score += 25
+
+
 
     # =========================
     # WHATSAPP — responde primeiro

@@ -80,6 +80,7 @@ class Contact(Base):
     name         = Column(String)
     first_seen_at = Column(DateTime, server_default=func.now())
     last_seen_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    ai_blocked = Column(Boolean, default=False)
 
     profile = Column(JSONB, default=dict)
 
@@ -98,8 +99,15 @@ class Conversation(Base):
     id         = Column(Integer, primary_key=True, index=True)
     tenant_id  = Column(Integer, ForeignKey("tenants.id"), nullable=False)
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
+
     status     = Column(Enum(ConversationStatusEnum), default=ConversationStatusEnum.open)
     human_mode = Column(Boolean, default=False)
+
+    handoff_score = Column(Integer, default=0)
+    handoff_offered = Column(Boolean, default=False)
+    handoff_declined = Column(Boolean, default=False)
+    handoff_offer_count = Column(Integer, default=0)
+
     created_at = Column(DateTime, server_default=func.now())
     closed_at  = Column(DateTime, nullable=True)
 
