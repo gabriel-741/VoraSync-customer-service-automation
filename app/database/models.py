@@ -1,15 +1,13 @@
-#app/database/models.py
-
-
+# app/database/models.py
 
 from sqlalchemy import (
     Column, Integer, String, DateTime,
-    ForeignKey, Enum, func, BigInteger, Boolean
+    ForeignKey, Enum, func, Boolean
 )
 from sqlalchemy.orm import declarative_base, relationship
-import enum
-
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.postgresql import JSONB
+import enum
 
 Base = declarative_base()
 
@@ -29,17 +27,23 @@ class StatusTenantEnum(str, enum.Enum):
     cancelled  = "cancelled"
 
 class ConversationStatusEnum(str, enum.Enum):
-    open         = "open"
+    open          = "open"
     waiting_human = "waiting_human"
-    closed       = "closed"
+    closed        = "closed"
 
 class DirectionEnum(str, enum.Enum):
-    inbound  = "inbound"   # cliente → bot
-    outbound = "outbound"  # bot → cliente
+    inbound  = "inbound"
+    outbound = "outbound"
+
+class ConversationStateEnum(str, enum.Enum):
+    ai_active                     = "ai_active"
+    awaiting_handoff_confirmation = "awaiting_handoff_confirmation"
+    human_active                  = "human_active"
+    cooldown                      = "cooldown"
 
 
 # ================================
-# TENANTS (empresas clientes)
+# TENANTS
 # ================================
 
 class Tenant(Base):
@@ -57,10 +61,10 @@ class Tenant(Base):
     max_messages_month  = Column(Integer, default=1000)
     created_at          = Column(DateTime, server_default=func.now())
     updated_at          = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    bot_name      = Column(String, default="Assistente")
-    system_prompt = Column(String, nullable=True)
-    ai_model      = Column(String, default="gpt-4o-mini")
-    webhook_secret = Column(String, nullable=True)
+    bot_name            = Column(String, default="Assistente")
+    system_prompt       = Column(String, nullable=True)
+    ai_model            = Column(String, default="gpt-4o-mini")
+    webhook_secret      = Column(String, nullable=True)
 
     contacts      = relationship("Contact",      back_populates="tenant")
     conversations = relationship("Conversation", back_populates="tenant")
@@ -68,21 +72,20 @@ class Tenant(Base):
 
 
 # ================================
-# CONTACTS (quem fala com o bot)
+# CONTACTS
 # ================================
 
 class Contact(Base):
     __tablename__ = "contacts"
 
-    id           = Column(Integer, primary_key=True, index=True)
-    tenant_id    = Column(Integer, ForeignKey("tenants.id"), nullable=False)
-    phone        = Column(String, nullable=False)
-    name         = Column(String)
+    id            = Column(Integer, primary_key=True, index=True)
+    tenant_id     = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    phone         = Column(String, nullable=False)
+    name          = Column(String)
     first_seen_at = Column(DateTime, server_default=func.now())
     last_seen_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    ai_blocked = Column(Boolean, default=False)
-
-    profile = Column(JSONB, default=dict)
+    ai_blocked    = Column(Boolean, default=False)
+    profile       = Column(JSONB, default=dict)
 
     tenant        = relationship("Tenant",       back_populates="contacts")
     conversations = relationship("Conversation", back_populates="contact")
@@ -90,7 +93,7 @@ class Contact(Base):
 
 
 # ================================
-# CONVERSATIONS (atendimentos)
+# CONVERSATIONS
 # ================================
 
 class Conversation(Base):
@@ -100,13 +103,24 @@ class Conversation(Base):
     tenant_id  = Column(Integer, ForeignKey("tenants.id"), nullable=False)
     contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
 
-    status     = Column(Enum(ConversationStatusEnum), default=ConversationStatusEnum.open)
+    status = Column(Enum(ConversationStatusEnum), default=ConversationStatusEnum.open)
+    state  = Column(Enum(ConversationStateEnum), default=ConversationStateEnum.ai_active, nullable=False)
     human_mode = Column(Boolean, default=False)
 
-    handoff_score = Column(Integer, default=0)
-    handoff_offered = Column(Boolean, default=False)
-    handoff_declined = Column(Boolean, default=False)
-    handoff_offer_count = Column(Integer, default=0)
+    # =========================
+    # SCORING — explicit/soft separados
+    # =========================
+    explicit_score = Column(Integer, default=0)   # pedido direto — cap 100
+    soft_score     = Column(Integer, default=0)   # confusão/baixa confiança — cap 70
+
+    handoff_offered      = Column(Boolean, default=False)
+    handoff_offer_count   = Column(Integer, default=0)
+    handoff_reason        = Column(String, nullable=True)
+    handoff_summary       = Column(String, nullable=True)
+
+    cooldown_until = Column(DateTime, nullable=True)   # bloqueia nova oferta após recusa
+
+    last_activity_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     created_at = Column(DateTime, server_default=func.now())
     closed_at  = Column(DateTime, nullable=True)
@@ -115,9 +129,13 @@ class Conversation(Base):
     contact  = relationship("Contact",  back_populates="conversations")
     messages = relationship("Message",  back_populates="conversation")
 
+    @hybrid_property
+    def handoff_score(self):
+        return (self.explicit_score or 0) + (self.soft_score or 0)
+
 
 # ================================
-# MESSAGES (cada mensagem)
+# MESSAGES
 # ================================
 
 class Message(Base):

@@ -6,6 +6,7 @@ from app.routes import webhook, auth, bots, admin
 from app.database.connection import engine
 from app.database.models import Base
 from app.database.redis import get_redis, close_redis
+from app.routes import onboarding
 
 # cria tabelas automaticamente
 Base.metadata.create_all(bind=engine)
@@ -39,3 +40,8 @@ def home():
         "status": "online",
         "service": "Vorasync API"
     }
+
+
+app.include_router(
+    onboarding.router
+)
