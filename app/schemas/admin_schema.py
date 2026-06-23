@@ -40,3 +40,11 @@ class RegisterResponse(BaseModel):
     max_messages_month: int
     plan: str
     instructions: str
+
+class TenantUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    plan: Optional[str] = None
+    max_messages_month: Optional[int] = None
+    bot_name: Optional[str] = None
+    system_prompt: Optional[str] = None

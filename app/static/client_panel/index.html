@@ -71,11 +71,6 @@
   <div class="card">
     <label>Nome do bot</label>
     <input id="s_botname">
-    <label>Modelo de IA</label>
-    <select id="s_model">
-      <option value="gpt-4o-mini">gpt-4o-mini (rápido e econômico)</option>
-      <option value="gpt-4.1-mini">gpt-4.1-mini (mais avançado)</option>
-    </select>
     <label>Personalidade / Instruções do bot</label>
     <textarea id="s_prompt" rows="6"></textarea>
     <button onclick="saveSettings()">Salvar Configurações</button>
@@ -218,7 +213,6 @@ async function loadSettings() {
 async function saveSettings() {
   const payload = {
     bot_name: document.getElementById('s_botname').value,
-    ai_model: document.getElementById('s_model').value,
     system_prompt: document.getElementById('s_prompt').value,
   };
   try {

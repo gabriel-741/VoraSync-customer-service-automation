@@ -13,7 +13,7 @@ from app.database.models import (
     Tenant, Contact, Conversation, Message,
     DirectionEnum, PlanEnum, StatusTenantEnum
 )
-from app.schemas.admin_schema import RegisterRequest, RegisterResponse
+from app.schemas.admin_schema import RegisterRequest, RegisterResponse, TenantUpdate
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -152,3 +152,95 @@ async def register_tenant(payload: RegisterRequest, db: Session = Depends(get_db
         plan=tenant.plan.value,
         instructions=instructions
     )
+
+
+
+
+# =========================
+# EDITAR TENANT (plano, limite, dados)
+# =========================
+@router.patch("/tenants/{tenant_id}")
+async def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Depends(get_db)):
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    if payload.name is not None:
+        tenant.name = payload.name
+
+    if payload.phone is not None:
+        tenant.phone = payload.phone
+
+    if payload.plan is not None:
+        if payload.plan not in PLAN_LIMITS:
+            raise HTTPException(status_code=400, detail="Plano inválido")
+        tenant.plan = PlanEnum(payload.plan)
+        # se não veio limite customizado junto, aplica o padrão do novo plano
+        if payload.max_messages_month is None:
+            tenant.max_messages_month = PLAN_LIMITS[payload.plan]
+
+    if payload.max_messages_month is not None:
+        tenant.max_messages_month = payload.max_messages_month
+
+    if payload.bot_name is not None:
+        tenant.bot_name = payload.bot_name
+
+    if payload.system_prompt is not None:
+        tenant.system_prompt = payload.system_prompt
+
+    db.commit()
+    db.refresh(tenant)
+
+    log.info(f"[SUPER ADMIN] Tenant {tenant.id} atualizado")
+
+    return {
+        "success": True,
+        "tenant_id": tenant.id,
+        "name": tenant.name,
+        "plan": tenant.plan.value,
+        "max_messages_month": tenant.max_messages_month
+    }
+
+
+# =========================
+# DETALHE DE UM TENANT (para edição)
+# =========================
+@router.get("/tenants/{tenant_id}")
+async def get_tenant_detail(tenant_id: int, db: Session = Depends(get_db)):
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    return {
+        "id": tenant.id,
+        "name": tenant.name,
+        "email": tenant.email,
+        "phone": tenant.phone,
+        "whatsapp_instance": tenant.whatsapp_instance,
+        "whatsapp_number": tenant.whatsapp_number,
+        "plan": tenant.plan.value,
+        "status": tenant.status.value,
+        "max_messages_month": tenant.max_messages_month,
+        "bot_name": tenant.bot_name,
+        "system_prompt": tenant.system_prompt,
+        "ai_model": tenant.ai_model,
+        "created_at": tenant.created_at,
+    }
+
+
+# =========================
+# REGENERAR API KEY (se vazar)
+# =========================
+@router.post("/tenants/{tenant_id}/regenerate-key")
+async def regenerate_api_key(tenant_id: int, db: Session = Depends(get_db)):
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    new_key = token_hex(32)
+    tenant.api_key = new_key
+    db.commit()
+
+    log.info(f"[SUPER ADMIN] API key regenerada para tenant {tenant.id}")
+
+    return {"success": True, "tenant_id": tenant.id, "new_api_key": new_key}

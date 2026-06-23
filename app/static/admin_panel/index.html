@@ -64,8 +64,110 @@
   </div>
 </div>
 
+<div id="editModal" class="hidden" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center;">
+  <div class="card" style="width:420px;">
+    <h2>✏️ Editar Cliente #<span id="edit_id"></span></h2>
+    <input id="edit_name" placeholder="Nome">
+    <input id="edit_phone" placeholder="Telefone">
+    <select id="edit_plan">
+      <option value="basic">Basic — 1.000 msgs/mês (padrão)</option>
+      <option value="pro">Pro — 5.000 msgs/mês (padrão)</option>
+      <option value="enterprise">Enterprise — ilimitado</option>
+    </select>
+    <label style="font-size:12px; color:#9aa3b2;">Limite de mensagens/mês (sobrescreve o padrão do plano)</label>
+    <input id="edit_limit" type="number">
+    <input id="edit_botname" placeholder="Nome do bot">
+    <textarea id="edit_prompt" rows="4" placeholder="System prompt"></textarea>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button onclick="saveTenantEdit()">Salvar</button>
+      <button class="ghost" onclick="closeEditModal()">Cancelar</button>
+      <button class="danger" onclick="regenerateKey()">Regenerar API Key</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = window.location.origin;
+
+let editingTenantId = null;
+
+async function loadTenants() {
+  try {
+    const tenants = await api('/super-admin/tenants');
+    const tbody = document.querySelector('#tenantsTable tbody');
+    tbody.innerHTML = '';
+    tenants.forEach(t => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${t.id}</td>
+        <td>${t.name}<br><small>${t.email}</small></td>
+        <td>${t.plan}</td>
+        <td class="status-${t.status}">${t.status}</td>
+        <td>${t.messages_month}/${t.max_messages_month}</td>
+        <td>${t.contacts}</td>
+        <td class="actions">
+          <button onclick="openEditModal(${t.id})">Editar</button>
+          ${t.status === 'active'
+            ? `<button class="danger" onclick="changeStatus(${t.id}, 'suspended')">Suspender</button>`
+            : `<button onclick="changeStatus(${t.id}, 'active')">Ativar</button>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    alert('Erro ao carregar tenants: ' + e.message);
+  }
+}
+
+async function openEditModal(id) {
+  try {
+    const t = await api(`/super-admin/tenants/${id}`);
+    editingTenantId = id;
+    document.getElementById('edit_id').innerText = id;
+    document.getElementById('edit_name').value = t.name || '';
+    document.getElementById('edit_phone').value = t.phone || '';
+    document.getElementById('edit_plan').value = t.plan;
+    document.getElementById('edit_limit').value = t.max_messages_month;
+    document.getElementById('edit_botname').value = t.bot_name || '';
+    document.getElementById('edit_prompt').value = t.system_prompt || '';
+    document.getElementById('editModal').classList.remove('hidden');
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+function closeEditModal() {
+  editingTenantId = null;
+  document.getElementById('editModal').classList.add('hidden');
+}
+
+async function saveTenantEdit() {
+  const payload = {
+    name: document.getElementById('edit_name').value,
+    phone: document.getElementById('edit_phone').value,
+    plan: document.getElementById('edit_plan').value,
+    max_messages_month: parseInt(document.getElementById('edit_limit').value) || null,
+    bot_name: document.getElementById('edit_botname').value,
+    system_prompt: document.getElementById('edit_prompt').value,
+  };
+  try {
+    await api(`/super-admin/tenants/${editingTenantId}`, 'PATCH', payload);
+    closeEditModal();
+    loadTenants();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
+async function regenerateKey() {
+  if (!confirm('Isso vai invalidar a API key atual do cliente. Confirma?')) return;
+  try {
+    const result = await api(`/super-admin/tenants/${editingTenantId}/regenerate-key`, 'POST');
+    alert('Nova API Key:\n\n' + result.new_api_key + '\n\nCopie e envie ao cliente — não será mostrada de novo.');
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  }
+}
 
 function saveKey() {
   const key = document.getElementById('adminKey').value.trim();
