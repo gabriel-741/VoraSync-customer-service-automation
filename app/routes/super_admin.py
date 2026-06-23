@@ -14,6 +14,7 @@ from app.database.models import (
     DirectionEnum, PlanEnum, StatusTenantEnum
 )
 from app.schemas.admin_schema import RegisterRequest, RegisterResponse, TenantUpdate
+from app.services.message_service import get_monthly_message_count
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -21,7 +22,7 @@ log = get_logger(__name__)
 router = APIRouter(
     prefix="/super-admin",
     tags=["Super Admin"],
-    dependencies=[Depends(verify_super_admin)]   # ← protege TODAS as rotas abaixo
+    dependencies=[Depends(verify_super_admin)]
 )
 
 PLAN_LIMITS = {
@@ -38,21 +39,9 @@ PLAN_LIMITS = {
 async def list_tenants(db: Session = Depends(get_db)):
     tenants = db.query(Tenant).order_by(Tenant.created_at.desc()).all()
 
-    start_month = datetime.now(timezone.utc).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
-
     result = []
     for t in tenants:
-        messages_month = (
-            db.query(func.count(Message.id))
-            .filter(
-                Message.tenant_id == t.id,
-                Message.direction == DirectionEnum.outbound,
-                Message.created_at >= start_month
-            )
-            .scalar()
-        )
+        messages_month = get_monthly_message_count(t.id, db)
         contacts_count = db.query(func.count(Contact.id)).filter(Contact.tenant_id == t.id).scalar()
 
         result.append({
@@ -93,7 +82,7 @@ async def update_tenant_status(tenant_id: int, status: str, db: Session = Depend
 
 
 # =========================
-# REGISTRO DE NOVO TENANT (movido do admin.py)
+# REGISTRO DE NOVO TENANT
 # =========================
 @router.post("/tenants/register", response_model=RegisterResponse)
 async def register_tenant(payload: RegisterRequest, db: Session = Depends(get_db)):
@@ -110,7 +99,9 @@ async def register_tenant(payload: RegisterRequest, db: Session = Depends(get_db
 
     plan_value = payload.plan if payload.plan in PLAN_LIMITS else "basic"
     max_messages = PLAN_LIMITS[plan_value]
-    new_api_key = token_hex(32)
+
+    dashboard_key  = token_hex(32)
+    webhook_secret = token_hex(32)
 
     tenant = Tenant(
         name=payload.name,
@@ -118,7 +109,9 @@ async def register_tenant(payload: RegisterRequest, db: Session = Depends(get_db
         phone=payload.phone,
         whatsapp_instance=payload.whatsapp_instance,
         whatsapp_number=payload.whatsapp_number,
-        api_key=new_api_key,
+        api_key=payload.api_key,             # chave REAL da Evolution
+        dashboard_key=dashboard_key,
+        webhook_secret=webhook_secret,
         plan=PlanEnum(plan_value),
         status=StatusTenantEnum.active,
         max_messages_month=max_messages,
@@ -131,13 +124,13 @@ async def register_tenant(payload: RegisterRequest, db: Session = Depends(get_db
     db.commit()
     db.refresh(tenant)
 
-    webhook_url = f"{settings.PUBLIC_API_URL}/webhook/evolution?token={settings.WEBHOOK_TOKEN}"
+    webhook_url = f"{settings.PUBLIC_API_URL}/webhook/evolution?token={webhook_secret}"
 
     instructions = (
         f"1. Configure o webhook na Evolution para a instância '{tenant.whatsapp_instance}' "
         f"apontando para: {webhook_url}\n"
-        f"2. Use o api_key abaixo no header x-api-key para o painel do cliente.\n"
-        f"3. Guarde o api_key com segurança — não será mostrado novamente."
+        f"2. Use o dashboard_key abaixo no painel do cliente (campo 'API Key').\n"
+        f"3. Guarde o dashboard_key com segurança — não será mostrado novamente."
     )
 
     log.info(f"✅ Novo tenant registrado: {tenant.id} | {tenant.name}")
@@ -145,7 +138,7 @@ async def register_tenant(payload: RegisterRequest, db: Session = Depends(get_db
     return RegisterResponse(
         tenant_id=tenant.id,
         name=tenant.name,
-        api_key=new_api_key,
+        dashboard_key=dashboard_key,
         whatsapp_instance=tenant.whatsapp_instance,
         webhook_url=webhook_url,
         max_messages_month=tenant.max_messages_month,
@@ -154,10 +147,8 @@ async def register_tenant(payload: RegisterRequest, db: Session = Depends(get_db
     )
 
 
-
-
 # =========================
-# EDITAR TENANT (plano, limite, dados)
+# EDITAR TENANT
 # =========================
 @router.patch("/tenants/{tenant_id}")
 async def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Depends(get_db)):
@@ -175,7 +166,6 @@ async def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Dep
         if payload.plan not in PLAN_LIMITS:
             raise HTTPException(status_code=400, detail="Plano inválido")
         tenant.plan = PlanEnum(payload.plan)
-        # se não veio limite customizado junto, aplica o padrão do novo plano
         if payload.max_messages_month is None:
             tenant.max_messages_month = PLAN_LIMITS[payload.plan]
 
@@ -187,6 +177,9 @@ async def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Dep
 
     if payload.system_prompt is not None:
         tenant.system_prompt = payload.system_prompt
+
+    if payload.api_key is not None:
+        tenant.api_key = payload.api_key
 
     db.commit()
     db.refresh(tenant)
@@ -203,13 +196,15 @@ async def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Dep
 
 
 # =========================
-# DETALHE DE UM TENANT (para edição)
+# DETALHE DE UM TENANT
 # =========================
 @router.get("/tenants/{tenant_id}")
 async def get_tenant_detail(tenant_id: int, db: Session = Depends(get_db)):
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
+
+    webhook_url = f"{settings.PUBLIC_API_URL}/webhook/evolution?token={tenant.webhook_secret}"
 
     return {
         "id": tenant.id,
@@ -224,23 +219,44 @@ async def get_tenant_detail(tenant_id: int, db: Session = Depends(get_db)):
         "bot_name": tenant.bot_name,
         "system_prompt": tenant.system_prompt,
         "ai_model": tenant.ai_model,
+        "webhook_url": webhook_url,
         "created_at": tenant.created_at,
     }
 
 
 # =========================
-# REGENERAR API KEY (se vazar)
+# REGENERAR DASHBOARD KEY (login do painel)
 # =========================
-@router.post("/tenants/{tenant_id}/regenerate-key")
-async def regenerate_api_key(tenant_id: int, db: Session = Depends(get_db)):
+@router.post("/tenants/{tenant_id}/regenerate-dashboard-key")
+async def regenerate_dashboard_key(tenant_id: int, db: Session = Depends(get_db)):
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     new_key = token_hex(32)
-    tenant.api_key = new_key
+    tenant.dashboard_key = new_key
     db.commit()
 
-    log.info(f"[SUPER ADMIN] API key regenerada para tenant {tenant.id}")
+    log.info(f"[SUPER ADMIN] Dashboard key regenerada para tenant {tenant.id}")
 
-    return {"success": True, "tenant_id": tenant.id, "new_api_key": new_key}
+    return {"success": True, "tenant_id": tenant.id, "new_dashboard_key": new_key}
+
+
+# =========================
+# REGENERAR WEBHOOK SECRET
+# =========================
+@router.post("/tenants/{tenant_id}/regenerate-webhook-secret")
+async def regenerate_webhook_secret(tenant_id: int, db: Session = Depends(get_db)):
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    new_secret = token_hex(32)
+    tenant.webhook_secret = new_secret
+    db.commit()
+
+    new_webhook_url = f"{settings.PUBLIC_API_URL}/webhook/evolution?token={new_secret}"
+
+    log.info(f"[SUPER ADMIN] Webhook secret regenerado para tenant {tenant.id}")
+
+    return {"success": True, "tenant_id": tenant.id, "new_webhook_url": new_webhook_url}

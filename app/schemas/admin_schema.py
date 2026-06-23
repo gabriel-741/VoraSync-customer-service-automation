@@ -26,7 +26,8 @@ class RegisterRequest(BaseModel):
     phone: Optional[str] = None
     whatsapp_instance: str
     whatsapp_number: Optional[str] = None
-    plan: Optional[str] = "basic"           # basic | pro | enterprise
+    api_key: str                       # ← chave REAL da Evolution API
+    plan: Optional[str] = "basic"
     bot_name: Optional[str] = "Assistente"
     system_prompt: Optional[str] = None
 
@@ -34,12 +35,13 @@ class RegisterRequest(BaseModel):
 class RegisterResponse(BaseModel):
     tenant_id: int
     name: str
-    api_key: str
+    dashboard_key: str
     whatsapp_instance: str
     webhook_url: str
     max_messages_month: int
     plan: str
     instructions: str
+
 
 class TenantUpdate(BaseModel):
     name: Optional[str] = None
@@ -48,3 +50,4 @@ class TenantUpdate(BaseModel):
     max_messages_month: Optional[int] = None
     bot_name: Optional[str] = None
     system_prompt: Optional[str] = None
+    api_key: Optional[str] = None      # permite rotacionar a chave da Evolution

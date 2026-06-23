@@ -2,6 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vorasync — Painel do Cliente</title>
 <style>
   * { box-sizing: border-box; font-family: system-ui, sans-serif; }
@@ -18,6 +19,7 @@
   button:disabled { opacity: 0.5; cursor: not-allowed; }
   button.danger { background: #c0392b; }
   button.ghost { background: transparent; border: 1px solid #4f7cff; color: #4f7cff; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 8px; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .stat-box { background: #1c2029; border-radius: 8px; padding: 16px; text-align: center; }
   .stat-box .num { font-size: 26px; font-weight: 700; }
@@ -27,7 +29,7 @@
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   th, td { padding: 8px; border-bottom: 1px solid #2a2e38; text-align: left; font-size: 13px; }
   tr.priority { background: #221a10; }
-  .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+  .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; white-space: nowrap; }
   .badge-human { background: #ff9800; color: #000; }
   .badge-ai { background: #4caf50; color: #000; }
   .badge-waiting { background: #2196f3; color: #000; }
@@ -35,14 +37,21 @@
   .summary-box { background: #1c2029; border-left: 3px solid #ff9800; padding: 12px; margin-top: 8px; font-size: 13px; }
   .hidden { display: none; }
   .actions button { width: auto; margin-right: 6px; padding: 4px 10px; font-size: 12px; }
-  .topbar { display:flex; justify-content:space-between; align-items:center; }
+
+  @media (max-width: 640px) {
+    body { padding: 12px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+    .topbar { flex-direction: column; align-items: stretch; }
+    .topbar button { width: 100%; }
+  }
 </style>
 </head>
 <body>
 
 <div id="login" class="card">
   <h1>🔐 Painel do Cliente</h1>
-  <input id="apiKey" type="password" placeholder="Sua API Key">
+  <input id="apiKey" type="password" placeholder="Sua API Key (Dashboard Key)">
   <button onclick="saveKey()">Entrar</button>
 </div>
 
@@ -105,15 +114,10 @@ function saveKey() {
 
 function getKey() { return localStorage.getItem('clientApiKey'); }
 
-// =========================
-// PARSER DE ERRO — entende erros 422 do FastAPI (lista de objetos)
-// =========================
 function parseApiError(err, fallback) {
   if (!err) return fallback;
   if (typeof err === 'string') return err;
-  if (Array.isArray(err)) {
-    return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
-  }
+  if (Array.isArray(err)) return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
   return fallback;
 }
 
@@ -139,7 +143,6 @@ async function startApp() {
     logout();
     return;
   }
-
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadStats();
@@ -151,20 +154,18 @@ async function startApp() {
 async function loadStats() {
   try {
     const s = await api('/admin/stats');
-
     let remainingClass = '';
     if (s.messages_remaining !== null) {
       const pct = s.messages_remaining / (s.max_messages_month || 1);
       if (pct <= 0.1) remainingClass = 'danger';
       else if (pct <= 0.3) remainingClass = 'warn';
     }
-
     document.getElementById('statsBox').innerHTML = `
       <div class="stat-box"><div class="num">${s.contacts}</div><div class="label">Contatos</div></div>
       <div class="stat-box"><div class="num">${s.conversations}</div><div class="label">Conversas</div></div>
       <div class="stat-box ${remainingClass}">
         <div class="num">${s.messages_remaining ?? '∞'}</div>
-        <div class="label">Mensagens restantes (${s.messages_month}/${s.max_messages_month})</div>
+        <div class="label">Restantes (${s.messages_month}/${s.max_messages_month})</div>
       </div>
       <div class="stat-box"><div class="num">${s.plan}</div><div class="label">Plano</div></div>
     `;
@@ -175,24 +176,21 @@ function stateBadge(state) {
   const map = {
     ai_active: '<span class="badge badge-ai">IA ativa</span>',
     human_active: '<span class="badge badge-human">Humano ativo</span>',
-    awaiting_handoff_confirmation: '<span class="badge badge-waiting">Aguardando confirmação</span>',
+    awaiting_handoff_confirmation: '<span class="badge badge-waiting">Aguardando</span>',
     cooldown: '<span class="badge badge-waiting">Cooldown</span>',
   };
   return map[state] || state;
 }
 
-// estados que merecem atenção sobem para o topo
 const PRIORITY_STATES = ['human_active', 'awaiting_handoff_confirmation'];
 
 async function loadConversations() {
   try {
     let list = await api('/admin/conversations');
-
-    // ordena: estados prioritários primeiro, depois por mais recente
     list = list.sort((a, b) => {
-      const aPriority = PRIORITY_STATES.includes(a.state) ? 0 : 1;
-      const bPriority = PRIORITY_STATES.includes(b.state) ? 0 : 1;
-      if (aPriority !== bPriority) return aPriority - bPriority;
+      const aP = PRIORITY_STATES.includes(a.state) ? 0 : 1;
+      const bP = PRIORITY_STATES.includes(b.state) ? 0 : 1;
+      if (aP !== bP) return aP - bP;
       return new Date(b.created_at) - new Date(a.created_at);
     });
 
@@ -252,7 +250,7 @@ async function loadContacts() {
 }
 
 async function blockContact(id) {
-  if (!confirm('Bloquear a IA para este número? Ele só será atendido manualmente.')) return;
+  if (!confirm('Bloquear a IA para este número?')) return;
   try { await api(`/admin/contacts/${id}/block`, 'POST'); loadContacts(); }
   catch (e) { alert('Erro: ' + e.message); }
 }

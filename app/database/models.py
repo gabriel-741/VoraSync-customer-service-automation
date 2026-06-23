@@ -57,14 +57,17 @@ class Tenant(Base):
     status              = Column(Enum(StatusTenantEnum), default=StatusTenantEnum.active)
     whatsapp_instance   = Column(String, unique=True, nullable=False)
     whatsapp_number     = Column(String)
-    api_key             = Column(String, nullable=False)
+
+    api_key             = Column(String, nullable=False)   # chave REAL da Evolution API
+    dashboard_key        = Column(String, unique=True, nullable=True)  # login do painel do cliente
+    webhook_secret       = Column(String, unique=True, nullable=True)  # identifica o tenant no webhook
+
     max_messages_month  = Column(Integer, default=1000)
     created_at          = Column(DateTime, server_default=func.now())
     updated_at          = Column(DateTime, server_default=func.now(), onupdate=func.now())
     bot_name            = Column(String, default="Assistente")
     system_prompt       = Column(String, nullable=True)
     ai_model            = Column(String, default="gpt-4o-mini")
-    webhook_secret      = Column(String, nullable=True)
 
     contacts      = relationship("Contact",      back_populates="tenant")
     conversations = relationship("Conversation", back_populates="tenant")
@@ -107,19 +110,15 @@ class Conversation(Base):
     state  = Column(Enum(ConversationStateEnum), default=ConversationStateEnum.ai_active, nullable=False)
     human_mode = Column(Boolean, default=False)
 
-    # =========================
-    # SCORING — explicit/soft separados
-    # =========================
-    explicit_score = Column(Integer, default=0)   # pedido direto — cap 100
-    soft_score     = Column(Integer, default=0)   # confusão/baixa confiança — cap 70
+    explicit_score = Column(Integer, default=0)
+    soft_score     = Column(Integer, default=0)
 
     handoff_offered      = Column(Boolean, default=False)
     handoff_offer_count   = Column(Integer, default=0)
     handoff_reason        = Column(String, nullable=True)
     handoff_summary       = Column(String, nullable=True)
 
-    cooldown_until = Column(DateTime, nullable=True)   # bloqueia nova oferta após recusa
-
+    cooldown_until = Column(DateTime, nullable=True)
     last_activity_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     created_at = Column(DateTime, server_default=func.now())

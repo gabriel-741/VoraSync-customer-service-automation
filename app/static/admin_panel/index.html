@@ -4,101 +4,40 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vorasync — Admin</title>
-
 <style>
-*{
-  box-sizing:border-box;
-  font-family:system-ui,sans-serif;
+* { box-sizing: border-box; font-family: system-ui, sans-serif; }
+body { background:#0f1115; color:#e6e6e6; margin:0; padding:24px; }
+h1 { font-size:20px; }
+.card { background:#181b22; border-radius:10px; padding:20px; margin-bottom:20px; }
+input, select, button, textarea {
+  background:#0f1115; color:#fff; border:1px solid #2a2e38;
+  border-radius:6px; padding:8px 10px; margin:4px 0; width:100%;
 }
+button { background:#4f7cff; cursor:pointer; border:none; font-weight:600; }
+button:hover { background:#3f63d6; }
+button:disabled { opacity:0.5; cursor:not-allowed; }
+button.danger { background:#c0392b; }
+button.ghost { background:transparent; border:1px solid #444; }
+button.ghost:hover { background:#222; }
+table { width:100%; border-collapse:collapse; margin-top:12px; }
+th, td { padding:8px; border-bottom:1px solid #2a2e38; text-align:left; font-size:13px; }
+.status-active { color:#4caf50; }
+.status-suspended { color:#ff9800; }
+.status-cancelled { color:#f44336; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.hidden { display:none !important; }
+.actions { display:flex; gap:6px; }
+.actions button { width:auto; }
+.topbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
 
-body{
-  background:#0f1115;
-  color:#e6e6e6;
-  margin:0;
-  padding:24px;
-}
-
-h1{font-size:20px;}
-
-.card{
-  background:#181b22;
-  border-radius:10px;
-  padding:20px;
-  margin-bottom:20px;
-}
-
-input,select,button,textarea{
-  background:#0f1115;
-  color:#fff;
-  border:1px solid #2a2e38;
-  border-radius:6px;
-  padding:8px 10px;
-  margin:4px 0;
-  width:100%;
-}
-
-button{
-  background:#4f7cff;
-  cursor:pointer;
-  border:none;
-  font-weight:600;
-}
-
-button:hover{
-  background:#3f63d6;
-}
-
-button.danger{
-  background:#c0392b;
-}
-
-button.ghost{
-  background:transparent;
-  border:1px solid #444;
-}
-
-button.ghost:hover{
-  background:#222;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:12px;
-}
-
-th,td{
-  padding:8px;
-  border-bottom:1px solid #2a2e38;
-  text-align:left;
-  font-size:13px;
-}
-
-.status-active{color:#4caf50;}
-.status-suspended{color:#ff9800;}
-.status-cancelled{color:#f44336;}
-
-.grid2{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-
-.hidden{
-  display:none !important;
-}
-
-.actions{
-  display:flex;
-  gap:6px;
-}
-
-.actions button{
-  width:auto;
+@media (max-width: 640px) {
+  body { padding: 12px; }
+  .grid2 { grid-template-columns: 1fr; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
+  #editModal .card { width: 92vw !important; max-width: 420px; max-height: 88vh; overflow-y: auto; }
 }
 </style>
 </head>
-
 <body>
 
 <div id="login" class="card">
@@ -109,309 +48,146 @@ th,td{
 
 <div id="app" class="hidden">
 
-  <h1>📋 Tenants</h1>
+  <div class="topbar">
+    <h1>📋 Tenants</h1>
+    <button class="ghost" onclick="logout()" style="width:auto;">🚪 Sair</button>
+  </div>
 
   <div class="card">
     <button onclick="loadTenants()">🔄 Atualizar lista</button>
-
     <table id="tenantsTable">
       <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nome</th>
-          <th>Plano</th>
-          <th>Status</th>
-          <th>Msgs/mês</th>
-          <th>Contatos</th>
-          <th>Ações</th>
-        </tr>
+        <tr><th>ID</th><th>Nome</th><th>Plano</th><th>Status</th><th>Msgs/mês</th><th>Contatos</th><th>Ações</th></tr>
       </thead>
       <tbody></tbody>
     </table>
   </div>
 
   <h1>➕ Novo Cliente</h1>
-
   <div class="card">
-
     <div class="grid2">
       <input id="r_name" placeholder="Nome da empresa">
       <input id="r_email" placeholder="Email">
-
       <input id="r_instance" placeholder="whatsapp_instance (Evolution)">
       <input id="r_number" placeholder="Número WhatsApp (opcional)">
-
+      <input id="r_apikey" placeholder="API Key da Evolution (do cliente)">
       <select id="r_plan">
         <option value="basic">Basic — 3.000 msgs/mês</option>
         <option value="pro">Pro — 6.000 msgs/mês</option>
         <option value="enterprise">Enterprise — ilimitado</option>
       </select>
-
       <input id="r_botname" value="Assistente" placeholder="Nome do bot">
     </div>
-
     <textarea id="r_prompt" rows="4" placeholder="System prompt"></textarea>
-
     <button onclick="registerTenant()">Cadastrar Cliente</button>
-
     <div id="registerResult"></div>
   </div>
 
 </div>
 
-<div id="editModal" class="hidden"
-style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;">
-
+<div id="editModal" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;">
   <div class="card" style="width:420px;">
-
     <h2>✏️ Editar Cliente #<span id="edit_id"></span></h2>
-
     <input id="edit_name" placeholder="Nome">
     <input id="edit_phone" placeholder="Telefone">
-
+    <input id="edit_apikey" placeholder="API Key da Evolution (deixe vazio para não alterar)">
     <select id="edit_plan" onchange="applyPlanDefault()">
       <option value="basic">Basic</option>
       <option value="pro">Pro</option>
       <option value="enterprise">Enterprise</option>
     </select>
-
-    <label style="font-size:12px;color:#9aa3b2;">
-      Limite de mensagens/mês
-    </label>
-
+    <label style="font-size:12px;color:#9aa3b2;">Limite de mensagens/mês</label>
     <input id="edit_limit" type="number">
-
     <input id="edit_botname" placeholder="Nome do bot">
-
     <textarea id="edit_prompt" rows="4"></textarea>
-
-    <div style="display:flex;gap:8px;margin-top:8px;">
+    <div style="display:flex;gap:8px;margin-top:8px; flex-wrap:wrap;">
       <button onclick="saveTenantEdit()">Salvar</button>
       <button class="ghost" onclick="closeEditModal()">Cancelar</button>
-      <button class="danger" onclick="regenerateKey()">Regenerar API Key</button>
+      <button class="danger" onclick="regenerateDashboardKey()">Nova Dashboard Key</button>
+      <button class="danger" onclick="regenerateWebhookSecret()">Novo Webhook</button>
     </div>
-
   </div>
 </div>
 
 <script>
 const API = window.location.origin;
-const PLAN_DEFAULTS = { basic: 3000, pro: 6000, enterprise: 999999 };
-
+const PLAN_LIMITS = { basic: 3000, pro: 6000, enterprise: 999999 };
 let editingTenantId = null;
 
-function applyPlanDefault() {
-  const plan = document.getElementById('edit_plan').value;
-  document.getElementById('edit_limit').value = PLAN_DEFAULTS[plan];
+function getKey() { return localStorage.getItem('adminKey'); }
+
+function logout() {
+  localStorage.removeItem('adminKey');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
 }
 
-function parseApiError(err, fallback) {
-  if (!err) return fallback;
-  if (typeof err === 'string') return err;
-  if (Array.isArray(err)) {
-    return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
-  }
-  return fallback;
-}
-
-
-function getKey() {
-  return sessionStorage.getItem('adminKey');
-}
-
-function escapeHtml(value='') {
+function escapeHtml(value = '') {
   const div = document.createElement('div');
   div.textContent = value;
   return div.innerHTML;
 }
 
-async function api(path, method='GET', body=null) {
+function parseApiError(err, fallback) {
+  if (!err) return fallback;
+  if (typeof err === 'string') return err;
+  if (Array.isArray(err)) return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
+  return fallback;
+}
 
+async function api(path, method = 'GET', body = null) {
   const res = await fetch(API + path, {
     method,
-    headers:{
-      'Content-Type':'application/json',
-      'X-Admin-Key': getKey()
-    },
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': getKey() },
     body: body ? JSON.stringify(body) : null
   });
-
-  if(!res.ok){
+  if (!res.ok) {
     let err = {};
-    try{
-      err = await res.json();
-    }catch(e){}
+    try { err = await res.json(); } catch (e) {}
     throw new Error(parseApiError(err.detail, res.statusText));
   }
-
   return res.json();
 }
 
-async function saveKey(){
-
+async function saveKey() {
   const key = document.getElementById('adminKey').value.trim();
-
-  if(!key){
-    alert('Informe a chave');
-    return;
-  }
-
-  sessionStorage.setItem('adminKey', key);
-
-  try{
-
+  if (!key) return alert('Informe a chave');
+  localStorage.setItem('adminKey', key);
+  try {
     await api('/super-admin/tenants');
-
     document.getElementById('login').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
-
     loadTenants();
-
-  }catch(e){
-
-    sessionStorage.removeItem('adminKey');
-
+  } catch (e) {
+    localStorage.removeItem('adminKey');
     alert('Chave inválida: ' + e.message);
   }
 }
 
-async function loadTenants(){
-
-  try{
-
+async function loadTenants() {
+  try {
     const tenants = await api('/super-admin/tenants');
-
     const tbody = document.querySelector('#tenantsTable tbody');
-
     tbody.innerHTML = '';
-
-    tenants.forEach(t=>{
-
+    tenants.forEach(t => {
       const tr = document.createElement('tr');
-
       tr.innerHTML = `
         <td>${t.id}</td>
-        <td>
-          ${escapeHtml(t.name || '')}
-          <br>
-          <small>${escapeHtml(t.email || '-')}</small>
-        </td>
+        <td>${escapeHtml(t.name || '')}<br><small>${escapeHtml(t.email || '-')}</small></td>
         <td>${escapeHtml(t.plan || '')}</td>
         <td class="status-${t.status}">${escapeHtml(t.status || '')}</td>
         <td>${t.messages_month || 0}/${t.max_messages_month || '∞'}</td>
         <td>${t.contacts || 0}</td>
         <td class="actions">
-          <button onclick="openEditModal(${t.id})">
-            Editar
-          </button>
-
-          ${
-            t.status === 'active'
-            ? `<button class="danger"
-                 onclick="changeStatus(${t.id}, 'suspended')">
-                 Suspender
-               </button>`
-            : `<button
-                 onclick="changeStatus(${t.id}, 'active')">
-                 Ativar
-               </button>`
-          }
+          <button onclick="openEditModal(${t.id})">Editar</button>
+          ${t.status === 'active'
+            ? `<button class="danger" onclick="changeStatus(${t.id}, 'suspended', this)">Suspender</button>`
+            : `<button onclick="changeStatus(${t.id}, 'active', this)">Ativar</button>`}
         </td>
       `;
-
       tbody.appendChild(tr);
     });
-
-  }catch(e){
-    alert('Erro ao carregar tenants: ' + e.message);
-  }
-}
-
-async function openEditModal(id){
-
-  try{
-
-    const t = await api(`/super-admin/tenants/${id}`);
-
-    editingTenantId = id;
-
-    edit_id.textContent = id;
-    edit_name.value = t.name || '';
-    edit_phone.value = t.phone || '';
-    edit_plan.value = t.plan || 'basic';
-    edit_limit.value = t.max_messages_month || '';
-    edit_botname.value = t.bot_name || '';
-    edit_prompt.value = t.system_prompt || '';
-
-    const modal = document.getElementById('editModal');
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-
-  }catch(e){
-    alert(e.message);
-  }
-}
-
-function closeEditModal(){
-
-  editingTenantId = null;
-
-  const modal = document.getElementById('editModal');
-
-  modal.classList.add('hidden');
-  modal.style.display = 'none';
-}
-
-async function saveTenantEdit(){
-
-  if(!editingTenantId) return;
-
-  const payload = {
-    name: edit_name.value,
-    phone: edit_phone.value,
-    plan: edit_plan.value,
-    max_messages_month: parseInt(edit_limit.value) || null,
-    bot_name: edit_botname.value,
-    system_prompt: edit_prompt.value
-  };
-
-  try{
-
-    await api(
-      `/super-admin/tenants/${editingTenantId}`,
-      'PATCH',
-      payload
-    );
-
-    closeEditModal();
-    loadTenants();
-
-  }catch(e){
-    alert(e.message);
-  }
-}
-
-async function regenerateKey(){
-
-  if(!editingTenantId) return;
-
-  if(!confirm('Regenerar API key?')) return;
-
-  try{
-
-    const result = await api(
-      `/super-admin/tenants/${editingTenantId}/regenerate-key`,
-      'POST'
-    );
-
-    prompt(
-      'Copie a nova API Key:',
-      result.new_api_key
-    );
-
-  }catch(e){
-    alert(e.message);
-  }
+  } catch (e) { alert('Erro ao carregar tenants: ' + e.message); }
 }
 
 async function changeStatus(id, status, btn) {
@@ -420,7 +196,6 @@ async function changeStatus(id, status, btn) {
   try {
     await api(`/super-admin/tenants/${id}/status?status=${status}`, 'PATCH');
     await loadTenants();
-    console.log(`Status alterado com sucesso às ${new Date().toLocaleTimeString('pt-BR')}`);
   } catch (e) {
     alert('Erro ao alterar status: ' + e.message);
   } finally {
@@ -428,62 +203,115 @@ async function changeStatus(id, status, btn) {
   }
 }
 
-async function registerTenant(){
-
-  const payload = {
-    name:r_name.value,
-    email:r_email.value,
-    whatsapp_instance:r_instance.value,
-    whatsapp_number:r_number.value || null,
-    plan:r_plan.value,
-    bot_name:r_botname.value,
-    system_prompt:r_prompt.value || null
-  };
-
-  try{
-
-    const result = await api(
-      '/super-admin/tenants/register',
-      'POST',
-      payload
-    );
-
-    registerResult.innerHTML = `
-      <div class="card" style="margin-top:12px;background:#1d2b1d;">
-        <strong>✅ Cliente criado!</strong><br><br>
-
-        <strong>API Key:</strong><br>
-        <code>${escapeHtml(result.api_key)}</code>
-        <br><br>
-
-        <strong>Webhook:</strong><br>
-        <code>${escapeHtml(result.webhook_url)}</code>
-      </div>
-    `;
-
-    r_name.value='';
-    r_email.value='';
-    r_instance.value='';
-    r_number.value='';
-    r_prompt.value='';
-    r_plan.value='basic';
-    r_botname.value='Assistente';
-
-    loadTenants();
-
-  }catch(e){
-    alert(e.message);
-  }
+function applyPlanDefault() {
+  const plan = document.getElementById('edit_plan').value;
+  document.getElementById('edit_limit').value = PLAN_LIMITS[plan];
 }
 
-if(getKey()){
+async function openEditModal(id) {
+  try {
+    const t = await api(`/super-admin/tenants/${id}`);
+    editingTenantId = id;
+    document.getElementById('edit_id').textContent = id;
+    document.getElementById('edit_name').value = t.name || '';
+    document.getElementById('edit_phone').value = t.phone || '';
+    document.getElementById('edit_apikey').value = '';
+    document.getElementById('edit_plan').value = t.plan || 'basic';
+    document.getElementById('edit_limit').value = t.max_messages_month || '';
+    document.getElementById('edit_botname').value = t.bot_name || '';
+    document.getElementById('edit_prompt').value = t.system_prompt || '';
+    const modal = document.getElementById('editModal');
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  } catch (e) { alert(e.message); }
+}
 
+function closeEditModal() {
+  editingTenantId = null;
+  const modal = document.getElementById('editModal');
+  modal.classList.add('hidden');
+  modal.style.display = 'none';
+}
+
+async function saveTenantEdit() {
+  if (!editingTenantId) return;
+  const apiKeyValue = document.getElementById('edit_apikey').value.trim();
+
+  const payload = {
+    name: document.getElementById('edit_name').value,
+    phone: document.getElementById('edit_phone').value,
+    plan: document.getElementById('edit_plan').value,
+    max_messages_month: parseInt(document.getElementById('edit_limit').value) || null,
+    bot_name: document.getElementById('edit_botname').value,
+    system_prompt: document.getElementById('edit_prompt').value,
+  };
+  if (apiKeyValue) payload.api_key = apiKeyValue;
+
+  try {
+    await api(`/super-admin/tenants/${editingTenantId}`, 'PATCH', payload);
+    closeEditModal();
+    loadTenants();
+  } catch (e) { alert(e.message); }
+}
+
+async function regenerateDashboardKey() {
+  if (!editingTenantId) return;
+  if (!confirm('Gerar nova Dashboard Key? A antiga deixará de funcionar.')) return;
+  try {
+    const result = await api(`/super-admin/tenants/${editingTenantId}/regenerate-dashboard-key`, 'POST');
+    prompt('Nova Dashboard Key (copie e envie ao cliente):', result.new_dashboard_key);
+  } catch (e) { alert(e.message); }
+}
+
+async function regenerateWebhookSecret() {
+  if (!editingTenantId) return;
+  if (!confirm('Gerar novo Webhook? Será necessário reconfigurar na Evolution API.')) return;
+  try {
+    const result = await api(`/super-admin/tenants/${editingTenantId}/regenerate-webhook-secret`, 'POST');
+    prompt('Nova Webhook URL (configure na Evolution API):', result.new_webhook_url);
+  } catch (e) { alert(e.message); }
+}
+
+async function registerTenant() {
+  const payload = {
+    name: document.getElementById('r_name').value,
+    email: document.getElementById('r_email').value,
+    whatsapp_instance: document.getElementById('r_instance').value,
+    whatsapp_number: document.getElementById('r_number').value || null,
+    api_key: document.getElementById('r_apikey').value,
+    plan: document.getElementById('r_plan').value,
+    bot_name: document.getElementById('r_botname').value,
+    system_prompt: document.getElementById('r_prompt').value || null
+  };
+
+  try {
+    const result = await api('/super-admin/tenants/register', 'POST', payload);
+    document.getElementById('registerResult').innerHTML = `
+      <div class="card" style="margin-top:12px;background:#1d2b1d;">
+        <strong>✅ Cliente criado!</strong><br><br>
+        <strong>Dashboard Key (login do painel cliente):</strong><br>
+        <code style="word-break:break-all;">${escapeHtml(result.dashboard_key)}</code><br><br>
+        <strong>Webhook URL (configurar na Evolution API):</strong><br>
+        <code style="word-break:break-all;">${escapeHtml(result.webhook_url)}</code>
+      </div>
+    `;
+    document.getElementById('r_name').value = '';
+    document.getElementById('r_email').value = '';
+    document.getElementById('r_instance').value = '';
+    document.getElementById('r_number').value = '';
+    document.getElementById('r_apikey').value = '';
+    document.getElementById('r_prompt').value = '';
+    document.getElementById('r_plan').value = 'basic';
+    document.getElementById('r_botname').value = 'Assistente';
+    loadTenants();
+  } catch (e) { alert(e.message); }
+}
+
+if (getKey()) {
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-
   loadTenants();
 }
 </script>
-
 </body>
 </html>

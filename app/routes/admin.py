@@ -1,140 +1,31 @@
 # app/routes/admin.py
 
-from fastapi import APIRouter, Depends, HTTPException, Header
-from secrets import token_hex
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone
 
 from app.core.admin_auth import get_current_tenant
 from app.database.connection import get_db
-from app.core.config import settings
 
 from app.database.models import (
-    Tenant, Contact, Conversation, Message,
-    DirectionEnum, ConversationStateEnum, 
-    PlanEnum, StatusTenantEnum
+    Tenant, Contact, Conversation, ConversationStateEnum
 )
 
-from app.schemas.admin_schema import (
-    SettingsUpdate, SettingsResponse,
-    RegisterRequest, RegisterResponse)
+from app.schemas.admin_schema import SettingsUpdate, SettingsResponse
+from app.services.message_service import get_monthly_message_count
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 # =========================
-# REGISTRO DE NOVO TENANT
-# =========================
-
-PLAN_LIMITS = {
-    "basic":      1000,
-    "pro":        5000,
-    "enterprise": 999999,
-}
-
-
-@router.post("/register", response_model=RegisterResponse)
-async def register_tenant(
-    payload: RegisterRequest,
-    db: Session = Depends(get_db),
-    x_admin_key: str = Header(..., alias="X-Admin-Key")
-):
-    # =========================
-    # PROTEÇÃO —
-    # =========================
-    if x_admin_key != settings.ADMIN_REGISTRATION_KEY:
-        raise HTTPException(status_code=403, detail="Invalid admin key")
-
-    # =========================
-    # VALIDAÇÃO DE DUPLICIDADE
-    # =========================
-    existing = (
-        db.query(Tenant)
-        .filter(
-            (Tenant.email == payload.email) |
-            (Tenant.whatsapp_instance == payload.whatsapp_instance)
-        )
-        .first()
-    )
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="Email ou whatsapp_instance já cadastrado"
-        )
-
-    # =========================
-    # VALIDAÇÃO DE PLANO
-    # =========================
-    plan_value = payload.plan if payload.plan in PLAN_LIMITS else "basic"
-    max_messages = PLAN_LIMITS[plan_value]
-
-    # =========================
-    # GERA CREDENCIAIS
-    # =========================
-    new_api_key = token_hex(32)
-
-    tenant = Tenant(
-        name=payload.name,
-        email=payload.email,
-        phone=payload.phone,
-        whatsapp_instance=payload.whatsapp_instance,
-        whatsapp_number=payload.whatsapp_number,
-        api_key=new_api_key,
-        plan=PlanEnum(plan_value),
-        status=StatusTenantEnum.active,
-        max_messages_month=max_messages,
-        bot_name=payload.bot_name or "Assistente",
-        system_prompt=payload.system_prompt,
-        ai_model="gpt-4o-mini",
-    )
-
-    db.add(tenant)
-    db.commit()
-    db.refresh(tenant)
-
-    webhook_url = f"{settings.PUBLIC_API_URL}/webhook/evolution?token={settings.WEBHOOK_TOKEN}"
-
-    instructions = (
-        f"1. Configure o webhook na Evolution API para a instância '{tenant.whatsapp_instance}' "
-        f"apontando para: {webhook_url}\n"
-        f"2. Use o api_key abaixo no header x-api-key para acessar os endpoints /admin/*\n"
-        f"3. Guarde o api_key com segurança — ele não será mostrado novamente."
-    )
-
-    log.info(f"✅ Novo tenant registrado: {tenant.id} | {tenant.name}")
-
-    return RegisterResponse(
-        tenant_id=tenant.id,
-        name=tenant.name,
-        api_key=new_api_key,
-        whatsapp_instance=tenant.whatsapp_instance,
-        webhook_url=webhook_url,
-        max_messages_month=tenant.max_messages_month,
-        plan=tenant.plan.value,
-        instructions=instructions
-    )
-
-
-# =========================
-# DASHBOARD STATS
+# DASHBOARD STATS — fonte única de verdade, mesma função que aplica o limite
 # =========================
 @router.get("/stats")
 async def stats(tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
     contacts = db.query(func.count(Contact.id)).filter(Contact.tenant_id == tenant.id).scalar()
     conversations = db.query(func.count(Conversation.id)).filter(Conversation.tenant_id == tenant.id).scalar()
 
-    start_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    messages = (
-        db.query(func.count(Message.id))
-        .filter(
-            Message.tenant_id == tenant.id,
-            Message.direction == DirectionEnum.outbound,
-            Message.created_at >= start_month
-        )
-        .scalar()
-    )
-
+    messages = get_monthly_message_count(tenant.id, db)   # ← mesma função usada no enforcement do limite
     max_messages = tenant.max_messages_month or 0
     remaining = max(max_messages - messages, 0) if max_messages else None
 
@@ -148,6 +39,7 @@ async def stats(tenant=Depends(get_current_tenant), db: Session = Depends(get_db
         "messages_remaining": remaining,
         "plan": tenant.plan.value
     }
+
 
 # =========================
 # CONTACTS
@@ -207,7 +99,7 @@ async def get_settings(tenant=Depends(get_current_tenant)):
 
 
 # =========================
-# HANDOFF — TAKEOVER (manual)
+# HANDOFF — TAKEOVER
 # =========================
 @router.post("/conversations/{conversation_id}/takeover")
 async def takeover_conversation(conversation_id: int, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
@@ -249,31 +141,6 @@ async def takeover_conversation(conversation_id: int, tenant=Depends(get_current
 
 
 # =========================
-# RELEASE — devolve para IA (limpa o resumo)
-# =========================
-@router.post("/conversations/{conversation_id}/release")
-async def release_conversation(conversation_id: int, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
-    conversation = (
-        db.query(Conversation)
-        .filter(Conversation.id == conversation_id, Conversation.tenant_id == tenant.id)
-        .first()
-    )
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    conversation.state = ConversationStateEnum.ai_active
-    conversation.human_mode = False
-    conversation.explicit_score = 0
-    conversation.soft_score = 0
-    conversation.handoff_offered = False
-    conversation.handoff_offer_count = 0
-    conversation.handoff_reason = None      # ← limpa
-    conversation.handoff_summary = None     # ← limpa
-    conversation.cooldown_until = None
-    db.commit()
-
-    return {"success": True, "conversation_id": conversation.id, "human_mode": conversation.human_mode}
-# =========================
 # CONVERSATIONS — LISTAGEM
 # =========================
 @router.get("/conversations")
@@ -304,14 +171,40 @@ async def get_conversations(tenant=Depends(get_current_tenant), db: Session = De
 
 
 # =========================
-# BLOQUEIO DE IA POR CONTATO
+# RELEASE
+# =========================
+@router.post("/conversations/{conversation_id}/release")
+async def release_conversation(conversation_id: int, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
+    conversation = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id, Conversation.tenant_id == tenant.id)
+        .first()
+    )
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    conversation.state = ConversationStateEnum.ai_active
+    conversation.human_mode = False
+    conversation.explicit_score = 0
+    conversation.soft_score = 0
+    conversation.handoff_offered = False
+    conversation.handoff_offer_count = 0
+    conversation.handoff_reason = None
+    conversation.handoff_summary = None
+    conversation.cooldown_until = None
+    db.commit()
+
+    return {"success": True, "conversation_id": conversation.id, "human_mode": conversation.human_mode}
+
+
+# =========================
+# BLOQUEIO DE IA
 # =========================
 @router.post("/contacts/{contact_id}/block")
 async def block_contact(contact_id: int, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
     contact = db.query(Contact).filter(Contact.id == contact_id, Contact.tenant_id == tenant.id).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
-
     contact.ai_blocked = True
     db.commit()
     return {"success": True, "contact_id": contact.id, "ai_blocked": contact.ai_blocked}
@@ -322,7 +215,6 @@ async def unblock_contact(contact_id: int, tenant=Depends(get_current_tenant), d
     contact = db.query(Contact).filter(Contact.id == contact_id, Contact.tenant_id == tenant.id).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
-
     contact.ai_blocked = False
     db.commit()
     return {"success": True, "contact_id": contact.id, "ai_blocked": contact.ai_blocked}
