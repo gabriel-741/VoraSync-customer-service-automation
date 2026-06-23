@@ -135,15 +135,19 @@ async def stats(tenant=Depends(get_current_tenant), db: Session = Depends(get_db
         .scalar()
     )
 
+    max_messages = tenant.max_messages_month or 0
+    remaining = max(max_messages - messages, 0) if max_messages else None
+
     return {
         "tenant_id": tenant.id,
         "tenant_name": tenant.name,
         "contacts": contacts,
         "conversations": conversations,
         "messages_month": messages,
+        "max_messages_month": max_messages,
+        "messages_remaining": remaining,
         "plan": tenant.plan.value
     }
-
 
 # =========================
 # CONTACTS

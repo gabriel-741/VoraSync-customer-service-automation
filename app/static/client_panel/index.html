@@ -15,14 +15,18 @@
   }
   button { background: #4f7cff; cursor: pointer; border: none; font-weight: 600; width: auto; padding: 8px 16px; }
   button:hover { background: #3f63d6; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   button.danger { background: #c0392b; }
   button.ghost { background: transparent; border: 1px solid #4f7cff; color: #4f7cff; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .stat-box { background: #1c2029; border-radius: 8px; padding: 16px; text-align: center; }
   .stat-box .num { font-size: 26px; font-weight: 700; }
   .stat-box .label { font-size: 12px; color: #9aa3b2; }
+  .stat-box.warn .num { color: #ff9800; }
+  .stat-box.danger .num { color: #f44336; }
   table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   th, td { padding: 8px; border-bottom: 1px solid #2a2e38; text-align: left; font-size: 13px; }
+  tr.priority { background: #221a10; }
   .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; }
   .badge-human { background: #ff9800; color: #000; }
   .badge-ai { background: #4caf50; color: #000; }
@@ -31,6 +35,7 @@
   .summary-box { background: #1c2029; border-left: 3px solid #ff9800; padding: 12px; margin-top: 8px; font-size: 13px; }
   .hidden { display: none; }
   .actions button { width: auto; margin-right: 6px; padding: 4px 10px; font-size: 12px; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; }
 </style>
 </head>
 <body>
@@ -42,12 +47,11 @@
 </div>
 
 <div id="app" class="hidden">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
+  <div class="topbar">
     <h1>📊 Dashboard</h1>
-    <button class="ghost" onclick="logout()" style="width:auto;">🚪 Trocar API Key</button>
+    <button class="ghost" onclick="logout()">🚪 Trocar API Key</button>
   </div>
-  ...
-  <h1>📊 Dashboard</h1>
+
   <div class="card stats" id="statsBox"></div>
 
   <h2>💬 Conversas</h2>
@@ -101,6 +105,18 @@ function saveKey() {
 
 function getKey() { return localStorage.getItem('clientApiKey'); }
 
+// =========================
+// PARSER DE ERRO — entende erros 422 do FastAPI (lista de objetos)
+// =========================
+function parseApiError(err, fallback) {
+  if (!err) return fallback;
+  if (typeof err === 'string') return err;
+  if (Array.isArray(err)) {
+    return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
+  }
+  return fallback;
+}
+
 async function api(path, method = 'GET', body = null) {
   const res = await fetch(API + path, {
     method,
@@ -108,15 +124,16 @@ async function api(path, method = 'GET', body = null) {
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || res.statusText);
+    let errJson = {};
+    try { errJson = await res.json(); } catch (e) {}
+    throw new Error(parseApiError(errJson.detail, res.statusText));
   }
   return res.json();
 }
 
 async function startApp() {
   try {
-    await api('/admin/stats');   // testa se a key é válida
+    await api('/admin/stats');
   } catch (e) {
     alert('API Key inválida. Faça login novamente.');
     logout();
@@ -129,16 +146,26 @@ async function startApp() {
   loadConversations();
   loadContacts();
   loadSettings();
-}dSettings();
-
+}
 
 async function loadStats() {
   try {
     const s = await api('/admin/stats');
+
+    let remainingClass = '';
+    if (s.messages_remaining !== null) {
+      const pct = s.messages_remaining / (s.max_messages_month || 1);
+      if (pct <= 0.1) remainingClass = 'danger';
+      else if (pct <= 0.3) remainingClass = 'warn';
+    }
+
     document.getElementById('statsBox').innerHTML = `
       <div class="stat-box"><div class="num">${s.contacts}</div><div class="label">Contatos</div></div>
       <div class="stat-box"><div class="num">${s.conversations}</div><div class="label">Conversas</div></div>
-      <div class="stat-box"><div class="num">${s.messages_month}</div><div class="label">Mensagens/mês</div></div>
+      <div class="stat-box ${remainingClass}">
+        <div class="num">${s.messages_remaining ?? '∞'}</div>
+        <div class="label">Mensagens restantes (${s.messages_month}/${s.max_messages_month})</div>
+      </div>
       <div class="stat-box"><div class="num">${s.plan}</div><div class="label">Plano</div></div>
     `;
   } catch (e) { alert('Erro ao carregar stats: ' + e.message); }
@@ -154,13 +181,26 @@ function stateBadge(state) {
   return map[state] || state;
 }
 
+// estados que merecem atenção sobem para o topo
+const PRIORITY_STATES = ['human_active', 'awaiting_handoff_confirmation'];
+
 async function loadConversations() {
   try {
-    const list = await api('/admin/conversations');
+    let list = await api('/admin/conversations');
+
+    // ordena: estados prioritários primeiro, depois por mais recente
+    list = list.sort((a, b) => {
+      const aPriority = PRIORITY_STATES.includes(a.state) ? 0 : 1;
+      const bPriority = PRIORITY_STATES.includes(b.state) ? 0 : 1;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
     const tbody = document.querySelector('#conversationsTable tbody');
     tbody.innerHTML = '';
     list.forEach(c => {
       const tr = document.createElement('tr');
+      if (PRIORITY_STATES.includes(c.state)) tr.classList.add('priority');
       tr.innerHTML = `
         <td>${c.contact_name || '(sem nome)'}<br><small>${c.phone}</small></td>
         <td>${stateBadge(c.state)}</td>
@@ -226,7 +266,6 @@ async function loadSettings() {
   try {
     const s = await api('/admin/settings');
     document.getElementById('s_botname').value = s.bot_name || '';
-    document.getElementById('s_model').value = s.ai_model || 'gpt-4o-mini';
     document.getElementById('s_prompt').value = s.system_prompt || '';
   } catch (e) { alert('Erro ao carregar configurações: ' + e.message); }
 }

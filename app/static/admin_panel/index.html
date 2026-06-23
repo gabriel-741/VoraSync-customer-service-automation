@@ -142,8 +142,8 @@ th,td{
       <input id="r_number" placeholder="Número WhatsApp (opcional)">
 
       <select id="r_plan">
-        <option value="basic">Basic — 1.000 msgs/mês</option>
-        <option value="pro">Pro — 5.000 msgs/mês</option>
+        <option value="basic">Basic — 3.000 msgs/mês</option>
+        <option value="pro">Pro — 6.000 msgs/mês</option>
         <option value="enterprise">Enterprise — ilimitado</option>
       </select>
 
@@ -169,7 +169,7 @@ style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);al
     <input id="edit_name" placeholder="Nome">
     <input id="edit_phone" placeholder="Telefone">
 
-    <select id="edit_plan">
+    <select id="edit_plan" onchange="applyPlanDefault()">
       <option value="basic">Basic</option>
       <option value="pro">Pro</option>
       <option value="enterprise">Enterprise</option>
@@ -196,8 +196,24 @@ style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);al
 
 <script>
 const API = window.location.origin;
+const PLAN_DEFAULTS = { basic: 3000, pro: 6000, enterprise: 999999 };
 
 let editingTenantId = null;
+
+function applyPlanDefault() {
+  const plan = document.getElementById('edit_plan').value;
+  document.getElementById('edit_limit').value = PLAN_DEFAULTS[plan];
+}
+
+function parseApiError(err, fallback) {
+  if (!err) return fallback;
+  if (typeof err === 'string') return err;
+  if (Array.isArray(err)) {
+    return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
+  }
+  return fallback;
+}
+
 
 function getKey() {
   return sessionStorage.getItem('adminKey');
@@ -225,7 +241,7 @@ async function api(path, method='GET', body=null) {
     try{
       err = await res.json();
     }catch(e){}
-    throw new Error(err.detail || res.statusText);
+    throw new Error(parseApiError(err.detail, res.statusText));
   }
 
   return res.json();
@@ -398,23 +414,17 @@ async function regenerateKey(){
   }
 }
 
-async function changeStatus(id,status){
-
-  if(!confirm(`Alterar status para "${status}"?`)){
-    return;
-  }
-
-  try{
-
-    await api(
-      `/super-admin/tenants/${id}/status?status=${status}`,
-      'PATCH'
-    );
-
-    loadTenants();
-
-  }catch(e){
-    alert(e.message);
+async function changeStatus(id, status, btn) {
+  if (!confirm(`Alterar status para "${status}"?`)) return;
+  if (btn) btn.disabled = true;
+  try {
+    await api(`/super-admin/tenants/${id}/status?status=${status}`, 'PATCH');
+    await loadTenants();
+    console.log(`Status alterado com sucesso às ${new Date().toLocaleTimeString('pt-BR')}`);
+  } catch (e) {
+    alert('Erro ao alterar status: ' + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
