@@ -42,6 +42,12 @@
 </div>
 
 <div id="app" class="hidden">
+  <div id="app" class="hidden">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h1>📊 Dashboard</h1>
+    <button class="ghost" onclick="logout()" style="width:auto;">🚪 Trocar API Key</button>
+  </div>
+  ...
   <h1>📊 Dashboard</h1>
   <div class="card stats" id="statsBox"></div>
 
@@ -80,6 +86,13 @@
 <script>
 const API = window.location.origin;
 
+function logout() {
+  localStorage.removeItem('clientApiKey');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('apiKey').value = '';
+}
+
 function saveKey() {
   const key = document.getElementById('apiKey').value.trim();
   if (!key) return alert('Informe sua API Key');
@@ -102,14 +115,23 @@ async function api(path, method = 'GET', body = null) {
   return res.json();
 }
 
-function startApp() {
+async function startApp() {
+  try {
+    await api('/admin/stats');   // testa se a key é válida
+  } catch (e) {
+    alert('API Key inválida. Faça login novamente.');
+    logout();
+    return;
+  }
+
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadStats();
   loadConversations();
   loadContacts();
   loadSettings();
-}
+}dSettings();
+
 
 async function loadStats() {
   try {
