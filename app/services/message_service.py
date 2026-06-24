@@ -80,7 +80,11 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
 
     sender   = data["sender"]
     text     = data["message"]
-    instance = data["instance"]
+    instance = (
+    data.get("instance")
+    or (data.get("data") or {}).get("instance")
+    or (data.get("key") or {}).get("instance")
+)
 
     # =========================
     # TENANT
