@@ -43,10 +43,6 @@ async def send_message(to: str, body: str, api_key: str, instance: str) -> bool:
         log.info(f"📡 STATUS: {response.status_code}")
         log.info(f"📡 RESPONSE: {response.text}")
 
-        from app.services.debug_state import DEBUG_STATE
-
-        DEBUG_STATE["last_whatsapp_status"] = response.status_code
-        DEBUG_STATE["last_whatsapp_response"] = response.text
 
         return response.status_code in [200, 201]
     

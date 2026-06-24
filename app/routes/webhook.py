@@ -109,6 +109,10 @@ async def webhook_evolution(
         sender = key.get("remoteJid")
         if not sender:
             return {"ignored": True, "reason": "missing sender"}
+        
+        if sender.endswith("@g.us"):
+            log.info(f"Mensagem de grupo ignorada: {sender}")
+            return {"ignored": True, "reason": "group message"}
 
         # camada 3 — por contato
         allowed, info = await check_rate_limit(redis, "contact", f"{tenant.id}:{sender}")
