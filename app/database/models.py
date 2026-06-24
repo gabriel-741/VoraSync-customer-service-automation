@@ -112,6 +112,7 @@ class Conversation(Base):
 
     explicit_score = Column(Integer, default=0)
     soft_score     = Column(Integer, default=0)
+    consecutive_friction = Column(Integer, default=0)   # ← NOVO
 
     handoff_offered      = Column(Boolean, default=False)
     handoff_offer_count   = Column(Integer, default=0)

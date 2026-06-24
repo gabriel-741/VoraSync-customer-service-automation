@@ -23,13 +23,8 @@ async def webhook_evolution(
     db: Session = Depends(get_db)
 ):
     try:
-        # =========================
-        # 1. TOKEN → IDENTIFICA O TENANT DIRETAMENTE (não confia no body)
-        # =========================
         token = request.query_params.get("token")
-
-        if not token:
-            return {"ignored": True, "reason": "missing token"}
+        log.info(f"📥 Webhook recebido | token={token[:8] if token else 'NENHUM'}...")  # ← adiciona
 
         tenant = (
             db.query(Tenant)
@@ -38,8 +33,15 @@ async def webhook_evolution(
         )
 
         if not tenant:
-            log.warning("Webhook token não corresponde a nenhum tenant")
+            log.warning(f"❌ Token não corresponde a nenhum tenant: {token[:8] if token else 'NENHUM'}...")  # ← adiciona
             return {"ignored": True, "reason": "invalid token"}
+
+
+        tenant = (
+            db.query(Tenant)
+            .filter(Tenant.webhook_secret == token)
+            .first()
+        )
 
         if tenant.status != StatusTenantEnum.active:
             log.warning(f"Tenant {tenant.id} inativo: {tenant.status}")
@@ -58,11 +60,6 @@ async def webhook_evolution(
         except Exception:
             return {"ignored": True, "reason": "invalid json"}
         
-        log.warning("===== WEBHOOK RECEBIDO =====")
-        log.warning(f"EVENT: {data.get('event')}")
-        log.warning(f"FULL PAYLOAD: {data}")
-        log.warning("================================")
-            
 
         # =========================
         # 3. SANIDADE — instance do body precisa bater com o tenant do TOKEN

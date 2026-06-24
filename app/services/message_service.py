@@ -20,8 +20,10 @@ log = get_logger(__name__)
 
 INACTIVITY_RESET_HOURS = 12
 COOLDOWN_MINUTES_AFTER_DECLINE = 30
+
 EXPLICIT_CAP = 100
-SOFT_CAP = 70
+SOFT_CAP = 90                      # ← subiu de 70 para 90
+FRICTION_STREAK_THRESHOLD = 3      # ← NOVO: 3 falhas seguidas força a oferta
 HANDOFF_THRESHOLD = 100
 
 
@@ -80,11 +82,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
 
     sender   = data["sender"]
     text     = data["message"]
-    instance = (
-    data.get("instance")
-    or (data.get("data") or {}).get("instance")
-    or (data.get("key") or {}).get("instance")
-)
+    instance = data["instance"]
 
     # =========================
     # TENANT
@@ -142,6 +140,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             state=ConversationStateEnum.ai_active,
             explicit_score=0,
             soft_score=0,
+            consecutive_friction=0,
             handoff_offer_count=0,
             handoff_offered=False,
         )
@@ -157,6 +156,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         log.info(f"⏰ Reset por inatividade (conversation {conversation.id})")
         conversation.explicit_score = 0
         conversation.soft_score = 0
+        conversation.consecutive_friction = 0
         conversation.handoff_offer_count = 0
         conversation.handoff_offered = False
         conversation.cooldown_until = None
@@ -225,6 +225,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             conversation.cooldown_until = datetime.now(timezone.utc) + timedelta(minutes=COOLDOWN_MINUTES_AFTER_DECLINE)
             conversation.explicit_score = 0
             conversation.soft_score = max(conversation.soft_score - 20, 0)
+            conversation.consecutive_friction = 0   # ← reseta o streak também
             db.commit()
             return None
 
@@ -235,22 +236,43 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     # =========================
     intent = await analyze_intent(text, recent_messages=recent_messages)
 
+    friction_this_turn = False   # ← rastreia se ESTE turno teve sinal de atrito
+
     if intent.get("wants_human"):
         conversation.explicit_score = min((conversation.explicit_score or 0) + 100, EXPLICIT_CAP)
 
     if intent.get("confusion") and intent.get("confidence", 1.0) > 0.75:
         conversation.soft_score = min((conversation.soft_score or 0) + 25, SOFT_CAP)
+        friction_this_turn = True
 
     db.commit()
 
     # =========================
-    # OFERECE HANDOFF (soft_score nunca dispara sozinho — cap 70 < 100)
+    # ATUALIZA STREAK DE ATRITO (intent)
     # =========================
+    if friction_this_turn:
+        conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
+    db.commit()
+
+    # =========================
+    # OFERECE HANDOFF — 3 caminhos de disparo
+    # =========================
+    should_offer = (
+        conversation.explicit_score >= EXPLICIT_CAP
+        or conversation.soft_score >= SOFT_CAP
+        or (conversation.consecutive_friction or 0) >= FRICTION_STREAK_THRESHOLD
+    )
+
     if (
         conversation.state == ConversationStateEnum.ai_active
-        and conversation.handoff_score >= HANDOFF_THRESHOLD
+        and should_offer
         and conversation.handoff_offer_count < 1
     ):
+        log.info(
+            f"[HANDOFF] Disparado | explicit={conversation.explicit_score} "
+            f"soft={conversation.soft_score} streak={conversation.consecutive_friction}"
+        )
+
         conversation.state = ConversationStateEnum.awaiting_handoff_confirmation
         conversation.handoff_offered = True
         conversation.handoff_offer_count += 1
@@ -281,12 +303,26 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     if not response:
         return None
 
-    # ajusta soft_score com base na confiança — vale para a PRÓXIMA mensagem
+    # =========================
+    # AJUSTA SOFT SCORE E STREAK COM BASE NA CONFIANÇA
+    # =========================
     if response_data["confidence"] < 0.7:
         conversation.soft_score = min((conversation.soft_score or 0) + 20, SOFT_CAP)
+        conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
     else:
         conversation.soft_score = max((conversation.soft_score or 0) - 10, 0)
+        conversation.consecutive_friction = 0   # ← resposta boa de verdade quebra o streak
+
     db.commit()
+
+    # =========================
+    # RE-CHECA HANDOFF APÓS A RESPOSTA (caso o streak tenha batido agora)
+    # =========================
+    should_offer_after = (
+        conversation.explicit_score >= EXPLICIT_CAP
+        or conversation.soft_score >= SOFT_CAP
+        or (conversation.consecutive_friction or 0) >= FRICTION_STREAK_THRESHOLD
+    )
 
     await send_message(sender, response, api_key=tenant.api_key, instance=tenant.whatsapp_instance)
 
@@ -296,6 +332,26 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     )
     db.add(outbound)
     db.commit()
+
+    if (
+        conversation.state == ConversationStateEnum.ai_active
+        and should_offer_after
+        and conversation.handoff_offer_count < 1
+    ):
+        log.info(
+            f"[HANDOFF] Disparado pós-resposta | soft={conversation.soft_score} "
+            f"streak={conversation.consecutive_friction}"
+        )
+        conversation.state = ConversationStateEnum.awaiting_handoff_confirmation
+        conversation.handoff_offered = True
+        conversation.handoff_offer_count += 1
+        db.commit()
+
+        await send_message(
+            sender,
+            "Notei que tem sido difícil resolver sua questão. Posso te encaminhar para um especialista humano?",
+            api_key=tenant.api_key, instance=tenant.whatsapp_instance
+        )
 
     background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
 
