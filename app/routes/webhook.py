@@ -54,8 +54,15 @@ async def webhook_evolution(
 
         try:
             data = json.loads(body.decode("utf-8"))
+
         except Exception:
             return {"ignored": True, "reason": "invalid json"}
+        
+        log.warning("===== WEBHOOK RECEBIDO =====")
+        log.warning(f"EVENT: {data.get('event')}")
+        log.warning(f"FULL PAYLOAD: {data}")
+        log.warning("================================")
+            
 
         # =========================
         # 3. SANIDADE — instance do body precisa bater com o tenant do TOKEN
