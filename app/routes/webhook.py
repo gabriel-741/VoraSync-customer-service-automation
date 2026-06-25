@@ -10,6 +10,7 @@ from app.database.models import Tenant, StatusTenantEnum
 from app.database.redis import get_redis
 from app.utils.rate_limiter import check_rate_limit
 from app.services.message_service import process_message
+from app.services.whatsapp_service import send_message
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
@@ -124,18 +125,46 @@ async def webhook_evolution(
             )
 
         message_obj = inner.get("message") or {}
+
         message = (
             message_obj.get("conversation")
             or message_obj.get("extendedTextMessage", {}).get("text")
-        )
+                )
 
+        # =========================
+        # DETECTA TIPO DE MÍDIA NÃO SUPORTADO AINDA
+        # =========================
         if not message:
+            unsupported_type = None
+
+            if "audioMessage" in message_obj:
+                unsupported_type = "áudio"
+            elif "imageMessage" in message_obj:
+                unsupported_type = "imagem"
+            elif "videoMessage" in message_obj:
+                unsupported_type = "vídeo"
+            elif "documentMessage" in message_obj:
+                unsupported_type = "documento"
+
+            if unsupported_type:
+                log.info(f"Mídia não suportada recebida: {unsupported_type} | sender={sender}")
+
+                tenant_for_reply = tenant  # já temos o tenant nesse ponto do código
+                await send_message(
+                    sender,
+                    f"Por enquanto eu ainda não consigo processar {unsupported_type}s. "
+                    f"Pode me mandar sua mensagem em texto, por favor? ",
+                    api_key=tenant_for_reply.api_key,
+                    instance=tenant_for_reply.whatsapp_instance
+                )
+                return {"ignored": True, "reason": f"unsupported media: {unsupported_type}"}
+
             return {"ignored": True, "reason": "empty message"}
 
         payload = {
             "sender": sender,
             "message": message,
-            "instance": tenant.whatsapp_instance,   # ← vem do TENANT, nunca do body
+            "instance": tenant.whatsapp_instance, 
             "message_id": key.get("id"),
             "push_name": inner.get("pushName", "")
         }
