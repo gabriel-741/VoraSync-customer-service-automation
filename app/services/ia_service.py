@@ -26,34 +26,22 @@ async def handle_message(
     model: str | None = None,
     recent_messages: list | None = None,
     contact_profile: dict | None = None
-) -> tuple[str | None, dict]:
+) -> tuple[dict | None, dict]:
 
     if not message.strip():
-        return None, {
-            "should_update_profile": False,
-            "model_tier": "simple"
-        }
+        return None, {"model_tier": "simple"}
 
     recent_messages = recent_messages or []
     contact_profile = contact_profile or {}
 
     classification = classify_message(message)
-
-    log.info(
-        f"[IA] classificação: {classification}"
-    )
+    log.info(f"[IA] classificação: {classification}")
 
     prompt = system_prompt if system_prompt else DEFAULT_PROMPT
 
-    selected_model = (
-        model
-        or MODELS.get(
-            classification["model_tier"],
-            MODELS["simple"]
-        )
-    )
+    selected_model = model or MODELS.get(classification["model_tier"], MODELS["simple"])
 
-    response = await call_openai(
+    response_data = await call_openai(
         message=message,
         model=selected_model,
         system_prompt=prompt,
@@ -61,4 +49,4 @@ async def handle_message(
         contact_profile=contact_profile
     )
 
-    return response, classification
+    return response_data, classification

@@ -27,9 +27,6 @@ async def call_openai(
     recent_messages = recent_messages or []
     contact_profile = normalize_profile(contact_profile or {})
 
-    # =========================
-    # PROFILE LEVE
-    # =========================
     profile_text = ""
     if contact_profile:
         profile_text = (
@@ -43,18 +40,23 @@ async def call_openai(
     memory_text = f"\n\n[RESUMO DA CONVERSA]\n{memory_summary}" if memory_summary else ""
 
     # =========================
-    # INSTRUÇÃO DE FORMATO — OBRIGATÓRIA
+    # FORMATO + REGRA DE HANDOFF DIRETO
     # =========================
     format_instruction = """
 
 [FORMATO DE RESPOSTA OBRIGATÓRIO]
 Você DEVE responder em JSON válido com exatamente este formato:
-{"response": "sua resposta normal aqui em texto", "confidence": 0.0 a 1.0}
+{"response": "sua resposta normal em texto", "confidence": 0.0 a 1.0, "needs_human": false, "handoff_reason": ""}
 
 confidence representa o quão segura você está de que sua resposta resolve a necessidade do cliente.
-Use confidence baixa (< 0.7) quando: não tiver certeza da informação, a pergunta for ambígua, 
-ou o assunto estiver fora do que você sabe responder.
-Use confidence alta (>= 0.7) quando: a resposta for direta e você tiver certeza.
+
+needs_human deve ser true SOMENTE quando o pedido do cliente exigir uma capacidade que está
+explicitamente listada como NÃO DISPONÍVEL nas instruções acima (ex: agendamento, consulta de estoque,
+ou qualquer outra limitação descrita no system prompt). Quando isso ocorrer:
+- sua "response" deve avisar educadamente o cliente que você vai encaminhá-lo para um atendente
+- "handoff_reason" deve descrever em poucas palavras o que o cliente precisa (ex: "cliente quer agendar horário")
+
+Não marque needs_human=true por dúvidas genéricas, apenas por limitações explícitas de capacidade.
 """
 
     messages = [
@@ -64,9 +66,6 @@ Use confidence alta (>= 0.7) quando: a resposta for direta e você tiver certeza
         }
     ]
 
-    # =========================
-    # HISTÓRICO LIMITADO
-    # =========================
     MAX_HISTORY = 8
     for msg in recent_messages[-MAX_HISTORY:]:
         role = "user" if msg.get("direction") == "inbound" else "assistant"
@@ -77,9 +76,6 @@ Use confidence alta (>= 0.7) quando: a resposta for direta e você tiver certeza
 
     messages.append({"role": "user", "content": message[:1500]})
 
-    # =========================
-    # OPENAI CALL
-    # =========================
     try:
         response = await client.chat.completions.create(
             model=model,
@@ -93,19 +89,23 @@ Use confidence alta (>= 0.7) quando: a resposta for direta e você tiver certeza
 
         return {
             "text": result.get("response", "").strip(),
-            "confidence": max(0.0, min(1.0, float(result.get("confidence", 0.8))))
+            "confidence": max(0.0, min(1.0, float(result.get("confidence", 0.8)))),
+            "needs_human": bool(result.get("needs_human", False)),
+            "handoff_reason": (result.get("handoff_reason") or "").strip()
         }
 
     except Exception as e:
         log.error(f"[OPENAI] Erro na chamada principal: {e}")
         return {
             "text": "Desculpe, tive um problema para processar sua mensagem. Pode repetir?",
-            "confidence": 0.3   # confiança baixa propositalmente — favorece handoff em caso de erro
+            "confidence": 0.3,
+            "needs_human": False,
+            "handoff_reason": ""
         }
 
 
 # =========================
-# EXTRAÇÃO DE PERFIL
+# EXTRAÇÃO DE PERFIL (sem mudanças)
 # =========================
 async def smart_extract_profile(
     message: str,
@@ -165,7 +165,6 @@ MENSAGEM:
         result = json.loads(response.choices[0].message.content)
 
         if not result.get("has_new_info"):
-            log.info("[PROFILE] Nenhuma info nova detectada.")
             return current_profile
 
         extracted_profile = result.get("profile", {}) or {}
@@ -174,7 +173,6 @@ MENSAGEM:
         for key, value in extracted_profile.items():
             if key not in ALLOWED_FIELDS:
                 continue
-
             if isinstance(value, list):
                 existing = merged.get(key, [])
                 if not isinstance(existing, list):

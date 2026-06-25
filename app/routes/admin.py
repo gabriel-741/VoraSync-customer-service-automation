@@ -187,6 +187,7 @@ async def release_conversation(conversation_id: int, tenant=Depends(get_current_
     conversation.human_mode = False
     conversation.explicit_score = 0
     conversation.soft_score = 0
+    conversation.consecutive_friction = 0 
     conversation.handoff_offered = False
     conversation.handoff_offer_count = 0
     conversation.handoff_reason = None

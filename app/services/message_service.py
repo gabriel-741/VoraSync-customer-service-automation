@@ -22,9 +22,11 @@ INACTIVITY_RESET_HOURS = 12
 COOLDOWN_MINUTES_AFTER_DECLINE = 30
 
 EXPLICIT_CAP = 100
-SOFT_CAP = 90                      # ← subiu de 70 para 90
-FRICTION_STREAK_THRESHOLD = 3      # ← NOVO: 3 falhas seguidas força a oferta
+SOFT_CAP = 90
+FRICTION_STREAK_THRESHOLD = 3
 HANDOFF_THRESHOLD = 100
+
+MAX_MESSAGES_PER_CONVERSATION = 500   # ← limite rotativo de mensagens
 
 
 # ================
@@ -64,6 +66,45 @@ async def update_contact_profile(contact_id: int, message: str, recent_messages:
             new_profile = await smart_extract_profile(message, contact.profile or {}, recent_messages)
             contact.profile = new_profile
             db.commit()
+    finally:
+        db.close()
+
+
+# ========================
+# BACKGROUND — LIMPA MENSAGENS ANTIGAS (sistema rotativo)
+# ========================
+
+async def trim_old_messages(conversation_id: int):
+    """
+    Mantém só as últimas MAX_MESSAGES_PER_CONVERSATION mensagens por conversa.
+    Apaga as mais antigas quando o limite é excedido.
+    """
+    from app.database.connection import SessionLocal
+
+    db = SessionLocal()
+    try:
+        total = (
+            db.query(func.count(Message.id))
+            .filter(Message.conversation_id == conversation_id)
+            .scalar()
+        )
+
+        if total and total > MAX_MESSAGES_PER_CONVERSATION:
+            excess = total - MAX_MESSAGES_PER_CONVERSATION
+
+            old_ids = (
+                db.query(Message.id)
+                .filter(Message.conversation_id == conversation_id)
+                .order_by(Message.created_at.asc())
+                .limit(excess)
+                .all()
+            )
+            ids_to_delete = [row[0] for row in old_ids]
+
+            if ids_to_delete:
+                db.query(Message).filter(Message.id.in_(ids_to_delete)).delete(synchronize_session=False)
+                db.commit()
+                log.info(f"[TRIM] Removidas {len(ids_to_delete)} mensagens antigas da conversation {conversation_id}")
     finally:
         db.close()
 
@@ -149,7 +190,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         db.refresh(conversation)
 
     # =========================
-    # RESET POR INATIVIDADE (12h sem mensagens)
+    # RESET POR INATIVIDADE (12h)
     # =========================
     last_activity = _aware(conversation.last_activity_at) or _aware(conversation.created_at)
     if last_activity and (datetime.now(timezone.utc) - last_activity) > timedelta(hours=INACTIVITY_RESET_HOURS):
@@ -225,18 +266,18 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             conversation.cooldown_until = datetime.now(timezone.utc) + timedelta(minutes=COOLDOWN_MINUTES_AFTER_DECLINE)
             conversation.explicit_score = 0
             conversation.soft_score = max(conversation.soft_score - 20, 0)
-            conversation.consecutive_friction = 0   # ← reseta o streak também
+            conversation.consecutive_friction = 0
             db.commit()
             return None
 
-        return None   # resposta ambígua — espera próxima mensagem
+        return None
 
     # =========================
     # ANÁLISE DE INTENÇÃO
     # =========================
     intent = await analyze_intent(text, recent_messages=recent_messages)
 
-    friction_this_turn = False   # ← rastreia se ESTE turno teve sinal de atrito
+    friction_this_turn = False
 
     if intent.get("wants_human"):
         conversation.explicit_score = min((conversation.explicit_score or 0) + 100, EXPLICIT_CAP)
@@ -245,17 +286,13 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         conversation.soft_score = min((conversation.soft_score or 0) + 25, SOFT_CAP)
         friction_this_turn = True
 
-    db.commit()
-
-    # =========================
-    # ATUALIZA STREAK DE ATRITO (intent)
-    # =========================
     if friction_this_turn:
         conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
+
     db.commit()
 
     # =========================
-    # OFERECE HANDOFF — 3 caminhos de disparo
+    # OFERECE HANDOFF (por score/streak — fluxo normal)
     # =========================
     should_offer = (
         conversation.explicit_score >= EXPLICIT_CAP
@@ -272,7 +309,6 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             f"[HANDOFF] Disparado | explicit={conversation.explicit_score} "
             f"soft={conversation.soft_score} streak={conversation.consecutive_friction}"
         )
-
         conversation.state = ConversationStateEnum.awaiting_handoff_confirmation
         conversation.handoff_offered = True
         conversation.handoff_offer_count += 1
@@ -304,6 +340,36 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         return None
 
     # =========================
+    # HANDOFF DIRETO — IA detectou limitação de capacidade
+    # (definido no system_prompt do tenant, ex: agendamento/estoque)
+    # =========================
+    if response_data.get("needs_human"):
+        reason = response_data.get("handoff_reason") or "Cliente solicitou algo que a IA ainda não consegue resolver automaticamente"
+        log.info(f"[HANDOFF DIRETO] {reason}")
+
+        await send_message(sender, response, api_key=tenant.api_key, instance=tenant.whatsapp_instance)
+
+        outbound = Message(
+            tenant_id=tenant.id, conversation_id=conversation.id, contact_id=contact.id,
+            direction=DirectionEnum.outbound, content=response
+        )
+        db.add(outbound)
+        db.commit()
+
+        summary = await generate_handoff_summary(recent_messages + [{"direction": "outbound", "content": response}], reason)
+
+        conversation.state = ConversationStateEnum.human_active
+        conversation.handoff_offered = True
+        conversation.handoff_reason = reason
+        conversation.handoff_summary = summary
+        db.commit()
+
+        background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
+        background_tasks.add_task(trim_old_messages, conversation.id)
+
+        return response
+
+    # =========================
     # AJUSTA SOFT SCORE E STREAK COM BASE NA CONFIANÇA
     # =========================
     if response_data["confidence"] < 0.7:
@@ -311,13 +377,10 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
     else:
         conversation.soft_score = max((conversation.soft_score or 0) - 10, 0)
-        conversation.consecutive_friction = 0   # ← resposta boa de verdade quebra o streak
+        conversation.consecutive_friction = 0
 
     db.commit()
 
-    # =========================
-    # RE-CHECA HANDOFF APÓS A RESPOSTA (caso o streak tenha batido agora)
-    # =========================
     should_offer_after = (
         conversation.explicit_score >= EXPLICIT_CAP
         or conversation.soft_score >= SOFT_CAP
@@ -354,5 +417,13 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         )
 
     background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
+    background_tasks.add_task(trim_old_messages, conversation.id)
 
     return response
+
+
+
+
+
+
+
