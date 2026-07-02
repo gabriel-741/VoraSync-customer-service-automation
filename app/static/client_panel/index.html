@@ -38,6 +38,35 @@
   .hidden { display: none; }
   .actions button { width: auto; margin-right: 6px; padding: 4px 10px; font-size: 12px; }
 
+  .modal-overlay {
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+}
+.modal-box {
+  background: #181b22; border-radius: 12px;
+  padding: 24px; width: 100%; max-width: 480px;
+  max-height: 85vh; overflow-y: auto;
+}
+.modal-box h3 { margin: 0 0 16px; font-size: 16px; }
+.crm-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid #2a2e38;
+  font-size: 13px; gap: 12px;
+}
+.crm-row .crm-label { color: #9aa3b2; white-space: nowrap; }
+.crm-row .crm-value { text-align: right; word-break: break-word; }
+.crm-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.crm-tag {
+  background: #2a2e38; border-radius: 20px;
+  padding: 2px 10px; font-size: 12px;
+}
+.crm-empty { color: #9aa3b2; font-size: 13px; text-align: center; padding: 24px 0; }
+.etapa-badge {
+  padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+}
+
   @media (max-width: 640px) {
     body { padding: 12px; }
     .stats { grid-template-columns: repeat(2, 1fr); }
@@ -86,6 +115,7 @@
       </thead>
       <tbody></tbody>
     </table>
+    <div id="contactPagination"></div> 
   </div>
 
   <h2>⚙️ Configurações do Bot</h2>
@@ -95,6 +125,16 @@
     <label>Personalidade / Instruções do bot</label>
     <textarea id="s_prompt" rows="6"></textarea>
     <button onclick="saveSettings()">Salvar Configurações</button>
+  </div>
+</div>
+
+<div id="crmModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3>📋 CRM — <span id="crmContactName"></span></h3>
+      <button class="ghost" onclick="closeCrmModal()" style="width:auto; padding:4px 12px;">✕</button>
+    </div>
+    <div id="crmContent"></div>
   </div>
 </div>
 
@@ -234,17 +274,22 @@ async function release(id) {
 
 async function loadContacts() {
   try {
-    const result = await api('/admin/contacts?limit=50');
-    const tbody = document.querySelector('#contactsTable tbody');
-    tbody.innerHTML = '';
+    const result = await api(`/admin/contacts?page=${contactPage}&limit=${CONTACTS_PER_PAGE}`);
+    const tbody = document.querySelector("#contactsTable tbody");
+    tbody.innerHTML = "";
+
     result.data.forEach(c => {
-      const tr = document.createElement('tr');
+      const tr = document.createElement("tr");
+      const hasProfile = c.profile && Object.keys(c.profile).length > 0;
       tr.innerHTML = `
-        <td>${c.name || '(sem nome)'}</td>
+        <td>${c.name || "(sem nome)"}</td>
         <td>${c.phone}</td>
-        <td>${c.last_seen ? new Date(c.last_seen).toLocaleString('pt-BR') : '-'}</td>
-        <td>${c.ai_blocked ? '<span class="badge badge-blocked">Bloqueado</span>' : '-'}</td>
+        <td>${c.last_seen ? new Date(c.last_seen).toLocaleString("pt-BR") : "-"}</td>
+        <td>${c.ai_blocked ? '<span class="badge badge-blocked">Bloqueado</span>' : "-"}</td>
         <td class="actions">
+          <button class="ghost" onclick='openCrmModal(${JSON.stringify(c.name || "")}, ${JSON.stringify(c.profile || {})})' ${hasProfile ? "" : 'style="opacity:0.4"'}>
+            📋 CRM
+          </button>
           ${c.ai_blocked
             ? `<button onclick="unblockContact(${c.id})">Desbloquear</button>`
             : `<button class="danger" onclick="blockContact(${c.id})">Bloquear IA</button>`}
@@ -252,8 +297,39 @@ async function loadContacts() {
       `;
       tbody.appendChild(tr);
     });
-  } catch (e) { alert('Erro ao carregar contatos: ' + e.message); }
+
+    // paginação
+    renderContactPagination(result.total, result.page, result.limit);
+
+  } catch (e) { alert("Erro ao carregar contatos: " + e.message); }
 }
+
+
+const CONTACTS_PER_PAGE = 20;
+let contactPage = 1;
+
+function renderContactPagination(total, page, limit) {
+  const totalPages = Math.ceil(total / limit);
+  const container = document.getElementById("contactPagination");
+  if (!container) return;
+
+  if (totalPages <= 1) { container.innerHTML = ""; return; }
+
+  container.innerHTML = `
+    <div style="display:flex; gap:8px; align-items:center; margin-top:12px; justify-content:flex-end;">
+      <button class="ghost" onclick="goContactPage(${page - 1})" ${page <= 1 ? "disabled" : ""} style="width:auto; padding:4px 12px;">← Anterior</button>
+      <span style="font-size:13px; color:#9aa3b2;">${page} / ${totalPages} (${total} contatos)</span>
+      <button class="ghost" onclick="goContactPage(${page + 1})" ${page >= totalPages ? "disabled" : ""} style="width:auto; padding:4px 12px;">Próxima →</button>
+    </div>
+  `;
+}
+
+function goContactPage(page) {
+  contactPage = page;
+  loadContacts();
+}
+
+
 
 async function blockContact(id) {
   if (!confirm('Bloquear a IA para este número?')) return;
@@ -353,6 +429,88 @@ async function checkHandoffAlerts() {
     // silencioso — não quebra o painel se a checagem falhar
   }
 }
+
+// =========================
+// CRM
+// =========================
+
+const CRM_LABELS = {
+  nome:             "Nome",
+  empresa:          "Empresa",
+  cargo:            "Cargo",
+  segmento:         "Segmento",
+  cidade:           "Cidade",
+  tamanho_empresa:  "Tamanho da empresa",
+  decisor:          "Decisor",
+  interesse:        "Interesse",
+  orcamento:        "Orçamento",
+  urgencia:         "Urgência",
+  etapa_venda:      "Etapa de venda",
+  produto_atual:    "Produto atual",
+  processo_atual:   "Processo atual",
+  prazo_decisao:    "Prazo de decisão",
+  necessidades:     "Necessidades",
+  objecoes:         "Objeções",
+  resumo_cliente:   "Resumo",
+};
+
+const ETAPA_COLORS = {
+  descoberta:  "#2196f3",
+  interesse:   "#9c27b0",
+  orcamento:   "#ff9800",
+  negociacao:  "#f44336",
+  cliente:     "#4caf50",
+};
+
+function renderCrmValue(key, value) {
+  if (!value || (Array.isArray(value) && value.length === 0)) return null;
+
+  if (key === "etapa_venda") {
+    const color = ETAPA_COLORS[value] || "#4f7cff";
+    return `<span class="etapa-badge" style="background:${color}20; color:${color};">${value}</span>`;
+  }
+
+  if (Array.isArray(value)) {
+    return `<div class="crm-list">${value.map(v => `<span class="crm-tag">${v}</span>`).join("")}</div>`;
+  }
+
+  return `<span>${value}</span>`;
+}
+
+function openCrmModal(contactName, profile) {
+  document.getElementById("crmContactName").textContent = contactName || "(sem nome)";
+
+  const content = document.getElementById("crmContent");
+
+  const entries = Object.entries(CRM_LABELS)
+    .map(([key, label]) => ({ key, label, value: profile[key] }))
+    .filter(({ value }) => value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0));
+
+  if (entries.length === 0) {
+    content.innerHTML = `<div class="crm-empty">Nenhuma informação coletada ainda.<br>As informações aparecem conforme o cliente conversa.</div>`;
+  } else {
+    content.innerHTML = entries.map(({ key, label, value }) => {
+      const rendered = renderCrmValue(key, value);
+      return `
+        <div class="crm-row">
+          <span class="crm-label">${label}</span>
+          <span class="crm-value">${rendered}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  document.getElementById("crmModal").classList.remove("hidden");
+}
+
+function closeCrmModal() {
+  document.getElementById("crmModal").classList.add("hidden");
+}
+
+// fecha ao clicar fora do modal
+document.getElementById("crmModal")?.addEventListener("click", function(e) {
+  if (e.target === this) closeCrmModal();
+});
 
 if (getKey()) {
   startApp();
