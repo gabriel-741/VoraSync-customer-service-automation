@@ -18,25 +18,17 @@ from app.utils.logger import get_logger
 
 log = get_logger(__name__)
 
-INACTIVITY_RESET_HOURS = 12
-COOLDOWN_MINUTES_AFTER_DECLINE = 30
-
-EXPLICIT_CAP = 100
-SOFT_CAP = 90
+INACTIVITY_RESET_HOURS    = 12
+COOLDOWN_MINUTES          = 30
+EXPLICIT_CAP              = 100
+SOFT_CAP                  = 90
 FRICTION_STREAK_THRESHOLD = 3
-HANDOFF_THRESHOLD = 100
+HANDOFF_THRESHOLD         = 100
+MAX_MESSAGES_PER_CONV     = 500
 
-MAX_MESSAGES_PER_CONVERSATION = 500   # ← limite rotativo de mensagens
-
-
-# ================
-# CONTADOR MENSAL
-# ================
 
 def get_monthly_message_count(tenant_id: int, db: Session) -> int:
-    start_month = datetime.now(timezone.utc).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
+    start_month = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     count = (
         db.query(func.count(Message.id))
         .filter(
@@ -49,10 +41,6 @@ def get_monthly_message_count(tenant_id: int, db: Session) -> int:
     return count or 0
 
 
-# ========================
-# BACKGROUND — ATUALIZA PERFIL
-# ========================
-
 async def update_contact_profile(contact_id: int, message: str, recent_messages: list):
     from app.database.connection import SessionLocal
     from app.services.openai_provider import smart_extract_profile
@@ -61,7 +49,7 @@ async def update_contact_profile(contact_id: int, message: str, recent_messages:
     try:
         contact = db.query(Contact).filter(Contact.id == contact_id).first()
         if contact and contact.ai_blocked:
-            return None
+            return
         if contact:
             new_profile = await smart_extract_profile(message, contact.profile or {}, recent_messages)
             contact.profile = new_profile
@@ -70,28 +58,14 @@ async def update_contact_profile(contact_id: int, message: str, recent_messages:
         db.close()
 
 
-# ========================
-# BACKGROUND — LIMPA MENSAGENS ANTIGAS (sistema rotativo)
-# ========================
-
 async def trim_old_messages(conversation_id: int):
-    """
-    Mantém só as últimas MAX_MESSAGES_PER_CONVERSATION mensagens por conversa.
-    Apaga as mais antigas quando o limite é excedido.
-    """
     from app.database.connection import SessionLocal
 
     db = SessionLocal()
     try:
-        total = (
-            db.query(func.count(Message.id))
-            .filter(Message.conversation_id == conversation_id)
-            .scalar()
-        )
-
-        if total and total > MAX_MESSAGES_PER_CONVERSATION:
-            excess = total - MAX_MESSAGES_PER_CONVERSATION
-
+        total = db.query(func.count(Message.id)).filter(Message.conversation_id == conversation_id).scalar()
+        if total and total > MAX_MESSAGES_PER_CONV:
+            excess  = total - MAX_MESSAGES_PER_CONV
             old_ids = (
                 db.query(Message.id)
                 .filter(Message.conversation_id == conversation_id)
@@ -99,12 +73,11 @@ async def trim_old_messages(conversation_id: int):
                 .limit(excess)
                 .all()
             )
-            ids_to_delete = [row[0] for row in old_ids]
-
+            ids_to_delete = [r[0] for r in old_ids]
             if ids_to_delete:
                 db.query(Message).filter(Message.id.in_(ids_to_delete)).delete(synchronize_session=False)
                 db.commit()
-                log.info(f"[TRIM] Removidas {len(ids_to_delete)} mensagens antigas da conversation {conversation_id}")
+                log.info(f"[TRIM] Removidas {len(ids_to_delete)} mensagens antigas (conv {conversation_id})")
     finally:
         db.close()
 
@@ -115,9 +88,6 @@ def _aware(dt):
     return dt
 
 
-# =========================
-# MAIN FLOW
-# =========================
 async def process_message(data: dict, db: Session, background_tasks: BackgroundTasks):
     log.info("🔥 PROCESS_MESSAGE INICIADO")
 
@@ -125,12 +95,16 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     text     = data["message"]
     instance = data["instance"]
 
-    # =========================
-    # TENANT
-    # =========================
     tenant = db.query(Tenant).filter(Tenant.whatsapp_instance == instance).first()
     if not tenant:
-        raise Exception(f"Tenant não encontrado para instance: {instance}")
+        raise Exception(f"Tenant não encontrado: {instance}")
+
+    # =========================
+    # BOT ATIVO?
+    # =========================
+    if not tenant.bot_active:
+        log.info(f"[BOT] Tenant {tenant.id} com bot inativo — ignorando mensagem")
+        return None
 
     # =========================
     # LIMITE MENSAL
@@ -138,8 +112,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     count = get_monthly_message_count(tenant.id, db)
     if tenant.max_messages_month and count >= tenant.max_messages_month:
         await send_message(
-            sender,
-            "Atendimento indisponível no momento. Entre em contato conosco.",
+            sender, "Atendimento indisponível no momento. Entre em contato conosco.",
             api_key=tenant.api_key, instance=tenant.whatsapp_instance
         )
         return None
@@ -166,41 +139,37 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     conversation = (
         db.query(Conversation)
         .filter(
-            Conversation.tenant_id == tenant.id,
+            Conversation.tenant_id  == tenant.id,
             Conversation.contact_id == contact.id,
-            Conversation.status == ConversationStatusEnum.open
+            Conversation.status     == ConversationStatusEnum.open
         )
         .first()
     )
 
     if not conversation:
         conversation = Conversation(
-            tenant_id=tenant.id,
-            contact_id=contact.id,
+            tenant_id=tenant.id, contact_id=contact.id,
             status=ConversationStatusEnum.open,
             state=ConversationStateEnum.ai_active,
-            explicit_score=0,
-            soft_score=0,
-            consecutive_friction=0,
-            handoff_offer_count=0,
-            handoff_offered=False,
+            explicit_score=0, soft_score=0, consecutive_friction=0,
+            handoff_offer_count=0, handoff_offered=False,
         )
         db.add(conversation)
         db.commit()
         db.refresh(conversation)
 
     # =========================
-    # RESET POR INATIVIDADE (12h)
+    # RESET POR INATIVIDADE
     # =========================
     last_activity = _aware(conversation.last_activity_at) or _aware(conversation.created_at)
     if last_activity and (datetime.now(timezone.utc) - last_activity) > timedelta(hours=INACTIVITY_RESET_HOURS):
-        log.info(f"⏰ Reset por inatividade (conversation {conversation.id})")
-        conversation.explicit_score = 0
-        conversation.soft_score = 0
+        log.info(f"⏰ Reset por inatividade (conv {conversation.id})")
+        conversation.explicit_score       = 0
+        conversation.soft_score           = 0
         conversation.consecutive_friction = 0
-        conversation.handoff_offer_count = 0
-        conversation.handoff_offered = False
-        conversation.cooldown_until = None
+        conversation.handoff_offer_count  = 0
+        conversation.handoff_offered      = False
+        conversation.cooldown_until       = None
         if conversation.state != ConversationStateEnum.human_active:
             conversation.state = ConversationStateEnum.ai_active
 
@@ -208,12 +177,12 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     db.commit()
 
     # =========================
-    # SAI DO COOLDOWN AUTOMATICAMENTE
+    # SAI DO COOLDOWN
     # =========================
     if conversation.state == ConversationStateEnum.cooldown:
         cooldown_until = _aware(conversation.cooldown_until)
         if not cooldown_until or datetime.now(timezone.utc) >= cooldown_until:
-            conversation.state = ConversationStateEnum.ai_active
+            conversation.state          = ConversationStateEnum.ai_active
             conversation.cooldown_until = None
             db.commit()
 
@@ -233,39 +202,37 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     # SALVA INBOUND
     # =========================
     inbound = Message(
-        tenant_id=tenant.id, conversation_id=conversation.id, contact_id=contact.id,
-        direction=DirectionEnum.inbound, content=text, whatsapp_message_id=data.get("message_id")
+        tenant_id=tenant.id, conversation_id=conversation.id,
+        contact_id=contact.id, direction=DirectionEnum.inbound,
+        content=text, whatsapp_message_id=data.get("message_id")
     )
     db.add(inbound)
     db.commit()
 
-    # =========================
-    # HUMANO ATIVO — bot não responde
-    # =========================
     if conversation.state == ConversationStateEnum.human_active:
         return None
 
     # =========================
-    # AGUARDANDO CONFIRMAÇÃO DE HANDOFF
+    # AGUARDANDO CONFIRMAÇÃO
     # =========================
     if conversation.state == ConversationStateEnum.awaiting_handoff_confirmation:
-        intent = await analyze_intent(text, recent_messages=recent_messages)
+        # ← FIX: só as últimas 2 mensagens para evitar detectar intenções antigas
+        intent = await analyze_intent(text, recent_messages=recent_messages[-2:])
 
         if intent["accepted_handoff"]:
-            reason = build_reason(conversation.explicit_score, conversation.soft_score)
+            reason  = build_reason(conversation.explicit_score, conversation.soft_score)
             summary = await generate_handoff_summary(recent_messages, reason)
-
-            conversation.state = ConversationStateEnum.human_active
-            conversation.handoff_reason = reason
+            conversation.state           = ConversationStateEnum.human_active
+            conversation.handoff_reason  = reason
             conversation.handoff_summary = summary
             db.commit()
             return None
 
         if intent["declined_handoff"]:
-            conversation.state = ConversationStateEnum.cooldown
-            conversation.cooldown_until = datetime.now(timezone.utc) + timedelta(minutes=COOLDOWN_MINUTES_AFTER_DECLINE)
-            conversation.explicit_score = 0
-            conversation.soft_score = max(conversation.soft_score - 20, 0)
+            conversation.state          = ConversationStateEnum.cooldown
+            conversation.cooldown_until = datetime.now(timezone.utc) + timedelta(minutes=COOLDOWN_MINUTES)
+            conversation.explicit_score      = 0
+            conversation.soft_score          = max(conversation.soft_score - 20, 0)
             conversation.consecutive_friction = 0
             db.commit()
             return None
@@ -274,8 +241,10 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
 
     # =========================
     # ANÁLISE DE INTENÇÃO
+    # ← FIX: passa apenas últimas 2 mensagens
+    #   evita que mensagens antigas de "quero humano" influenciem intenção atual
     # =========================
-    intent = await analyze_intent(text, recent_messages=recent_messages)
+    intent = await analyze_intent(text, recent_messages=recent_messages[-2:])
 
     friction_this_turn = False
 
@@ -292,31 +261,23 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     db.commit()
 
     # =========================
-    # OFERECE HANDOFF (por score/streak — fluxo normal)
+    # OFERECE HANDOFF
     # =========================
     should_offer = (
         conversation.explicit_score >= EXPLICIT_CAP
-        or conversation.soft_score >= SOFT_CAP
+        or conversation.soft_score  >= SOFT_CAP
         or (conversation.consecutive_friction or 0) >= FRICTION_STREAK_THRESHOLD
     )
 
-    if (
-        conversation.state == ConversationStateEnum.ai_active
-        and should_offer
-        and conversation.handoff_offer_count < 1
-    ):
-        log.info(
-            f"[HANDOFF] Disparado | explicit={conversation.explicit_score} "
-            f"soft={conversation.soft_score} streak={conversation.consecutive_friction}"
-        )
-        conversation.state = ConversationStateEnum.awaiting_handoff_confirmation
-        conversation.handoff_offered = True
+    if conversation.state == ConversationStateEnum.ai_active and should_offer and conversation.handoff_offer_count < 1:
+        log.info(f"[HANDOFF] explicit={conversation.explicit_score} soft={conversation.soft_score} streak={conversation.consecutive_friction}")
+        conversation.state              = ConversationStateEnum.awaiting_handoff_confirmation
+        conversation.handoff_offered    = True
         conversation.handoff_offer_count += 1
         db.commit()
 
         await send_message(
-            sender,
-            "Posso te encaminhar para um especialista humano. Deseja isso?",
+            sender, "Posso te encaminhar para um especialista humano. Deseja isso?",
             api_key=tenant.api_key, instance=tenant.whatsapp_instance
         )
         return None
@@ -340,79 +301,70 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         return None
 
     # =========================
-    # HANDOFF DIRETO — IA detectou limitação de capacidade
-    # (definido no system_prompt do tenant, ex: agendamento/estoque)
+    # HANDOFF DIRETO (needs_human via prompt)
     # =========================
     if response_data.get("needs_human"):
-        reason = response_data.get("handoff_reason") or "Cliente solicitou algo que a IA ainda não consegue resolver automaticamente"
+        reason = response_data.get("handoff_reason") or "Capacidade não disponível automaticamente"
         log.info(f"[HANDOFF DIRETO] {reason}")
 
         await send_message(sender, response, api_key=tenant.api_key, instance=tenant.whatsapp_instance)
 
         outbound = Message(
-            tenant_id=tenant.id, conversation_id=conversation.id, contact_id=contact.id,
-            direction=DirectionEnum.outbound, content=response
+            tenant_id=tenant.id, conversation_id=conversation.id,
+            contact_id=contact.id, direction=DirectionEnum.outbound, content=response
         )
         db.add(outbound)
         db.commit()
 
-        summary = await generate_handoff_summary(recent_messages + [{"direction": "outbound", "content": response}], reason)
+        summary = await generate_handoff_summary(
+            recent_messages + [{"direction": "outbound", "content": response}], reason
+        )
 
-        conversation.state = ConversationStateEnum.human_active
+        conversation.state           = ConversationStateEnum.human_active
         conversation.handoff_offered = True
-        conversation.handoff_reason = reason
+        conversation.handoff_reason  = reason
         conversation.handoff_summary = summary
         db.commit()
 
         background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
         background_tasks.add_task(trim_old_messages, conversation.id)
-
         return response
 
     # =========================
-    # AJUSTA SOFT SCORE E STREAK COM BASE NA CONFIANÇA
+    # AJUSTA SCORES COM CONFIANÇA
     # =========================
     if response_data["confidence"] < 0.7:
-        conversation.soft_score = min((conversation.soft_score or 0) + 20, SOFT_CAP)
+        conversation.soft_score          = min((conversation.soft_score or 0) + 20, SOFT_CAP)
         conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
     else:
-        conversation.soft_score = max((conversation.soft_score or 0) - 10, 0)
+        conversation.soft_score           = max((conversation.soft_score or 0) - 10, 0)
         conversation.consecutive_friction = 0
 
     db.commit()
 
     should_offer_after = (
         conversation.explicit_score >= EXPLICIT_CAP
-        or conversation.soft_score >= SOFT_CAP
+        or conversation.soft_score  >= SOFT_CAP
         or (conversation.consecutive_friction or 0) >= FRICTION_STREAK_THRESHOLD
     )
 
     await send_message(sender, response, api_key=tenant.api_key, instance=tenant.whatsapp_instance)
 
     outbound = Message(
-        tenant_id=tenant.id, conversation_id=conversation.id, contact_id=contact.id,
-        direction=DirectionEnum.outbound, content=response
+        tenant_id=tenant.id, conversation_id=conversation.id,
+        contact_id=contact.id, direction=DirectionEnum.outbound, content=response
     )
     db.add(outbound)
     db.commit()
 
-    if (
-        conversation.state == ConversationStateEnum.ai_active
-        and should_offer_after
-        and conversation.handoff_offer_count < 1
-    ):
-        log.info(
-            f"[HANDOFF] Disparado pós-resposta | soft={conversation.soft_score} "
-            f"streak={conversation.consecutive_friction}"
-        )
-        conversation.state = ConversationStateEnum.awaiting_handoff_confirmation
-        conversation.handoff_offered = True
+    if conversation.state == ConversationStateEnum.ai_active and should_offer_after and conversation.handoff_offer_count < 1:
+        conversation.state               = ConversationStateEnum.awaiting_handoff_confirmation
+        conversation.handoff_offered     = True
         conversation.handoff_offer_count += 1
         db.commit()
 
         await send_message(
-            sender,
-            "Notei que tem sido difícil resolver sua questão. Posso te encaminhar para um especialista humano?",
+            sender, "Notei que tem sido difícil resolver sua questão. Posso te encaminhar para um especialista?",
             api_key=tenant.api_key, instance=tenant.whatsapp_instance
         )
 
@@ -420,10 +372,3 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     background_tasks.add_task(trim_old_messages, conversation.id)
 
     return response
-
-
-
-
-
-
-

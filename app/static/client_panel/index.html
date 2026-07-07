@@ -6,7 +6,6 @@
 <title>Vorasync</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f7cff'/><path d='M8 22 L16 10 L24 22' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='16' cy='22' r='2' fill='white'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -23,19 +22,17 @@
   --green:     #22c55e;
   --orange:    #f59e0b;
   --red:       #ef4444;
-  --purple:    #a855f7;
   --sidebar-w: 220px;
   --header-h:  56px;
-  --radius:    8px;
-  --radius-lg: 12px;
-  --font:      'Inter', system-ui, sans-serif;
+  --r:         8px;
+  --rl:        12px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
-  font-family: var(--font);
+  font-family: 'Inter', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -43,14 +40,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ===== LAYOUT ===== */
-#shell {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-}
+/* ── LAYOUT ── */
+#shell { display: flex; height: 100vh; overflow: hidden; }
 
-/* ===== SIDEBAR ===== */
+/* ── SIDEBAR ── */
 #sidebar {
   width: var(--sidebar-w);
   background: var(--surface);
@@ -62,11 +55,9 @@ html, body {
 }
 
 .sidebar-logo {
-  padding: 20px 20px 16px;
+  padding: 18px 18px 14px;
   border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: flex; align-items: center; gap: 10px;
 }
 
 .logo-mark {
@@ -77,69 +68,35 @@ html, body {
   flex-shrink: 0;
 }
 
-.logo-mark svg { width: 14px; height: 14px; }
+.logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
 
-.logo-text {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  color: var(--text);
-}
-
-.nav-section {
-  padding: 12px 12px 0;
-}
-
-.nav-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  padding: 0 8px;
-  margin-bottom: 4px;
-}
+.nav-section { padding: 12px 10px 0; }
 
 .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--r);
   color: var(--text-2);
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 13.5px; font-weight: 500;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
+  border: none; background: none; width: 100%; text-align: left;
+  transition: background .12s, color .12s;
   margin-bottom: 2px;
+  position: relative;
+  font-family: inherit;
 }
 
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
-.nav-item.active { background: rgba(79,124,255,0.12); color: var(--accent); }
-.nav-item.active .nav-icon { color: var(--accent); }
+.nav-item.active { background: rgba(79,124,255,.12); color: var(--accent); }
 
-.nav-icon {
-  width: 16px; height: 16px;
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-
+.nav-icon { width: 16px; height: 16px; opacity: .7; flex-shrink: 0; }
 .nav-item.active .nav-icon { opacity: 1; }
 
 .nav-badge {
   margin-left: auto;
-  background: var(--red);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 20px;
-  min-width: 18px;
-  text-align: center;
+  background: var(--red); color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 20px; min-width: 18px; text-align: center;
 }
 
 .sidebar-footer {
@@ -149,268 +106,236 @@ html, body {
 }
 
 .user-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background 0.12s;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--r);
+  cursor: pointer; transition: background .12s;
 }
-
 .user-row:hover { background: var(--surface-2); }
 
 .user-avatar {
   width: 28px; height: 28px;
-  background: rgba(79,124,255,0.2);
+  background: rgba(79,124,255,.2);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
+  font-size: 11px; font-weight: 600; color: var(--accent);
   flex-shrink: 0;
 }
 
 .user-info { flex: 1; min-width: 0; }
-.user-name { font-size: 12.5px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-name { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-plan { font-size: 11px; color: var(--text-2); }
 
 .logout-btn {
   background: none; border: none; cursor: pointer;
   color: var(--text-3); padding: 4px; border-radius: 4px;
-  display: flex; align-items: center; justify-content: center;
-  transition: color 0.12s;
+  display: flex; align-items: center;
+  transition: color .12s;
   flex-shrink: 0;
 }
 .logout-btn:hover { color: var(--red); }
 
-/* ===== MAIN ===== */
-#main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+/* ── MAIN ── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .page-header {
   height: var(--header-h);
   border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  gap: 12px;
-  flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 0 24px; gap: 12px; flex-shrink: 0;
 }
 
-.page-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-}
-
+.page-title { font-size: 15px; font-weight: 600; }
 .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
-.page-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-}
+.page-content { flex: 1; overflow-y: auto; padding: 24px; }
 
-/* ===== PAGES ===== */
 .page { display: none; }
 .page.active { display: block; }
 
-/* ===== ALERT BANNER ===== */
+/* ── ALERT ── */
 #alertBanner {
-  background: rgba(245,158,11,0.1);
-  border: 1px solid rgba(245,158,11,0.3);
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: background 0.12s;
+  background: rgba(245,158,11,.08);
+  border: 1px solid rgba(245,158,11,.25);
+  border-radius: var(--r);
+  padding: 10px 14px; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: background .12s;
 }
-
-#alertBanner:hover { background: rgba(245,158,11,0.15); }
+#alertBanner:hover { background: rgba(245,158,11,.13); }
 
 .alert-dot {
-  width: 8px; height: 8px;
-  background: var(--orange);
-  border-radius: 50%;
-  flex-shrink: 0;
+  width: 7px; height: 7px;
+  background: var(--orange); border-radius: 50%; flex-shrink: 0;
   animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 
 .alert-text { font-size: 13px; font-weight: 500; color: var(--orange); }
-.alert-action { margin-left: auto; font-size: 12px; color: var(--text-2); }
+.alert-link { margin-left: auto; font-size: 12px; color: var(--text-2); }
 
-/* ===== STATS ===== */
+/* ── STATS ── */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 12px; margin-bottom: 24px;
 }
 
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
+  border-radius: var(--rl);
+  padding: 16px 18px;
 }
 
-.stat-label { font-size: 12px; color: var(--text-2); font-weight: 500; margin-bottom: 6px; }
-.stat-value { font-size: 24px; font-weight: 600; color: var(--text); line-height: 1; }
-.stat-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
-.stat-card.warn .stat-value { color: var(--orange); }
+.stat-label  { font-size: 11.5px; color: var(--text-2); font-weight: 500; margin-bottom: 6px; }
+.stat-value  { font-size: 24px; font-weight: 600; line-height: 1; }
+.stat-sub    { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.stat-card.warn   .stat-value { color: var(--orange); }
 .stat-card.danger .stat-value { color: var(--red); }
 
-/* ===== CARDS ===== */
+/* ── CARD ── */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--rl);
   overflow: hidden;
   margin-bottom: 20px;
 }
 
 .card-header {
-  padding: 14px 20px;
+  padding: 13px 20px;
   border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
 }
 
-.card-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
-.card-desc { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+.card-title { font-size: 13.5px; font-weight: 600; }
+.card-desc  { font-size: 12px; color: var(--text-2); margin-top: 1px; }
 
-.card-body { padding: 0; }
+/* ── SEARCH ── */
+.search-row {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
 
-/* ===== TABLE ===== */
+.search-input-wrap { position: relative; }
+
+.search-input-wrap svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--text-3); pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 7px 12px 7px 32px;
+  font-size: 13px; color: var(--text);
+  font-family: inherit; outline: none;
+  transition: border-color .12s;
+}
+.search-input:focus { border-color: var(--accent); }
+
+/* ── TABLE ── */
 table { width: 100%; border-collapse: collapse; }
 th {
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
   color: var(--text-3);
   padding: 10px 20px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
 }
 td {
-  padding: 12px 20px;
+  padding: 11px 20px;
   border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--text);
+  font-size: 13px; color: var(--text);
   vertical-align: middle;
 }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.015); }
-tr.priority td { background: rgba(245,158,11,0.04); }
+tr:hover td { background: rgba(255,255,255,.012); }
+tr.priority td { background: rgba(245,158,11,.04); }
 
-.cell-primary { font-weight: 500; }
+.cell-primary   { font-weight: 500; }
 .cell-secondary { font-size: 12px; color: var(--text-2); margin-top: 2px; }
 
-/* ===== EMPTY STATE ===== */
-.empty-state {
-  padding: 48px 24px;
-  text-align: center;
-  color: var(--text-2);
+/* ── SUMMARY ── */
+.summary-box {
+  background: rgba(245,158,11,.06);
+  border-left: 2px solid var(--orange);
+  border-radius: 0 var(--r) var(--r) 0;
+  padding: 7px 11px;
+  font-size: 12px; color: var(--text-2); line-height: 1.5;
+  max-width: 280px;
+  /* truncate a 3 linhas */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
+/* ── EMPTY ── */
+.empty-state { padding: 44px 24px; text-align: center; }
 .empty-icon {
   width: 40px; height: 40px;
-  background: var(--surface-2);
-  border-radius: 10px;
+  background: var(--surface-2); border-radius: 10px;
   margin: 0 auto 12px;
   display: flex; align-items: center; justify-content: center;
 }
 .empty-icon svg { width: 20px; height: 20px; color: var(--text-3); }
-.empty-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-.empty-desc { font-size: 13px; color: var(--text-2); }
+.empty-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.empty-desc  { font-size: 13px; color: var(--text-2); }
 
-/* ===== BADGES ===== */
+/* ── BADGES ── */
 .badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
 }
-.badge-dot { width: 5px; height: 5px; border-radius: 50%; }
+.bdot { width: 5px; height: 5px; border-radius: 50%; }
 
-.badge-ai { background: rgba(34,197,94,0.12); color: var(--green); }
-.badge-ai .badge-dot { background: var(--green); }
+.badge-ai      { background: rgba(34,197,94,.1);  color: var(--green); }
+.badge-ai      .bdot { background: var(--green); }
+.badge-human   { background: rgba(245,158,11,.1); color: var(--orange); }
+.badge-human   .bdot { background: var(--orange); }
+.badge-waiting { background: rgba(79,124,255,.1); color: var(--accent); }
+.badge-waiting .bdot { background: var(--accent); }
+.badge-cool    { background: rgba(139,144,160,.1); color: var(--text-2); }
+.badge-cool    .bdot { background: var(--text-2); }
+.badge-blocked { background: rgba(239,68,68,.1); color: var(--red); }
 
-.badge-human { background: rgba(245,158,11,0.12); color: var(--orange); }
-.badge-human .badge-dot { background: var(--orange); }
-
-.badge-waiting { background: rgba(79,124,255,0.12); color: var(--accent); }
-.badge-waiting .badge-dot { background: var(--accent); }
-
-.badge-cooldown { background: rgba(139,144,160,0.12); color: var(--text-2); }
-.badge-cooldown .badge-dot { background: var(--text-2); }
-
-.badge-blocked { background: rgba(239,68,68,0.12); color: var(--red); }
-
-/* ===== BUTTONS ===== */
+/* ── BUTTONS ── */
 .btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background 0.12s, opacity 0.12s;
-  white-space: nowrap;
-  font-family: var(--font);
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: var(--r);
+  font-size: 12.5px; font-weight: 500;
+  cursor: pointer; border: none;
+  transition: background .12s, opacity .12s;
+  white-space: nowrap; font-family: inherit;
 }
-
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
+.btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-2); }
-
-.btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border-2); }
-.btn-ghost:hover { background: var(--surface-2); color: var(--text); }
-
-.btn-danger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
-.btn-danger:hover { background: rgba(239,68,68,0.18); }
-
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-
-.btn-icon {
-  background: none; border: none; cursor: pointer;
-  color: var(--text-3); padding: 4px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 4px; transition: color 0.12s, background 0.12s;
-}
+.btn-primary:hover:not(:disabled) { background: var(--accent-2); }
+.btn-ghost  { background: transparent; color: var(--text-2); border: 1px solid var(--border-2); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.btn-danger { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
+.btn-danger:hover:not(:disabled) { background: rgba(239,68,68,.18); }
+.btn-sm     { padding: 4px 9px; font-size: 12px; }
+.btn-xs     { padding: 3px 7px; font-size: 11px; }
+.btn-icon   { background: none; border: none; cursor: pointer; color: var(--text-3); padding: 4px; display: flex; align-items: center; border-radius: 4px; transition: color .12s, background .12s; }
 .btn-icon:hover { color: var(--text); background: var(--surface-2); }
+.full-w { width: 100%; }
 
-/* ===== FORMS ===== */
+.actions-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+
+/* ── FORMS ── */
 .form-section { padding: 20px; }
-.form-group { margin-bottom: 16px; }
+.form-group   { margin-bottom: 16px; }
 
 label {
   display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-2);
+  font-size: 12px; font-weight: 500; color: var(--text-2);
   margin-bottom: 6px;
 }
 
@@ -419,252 +344,251 @@ textarea, select {
   width: 100%;
   background: var(--bg);
   border: 1px solid var(--border-2);
-  border-radius: var(--radius);
+  border-radius: var(--r);
   padding: 9px 12px;
-  font-size: 13.5px;
-  color: var(--text);
-  font-family: var(--font);
-  transition: border-color 0.12s;
-  outline: none;
+  font-size: 13.5px; color: var(--text);
+  font-family: inherit; outline: none;
+  transition: border-color .12s;
 }
-
 input:focus, textarea:focus, select:focus { border-color: var(--accent); }
 textarea { resize: vertical; line-height: 1.6; }
 
-.form-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
-
+.form-hint  { font-size: 11px; color: var(--text-3); margin-top: 4px; }
 .form-footer {
-  padding: 14px 20px;
+  padding: 13px 20px;
   border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
 }
 
-/* ===== LOGIN ===== */
-#loginPage {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  padding: 24px;
+/* ── TOGGLE ── */
+.toggle-row {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.toggle-info .toggle-label { font-size: 13.5px; font-weight: 500; margin-bottom: 3px; }
+.toggle-info .toggle-desc  { font-size: 12px; color: var(--text-2); }
+
+.toggle {
+  position: relative; width: 36px; height: 20px; flex-shrink: 0;
+  cursor: pointer;
+}
+.toggle input { display: none; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  border-radius: 20px; transition: background .2s, border-color .2s;
+}
+.toggle input:checked ~ .toggle-track {
+  background: var(--accent); border-color: var(--accent);
+}
+.toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 12px; height: 12px;
+  background: var(--text-3);
+  border-radius: 50%;
+  transition: transform .2s, background .2s;
+}
+.toggle input:checked ~ .toggle-thumb {
+  transform: translateX(16px);
+  background: #fff;
 }
 
-.login-box {
-  width: 100%;
-  max-width: 360px;
+.bot-offline-banner {
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.2);
+  border-radius: var(--r);
+  padding: 10px 14px; margin-bottom: 20px;
+  font-size: 13px; color: var(--red);
+  display: flex; align-items: center; gap: 8px;
 }
 
-.login-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 32px;
-}
-
-.login-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.login-sub {
-  font-size: 13px;
-  color: var(--text-2);
-  margin-bottom: 24px;
-}
-
-/* ===== PAGINATION ===== */
+/* ── PAGINATION ── */
 .pagination {
-  padding: 12px 20px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  padding: 11px 20px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
 }
-
 .pagination-info { font-size: 12px; color: var(--text-2); }
 
-/* ===== HANDOFF SUMMARY ===== */
-.summary-box {
-  background: rgba(245,158,11,0.06);
-  border-left: 2px solid var(--orange);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--text-2);
-  line-height: 1.5;
-  max-width: 320px;
+/* ── LOGIN ── */
+#loginPage {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg); padding: 24px;
 }
+.login-box { width: 100%; max-width: 360px; }
+.login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.login-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.login-sub   { font-size: 13px; color: var(--text-2); margin-bottom: 22px; }
 
-/* ===== MODAL ===== */
+/* ── MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,.65);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
-  padding: 16px;
+  z-index: 1000; padding: 16px;
   backdrop-filter: blur(2px);
 }
-
-.modal-overlay.hidden { display: none !important; }
 
 .modal {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 460px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
+  border-radius: var(--rl);
+  width: 100%; max-width: 480px;
+  max-height: 88vh;
+  display: flex; flex-direction: column;
 }
 
+.modal-lg { max-width: 560px; }
+
 .modal-header {
-  padding: 16px 20px;
+  padding: 15px 20px;
   border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-shrink: 0;
+}
+.modal-title { font-size: 14px; font-weight: 600; }
+.modal-sub   { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.modal-body  { padding: 0; overflow-y: auto; flex: 1; }
+.modal-footer {
+  padding: 13px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 8px;
   flex-shrink: 0;
 }
 
-.modal-title { font-size: 14px; font-weight: 600; color: var(--text); }
-.modal-sub { font-size: 12px; color: var(--text-2); margin-top: 1px; }
-
-.modal-body { padding: 4px 0; overflow-y: auto; flex: 1; }
-
-/* ===== CRM ROWS ===== */
+/* ── CRM ── */
 .crm-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 10px 20px;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; padding: 10px 20px;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
-
 .crm-row:last-child { border-bottom: none; }
-
 .crm-label { color: var(--text-2); font-size: 12px; white-space: nowrap; padding-top: 1px; }
-.crm-value { text-align: right; color: var(--text); word-break: break-word; }
+.crm-value { text-align: right; word-break: break-word; }
 
 .tag-list { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
 .tag {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 11px;
-  color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 8px; font-size: 11px; color: var(--text-2);
 }
 
-.etapa-pill {
-  padding: 2px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-}
+.etapa-pill { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
-.crm-empty {
-  padding: 40px 20px;
+.crm-empty { padding: 40px 20px; text-align: center; color: var(--text-2); font-size: 13px; }
+
+/* CRM edit fields */
+.crm-edit-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.crm-edit-label { color: var(--text-2); font-size: 12px; width: 140px; flex-shrink: 0; }
+.crm-edit-input {
+  flex: 1; background: var(--bg);
+  border: 1px solid var(--border-2); border-radius: var(--r);
+  padding: 5px 9px; font-size: 13px; color: var(--text);
+  font-family: inherit; outline: none;
+}
+.crm-edit-input:focus { border-color: var(--accent); }
+
+/* ── CONFIRM ── */
+.confirm-icon {
+  width: 44px; height: 44px;
+  background: rgba(239,68,68,.1);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 20px auto 0;
+  color: var(--red);
+}
+.confirm-text {
+  padding: 16px 20px 20px;
   text-align: center;
-  color: var(--text-2);
-  font-size: 13px;
+  font-size: 13px; color: var(--text-2); line-height: 1.6;
 }
+.confirm-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
 
-/* ===== MOBILE NAV ===== */
+/* ── MOBILE NAV ── */
 #mobileNav {
   display: none;
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
+  position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--surface);
   border-top: 1px solid var(--border);
   z-index: 100;
   padding: 0 4px env(safe-area-inset-bottom);
 }
 
-.mobile-nav-items {
-  display: flex;
-  align-items: stretch;
-}
+.mobile-nav-items { display: flex; }
 
 .mobile-nav-item {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 10px 4px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--text-3);
-  font-size: 10px;
-  font-weight: 500;
-  font-family: var(--font);
-  transition: color 0.12s;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 9px 4px;
+  border: none; background: none; cursor: pointer;
+  color: var(--text-3); font-size: 10px; font-weight: 500;
+  font-family: inherit; transition: color .12s;
   position: relative;
 }
-
 .mobile-nav-item.active { color: var(--accent); }
-
 .mobile-nav-item svg { width: 20px; height: 20px; }
 
 .mobile-badge {
-  position: absolute;
-  top: 8px; right: calc(50% - 14px);
-  background: var(--red);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  width: 16px; height: 16px;
-  border-radius: 50%;
+  position: absolute; top: 7px; right: calc(50% - 16px);
+  background: var(--red); color: #fff;
+  font-size: 9px; font-weight: 700;
+  width: 16px; height: 16px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
 
-/* ===== RESPONSIVE ===== */
+/* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   #sidebar { display: none; }
   #mobileNav { display: block; }
-
-  #shell { flex-direction: column; }
-
   #main { height: 100vh; }
-
-  .page-content {
-    padding: 16px;
-    padding-bottom: 80px;
-  }
-
+  .page-content { padding: 16px; padding-bottom: 80px; }
   .page-header { padding: 0 16px; }
-
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 
-  table { display: block; overflow-x: auto; }
+  /* CONVERSATIONS → CARDS on mobile */
+  #convTable { display: none; }
+  #convCards { display: block; }
 
-  .card { margin-bottom: 16px; }
+  .modal { max-width: 100%; margin: 0; border-radius: var(--rl) var(--rl) 0 0; align-self: flex-end; }
+  .modal-overlay { align-items: flex-end; }
 
-  .modal { max-width: 100%; }
+  .crm-edit-label { width: 110px; }
 }
 
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat-card { padding: 12px 14px; }
-  .stat-value { font-size: 20px; }
+@media (min-width: 769px) {
+  #convCards { display: none; }
 }
 
-/* ===== UTIL ===== */
-.hidden { display: none !important; }
-.divider { height: 1px; background: var(--border); margin: 0; }
+/* CONVERSATION CARD (mobile) */
+.conv-card {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.conv-card:last-child { border-bottom: none; }
+.conv-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.conv-card-name { font-weight: 500; font-size: 13.5px; }
+.conv-card-phone { font-size: 12px; color: var(--text-2); }
+.conv-card-summary {
+  font-size: 12px; color: var(--text-2);
+  background: rgba(245,158,11,.06);
+  border-left: 2px solid var(--orange);
+  padding: 6px 10px; border-radius: 0 6px 6px 0;
+  margin-bottom: 10px; line-height: 1.5;
+}
+.conv-card-actions { display: flex; gap: 8px; }
+.conv-card-actions .btn { flex: 1; justify-content: center; }
+
+/* ── UTILS ── */
+.hidden    { display: none !important; }
 .text-muted { color: var(--text-2); }
-.text-small { font-size: 12px; }
-.actions-row { display: flex; align-items: center; gap: 6px; }
-.full-width { width: 100%; }
+.text-sm   { font-size: 12px; }
+.divider   { height: 1px; background: var(--border); }
 </style>
 </head>
 <body>
@@ -674,60 +598,50 @@ textarea { resize: vertical; line-height: 1.6; }
   <div class="login-box">
     <div class="login-logo">
       <div class="logo-mark">
-        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="7" cy="11" r="1.5" fill="white"/>
-        </svg>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg>
       </div>
       <span class="logo-text">Vorasync</span>
     </div>
-
     <div class="login-title">Entrar no painel</div>
     <div class="login-sub">Use sua Dashboard Key para acessar.</div>
-
     <div class="form-group">
       <label for="apiKeyInput">Dashboard Key</label>
-      <input type="password" id="apiKeyInput" placeholder="••••••••••••••••••••••••">
+      <input type="password" id="apiKeyInput" placeholder="••••••••••••••••••••••••"
+        onkeydown="if(event.key==='Enter') saveKey()">
       <div class="form-hint">Chave enviada no cadastro. Não compartilhe.</div>
     </div>
-
-    <button class="btn btn-primary full-width" onclick="saveKey()" style="padding:10px; font-size:14px;">
-      Entrar
-    </button>
+    <button class="btn btn-primary full-w" onclick="saveKey()" style="padding:10px;font-size:14px;">Entrar</button>
   </div>
 </div>
 
-<!-- APP -->
+<!-- APP SHELL -->
 <div id="shell" class="hidden">
 
   <!-- SIDEBAR -->
   <nav id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">
-        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="7" cy="11" r="1.5" fill="white"/>
-        </svg>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg>
       </div>
       <span class="logo-text">Vorasync</span>
     </div>
 
-    <div class="nav-section" style="padding-top: 16px;">
+    <div class="nav-section" style="padding-top:14px;">
       <button class="nav-item active" onclick="goTo('dashboard')" id="nav-dashboard">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
         Visão geral
       </button>
       <button class="nav-item" onclick="goTo('conversations')" id="nav-conversations">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 10.5C14 11.3284 13.3284 12 12.5 12H4.5L2 14V3.5C2 2.67157 2.67157 2 3.5 2H12.5C13.3284 2 14 2.67157 14 3.5V10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M14 10.5C14 11.3284 13.3284 12 12.5 12H4.5L2 14V3.5C2 2.67157 2.67157 2 3.5 2H12.5C13.3284 2 14 2.67157 14 3.5V10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
         Conversas
         <span class="nav-badge hidden" id="navBadge">0</span>
       </button>
       <button class="nav-item" onclick="goTo('contacts')" id="nav-contacts">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 13C2.5 10.5147 5.01472 8.5 8 8.5C10.9853 8.5 13.5 10.5147 13.5 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 13C2.5 10.5147 5.01472 8.5 8 8.5C10.9853 8.5 13.5 10.5147 13.5 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Contatos
       </button>
       <button class="nav-item" onclick="goTo('settings')" id="nav-settings">
-        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5V3M8 13V14.5M14.5 8H13M3 8H1.5M12.7 3.3L11.6 4.4M4.4 11.6L3.3 12.7M12.7 12.7L11.6 11.6M4.4 4.4L3.3 3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5V3M8 13V14.5M14.5 8H13M3 8H1.5M12.7 3.3L11.6 4.4M4.4 11.6L3.3 12.7M12.7 12.7L11.6 11.6M4.4 4.4L3.3 3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Configurações
       </button>
     </div>
@@ -739,7 +653,7 @@ textarea { resize: vertical; line-height: 1.6; }
           <div class="user-name" id="userName">Carregando...</div>
           <div class="user-plan" id="userPlan">—</div>
         </div>
-        <button class="logout-btn" onclick="logout()" title="Sair">
+        <button class="logout-btn" onclick="confirmLogout()" title="Sair">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 2H3.5C2.67157 2 2 2.67157 2 3.5V12.5C2 13.3284 2.67157 14 3.5 14H6M10.5 11.5L14 8M14 8L10.5 4.5M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
@@ -755,15 +669,21 @@ textarea { resize: vertical; line-height: 1.6; }
 
     <div class="page-content">
 
-      <!-- ALERT BANNER -->
+      <!-- ALERT -->
       <div id="alertBanner" class="hidden" onclick="goTo('conversations')">
         <div class="alert-dot"></div>
-        <span class="alert-text"><span id="alertCount">0</span> conversa aguardando atendimento humano</span>
-        <span class="alert-action">Ver conversas →</span>
+        <span class="alert-text"><span id="alertCount">0</span> conversa aguardando atendimento</span>
+        <span class="alert-link">Ver agora →</span>
       </div>
 
-      <!-- PAGE: DASHBOARD -->
+      <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
+        <div id="botOfflineBanner" class="bot-offline-banner hidden">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".75" fill="currentColor"/></svg>
+          Bot desativado. Nenhuma mensagem será respondida automaticamente.
+          <button class="btn btn-sm" onclick="goTo('settings')" style="margin-left:auto;background:rgba(239,68,68,.2);color:var(--red);border:none;">Reativar</button>
+        </div>
+
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-label">Contatos</div>
@@ -787,119 +707,160 @@ textarea { resize: vertical; line-height: 1.6; }
         <div class="card">
           <div class="card-header">
             <div>
-              <div class="card-title">Conversas ativas</div>
-              <div class="card-desc">Conversas aguardando ação ou com humano ativo</div>
+              <div class="card-title">Atenção necessária</div>
+              <div class="card-desc">Conversas que precisam de um atendente humano</div>
             </div>
             <button class="btn btn-ghost btn-sm" onclick="goTo('conversations')">Ver todas</button>
           </div>
-          <div class="card-body" id="dashConversations">
-            <div class="empty-state">
-              <div class="empty-icon">
-                <svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5C17 13.3284 16.3284 14 15.5 14H5.5L3 16.5V4.5C3 3.67157 3.67157 3 4.5 3H15.5C16.3284 3 17 3.67157 17 4.5V12.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-              </div>
-              <div class="empty-title">Nenhuma conversa ativa</div>
-              <div class="empty-desc">Conversas que precisam de atenção aparecerão aqui.</div>
-            </div>
-          </div>
+          <div id="dashConversations"></div>
         </div>
       </div>
 
-      <!-- PAGE: CONVERSATIONS -->
+      <!-- CONVERSATIONS -->
       <div class="page" id="page-conversations">
         <div class="card">
           <div class="card-header">
             <div>
-              <div class="card-title">Todas as conversas</div>
+              <div class="card-title">Conversas</div>
               <div class="card-desc">Gerencie atendimentos em andamento</div>
             </div>
             <button class="btn btn-ghost btn-sm" onclick="loadConversations()">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.68629 4.68629 2 8 2C10.4183 2 12.5 3.34315 13.5 5.5M14 8C14 11.3137 11.3137 14 8 14C5.58172 14 3.5 12.6569 2.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 2.5V5.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13.5V10.5H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.68629 4.68629 2 8 2C10.4183 2 12.5 3.34315 13.5 5.5M14 8C14 11.3137 11.3137 14 8 14C5.58172 14 3.5 12.6569 2.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 2.5V5.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Atualizar
             </button>
           </div>
-          <div class="card-body">
-            <table>
-              <thead>
-                <tr>
-                  <th>Contato</th>
-                  <th>Status</th>
-                  <th>Score</th>
-                  <th>Resumo</th>
-                  <th>Ação</th>
-                </tr>
-              </thead>
-              <tbody id="conversationsBody"></tbody>
-            </table>
+          <div class="search-row">
+            <div class="search-input-wrap">
+              <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input class="search-input" id="convSearch" placeholder="Buscar por nome ou telefone..." oninput="filterConversations(this.value)">
+            </div>
           </div>
+
+          <!-- DESKTOP TABLE -->
+          <table id="convTable">
+            <thead>
+              <tr>
+                <th>Contato</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Resumo</th>
+                <th>Acao</th>
+              </tr>
+            </thead>
+            <tbody id="conversationsBody"></tbody>
+          </table>
+
+          <!-- MOBILE CARDS -->
+          <div id="convCards"></div>
         </div>
       </div>
 
-      <!-- PAGE: CONTACTS -->
+      <!-- CONTACTS -->
       <div class="page" id="page-contacts">
+        <div class="card" style="margin-bottom:12px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Bloquear numero</div>
+              <div class="card-desc">O bot nao respondera mensagens deste numero</div>
+            </div>
+          </div>
+          <div class="form-section" style="padding:14px 20px;">
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="blockPhoneInput" placeholder="556299999999 (com DDD e codigo do pais)" style="flex:1;">
+              <button class="btn btn-danger" onclick="blockByPhone()">Bloquear</button>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <div>
               <div class="card-title">Contatos</div>
-              <div class="card-desc">Histórico de quem interagiu com o bot</div>
+              <div class="card-desc">Historico de quem interagiu com o bot</div>
             </div>
             <button class="btn btn-ghost btn-sm" onclick="loadContacts()">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.68629 4.68629 2 8 2C10.4183 2 12.5 3.34315 13.5 5.5M14 8C14 11.3137 11.3137 14 8 14C5.58172 14 3.5 12.6569 2.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 2.5V5.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13.5V10.5H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.68629 4.68629 2 8 2C10.4183 2 12.5 3.34315 13.5 5.5M14 8C14 11.3137 11.3137 14 8 14C5.58172 14 3.5 12.6569 2.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 2.5V5.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Atualizar
             </button>
           </div>
-          <div class="card-body">
-            <table>
-              <thead>
-                <tr>
-                  <th>Contato</th>
-                  <th>Último acesso</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="contactsBody"></tbody>
-            </table>
-            <div id="contactPagination"></div>
+          <div class="search-row">
+            <div class="search-input-wrap">
+              <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input class="search-input" id="contactSearch" placeholder="Buscar por nome ou telefone..." oninput="debounceContactSearch(this.value)">
+            </div>
           </div>
+          <table>
+            <thead>
+              <tr><th>Contato</th><th>Ultimo acesso</th><th>Status</th><th>Acoes</th></tr>
+            </thead>
+            <tbody id="contactsBody"></tbody>
+          </table>
+          <div id="contactPagination"></div>
         </div>
       </div>
 
-      <!-- PAGE: SETTINGS -->
+      <!-- SETTINGS -->
       <div class="page" id="page-settings">
         <div class="card">
           <div class="card-header">
             <div>
-              <div class="card-title">Configurações do bot</div>
-              <div class="card-desc">Ajuste o comportamento e personalidade do assistente</div>
+              <div class="card-title">Bot</div>
+              <div class="card-desc">Ative ou desative o atendimento automatico</div>
+            </div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Bot ativo</div>
+              <div class="toggle-desc" id="botStatusDesc">O bot responde mensagens automaticamente.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="botActiveToggle" onchange="toggleBotActive(this.checked)">
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Personalidade do bot</div>
+              <div class="card-desc">Ajuste como o assistente se comporta nas conversas</div>
             </div>
           </div>
           <div class="form-section">
             <div class="form-group">
               <label for="s_botname">Nome do bot</label>
               <input type="text" id="s_botname" placeholder="Ex: Sofia, Assistente, Ana">
-              <div class="form-hint">Como o bot se apresenta nas conversas.</div>
             </div>
             <div class="form-group">
-              <label for="s_prompt">Instruções do bot</label>
-              <textarea id="s_prompt" rows="8" placeholder="Você é um assistente da [Empresa]. Responda sobre [tópicos]. Você NÃO tem acesso a [limitações]."></textarea>
-              <div class="form-hint">Defina a personalidade, o que o bot sabe e o que ele deve encaminhar para um atendente humano.</div>
+              <label for="s_prompt">Instrucoes do bot</label>
+              <textarea id="s_prompt" rows="9" placeholder="Voce e um assistente da [Empresa]. Responda sobre [topicos].
+
+Voce NAO tem acesso a:
+- Agendamento de horarios
+- Consulta de estoque em tempo real
+
+Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></textarea>
+              <div class="form-hint">Defina a personalidade, o que o bot sabe, e o que deve encaminhar para atendente humano.</div>
             </div>
           </div>
           <div class="form-footer">
-            <button class="btn btn-primary" onclick="saveSettings()">Salvar alterações</button>
+            <span></span>
+            <button class="btn btn-primary" onclick="saveSettings()" id="saveSettingsBtn">Salvar alteracoes</button>
           </div>
         </div>
       </div>
 
-    </div><!-- /page-content -->
-  </div><!-- /main -->
+    </div>
+  </div>
 
   <!-- MOBILE NAV -->
   <nav id="mobileNav">
     <div class="mobile-nav-items">
       <button class="mobile-nav-item active" onclick="goTo('dashboard')" id="mnav-dashboard">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
-        Visão geral
+        Visao geral
       </button>
       <button class="mobile-nav-item" onclick="goTo('conversations')" id="mnav-conversations" style="position:relative;">
         <svg viewBox="0 0 16 16" fill="none"><path d="M14 10.5C14 11.3284 13.3284 12 12.5 12H4.5L2 14V3.5C2 2.67157 2.67157 2 3.5 2H12.5C13.3284 2 14 2.67157 14 3.5V10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -917,21 +878,50 @@ textarea { resize: vertical; line-height: 1.6; }
     </div>
   </nav>
 
-</div><!-- /shell -->
+</div>
 
 <!-- CRM MODAL -->
 <div id="crmModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal modal-lg">
     <div class="modal-header">
       <div>
         <div class="modal-title">Perfil do contato</div>
         <div class="modal-sub" id="crmContactName"></div>
       </div>
-      <button class="btn-icon" onclick="closeCrmModal()">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" id="crmEditToggleBtn" onclick="toggleCrmEditMode()">Editar</button>
+        <button class="btn-icon" onclick="closeCrmModal()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
     </div>
     <div class="modal-body" id="crmContent"></div>
+    <div class="modal-footer" id="crmFooter" style="justify-content:space-between;">
+      <button class="btn btn-danger btn-sm" onclick="clearCrm()">Limpar CRM</button>
+      <div style="display:flex;gap:8px;" id="crmEditActions" class="hidden">
+        <button class="btn btn-ghost btn-sm" onclick="toggleCrmEditMode()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="saveCrmEdit()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-body" style="padding-bottom:4px;">
+      <div class="confirm-icon" id="confirmIcon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 6V10.5M10 14H10.01M3 17L10 3L17 17H3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="confirm-text">
+        <div class="confirm-title" id="confirmTitle">Confirmar acao</div>
+        <div id="confirmDesc"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeConfirmModal()">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="confirmOkBtn" onclick="runConfirmAction()">Confirmar</button>
+    </div>
   </div>
 </div>
 
@@ -939,10 +929,21 @@ textarea { resize: vertical; line-height: 1.6; }
 const API = window.location.origin;
 const CONTACTS_PER_PAGE = 20;
 let contactPage = 1;
+let contactSearchQuery = '';
+let allConversations = [];
 let alertIntervalId = null;
+let notifiedIds = new Set();
+let audioCtx = null;
 let currentPage = 'dashboard';
+let crmEditMode = false;
+let crmCurrentContactId = null;
+let crmCurrentProfile = {};
+let confirmAction = null;
+let titleBlinkId = null;
 
-// ===== NAV =====
+// ═══════════════════════════════
+// NAV
+// ═══════════════════════════════
 
 function goTo(page) {
   currentPage = page;
@@ -950,34 +951,40 @@ function goTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
 
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const navEl = document.getElementById('nav-' + page);
-  if (navEl) navEl.classList.add('active');
+  ['dashboard','conversations','contacts','settings'].forEach(p => {
+    document.getElementById('nav-' + p)?.classList.remove('active');
+    document.getElementById('mnav-' + p)?.classList.remove('active');
+  });
+  document.getElementById('nav-' + page)?.classList.add('active');
+  document.getElementById('mnav-' + page)?.classList.add('active');
 
-  document.querySelectorAll('.mobile-nav-item').forEach(n => n.classList.remove('active'));
-  const mnavEl = document.getElementById('mnav-' + page);
-  if (mnavEl) mnavEl.classList.add('active');
-
-  const titles = {
-    dashboard: 'Visão geral',
-    conversations: 'Conversas',
-    contacts: 'Contatos',
-    settings: 'Configurações',
-  };
+  const titles = { dashboard: 'Visao geral', conversations: 'Conversas', contacts: 'Contatos', settings: 'Configuracoes' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
 
+  if (page === 'dashboard')     loadDashboard();
   if (page === 'conversations') loadConversations();
-  if (page === 'contacts') { contactPage = 1; loadContacts(); }
-  if (page === 'settings') loadSettings();
-  if (page === 'dashboard') loadDashboard();
+  if (page === 'contacts')      { contactPage = 1; loadContacts(); }
+  if (page === 'settings')      loadSettings();
 }
 
-// ===== AUTH =====
+// ═══════════════════════════════
+// AUTH
+// ═══════════════════════════════
 
 function getKey() { return localStorage.getItem('clientApiKey'); }
 
+function confirmLogout() {
+  openConfirm(
+    'Sair do painel',
+    'Voce tera que inserir sua Dashboard Key novamente para acessar.',
+    'Sair',
+    logout
+  );
+}
+
 function logout() {
   stopAlertPolling();
+  clearTitleBlink();
   localStorage.removeItem('clientApiKey');
   document.getElementById('shell').classList.add('hidden');
   document.getElementById('loginPage').style.display = 'flex';
@@ -990,12 +997,14 @@ async function saveKey() {
   await startApp();
 }
 
-// ===== API =====
+// ═══════════════════════════════
+// API
+// ═══════════════════════════════
 
 function parseApiError(err, fallback) {
   if (!err) return fallback;
   if (typeof err === 'string') return err;
-  if (Array.isArray(err)) return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
+  if (Array.isArray(err)) return err.map(e => `${(e.loc||[]).join('.')}: ${e.msg}`).join(' | ');
   return fallback;
 }
 
@@ -1006,21 +1015,21 @@ async function api(path, method = 'GET', body = null) {
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) {
-    let errJson = {};
-    try { errJson = await res.json(); } catch (e) {}
-    throw new Error(parseApiError(errJson.detail, res.statusText));
+    let e = {}; try { e = await res.json(); } catch (_) {}
+    throw new Error(parseApiError(e.detail, res.statusText));
   }
   return res.json();
 }
 
-// ===== APP START =====
+// ═══════════════════════════════
+// APP START
+// ═══════════════════════════════
 
 async function startApp() {
   let stats;
-  try {
-    stats = await api('/admin/stats');
-  } catch (e) {
-    alert('Dashboard Key inválida. Verifique e tente novamente.');
+  try { stats = await api('/admin/stats'); }
+  catch (e) {
+    alert('Dashboard Key invalida. Verifique e tente novamente.');
     localStorage.removeItem('clientApiKey');
     return;
   }
@@ -1038,20 +1047,23 @@ async function startApp() {
   startAlertPolling();
 }
 
-// ===== DASHBOARD =====
+// ═══════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════
 
 async function loadDashboard() {
   try {
     const s = await api('/admin/stats');
 
-    document.getElementById('statContacts').textContent = s.contacts ?? '—';
+    document.getElementById('statContacts').textContent      = s.contacts ?? '—';
     document.getElementById('statConversations').textContent = s.conversations ?? '—';
-    document.getElementById('statPlan').textContent = (s.plan || '—').charAt(0).toUpperCase() + (s.plan || '').slice(1);
+    document.getElementById('statRemaining').textContent     = s.messages_remaining ?? '∞';
+    document.getElementById('statMsgSub').textContent        = `${s.messages_month ?? 0} de ${s.max_messages_month ?? 0} usadas`;
+    document.getElementById('statPlan').textContent          = (s.plan || '—').charAt(0).toUpperCase() + (s.plan || '').slice(1);
+    document.getElementById('userName').textContent          = s.tenant_name || 'Minha conta';
+    document.getElementById('userPlan').textContent          = 'Plano ' + (s.plan || '—');
 
     const card = document.getElementById('statMsgCard');
-    document.getElementById('statRemaining').textContent = s.messages_remaining ?? '∞';
-    document.getElementById('statMsgSub').textContent = `${s.messages_month ?? 0} de ${s.max_messages_month ?? 0} usadas`;
-
     card.classList.remove('warn', 'danger');
     if (s.messages_remaining !== null && s.max_messages_month) {
       const pct = s.messages_remaining / s.max_messages_month;
@@ -1059,99 +1071,121 @@ async function loadDashboard() {
       else if (pct <= 0.3) card.classList.add('warn');
     }
 
-    document.getElementById('userName').textContent = s.tenant_name || 'Minha conta';
-    document.getElementById('userPlan').textContent = 'Plano ' + (s.plan || '—');
+    const offBanner = document.getElementById('botOfflineBanner');
+    if (s.bot_active === false) offBanner.classList.remove('hidden');
+    else offBanner.classList.add('hidden');
 
-    // mini-lista de conversas ativas
-    const list = await api('/admin/conversations');
-    const priority = list.filter(c => ['human_active', 'awaiting_handoff_confirmation'].includes(c.state));
+    const list  = await api('/admin/conversations');
+    const prior = list.filter(c => ['human_active','awaiting_handoff_confirmation'].includes(c.state));
 
     const container = document.getElementById('dashConversations');
-    if (priority.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5C17 13.3284 16.3284 14 15.5 14H5.5L3 16.5V4.5C3 3.67157 3.67157 3 4.5 3H15.5C16.3284 3 17 3.67157 17 4.5V12.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
-          <div class="empty-title">Nenhuma conversa ativa</div>
-          <div class="empty-desc">Tudo resolvido. Conversas críticas aparecerão aqui.</div>
-        </div>`;
+    if (prior.length === 0) {
+      container.innerHTML = `<div class="empty-state">
+        <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5C17 13.3284 16.3284 14 15.5 14H5.5L3 16.5V4.5C3 3.67157 3.67157 3 4.5 3H15.5C16.3284 3 17 3.67157 17 4.5V12.5Z" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <div class="empty-title">Tudo em dia</div>
+        <div class="empty-desc">Nenhuma conversa precisa de atencao agora.</div>
+      </div>`;
     } else {
       container.innerHTML = `<table>
-        <thead><tr><th>Contato</th><th>Status</th><th>Resumo</th><th>Ação</th></tr></thead>
-        <tbody>${priority.map(c => `
-          <tr class="priority">
-            <td>
-              <div class="cell-primary">${c.contact_name || '(sem nome)'}</div>
-              <div class="cell-secondary">${c.phone}</div>
-            </td>
-            <td>${stateBadge(c.state)}</td>
-            <td>${c.handoff_summary ? `<div class="summary-box">${c.handoff_summary}</div>` : '<span class="text-muted text-small">—</span>'}</td>
-            <td>
-              ${c.state !== 'human_active'
-                ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`
-                : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
-            </td>
-          </tr>`).join('')}
-        </tbody></table>`;
+        <thead><tr><th>Contato</th><th>Status</th><th>Resumo</th><th>Acao</th></tr></thead>
+        <tbody>${prior.map(c => `<tr class="priority">
+          <td>
+            <div class="cell-primary">${esc(c.contact_name || '(sem nome)')}</div>
+            <div class="cell-secondary">${esc(c.phone)}</div>
+          </td>
+          <td>${stateBadge(c.state)}</td>
+          <td>${c.handoff_summary ? `<div class="summary-box">${esc(c.handoff_summary)}</div>` : '<span class="text-muted text-sm">—</span>'}</td>
+          <td>${c.state !== 'human_active'
+            ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`
+            : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
+          </td>
+        </tr>`).join('')}</tbody>
+      </table>`;
     }
-  } catch (e) { console.error('Erro ao carregar dashboard:', e); }
+  } catch (e) { console.error('Dashboard:', e); }
 }
 
-// ===== CONVERSATIONS =====
+// ═══════════════════════════════
+// CONVERSATIONS
+// ═══════════════════════════════
 
 function stateBadge(state) {
-  const map = {
-    ai_active:                     `<span class="badge badge-ai"><span class="badge-dot"></span>IA ativa</span>`,
-    human_active:                  `<span class="badge badge-human"><span class="badge-dot"></span>Humano ativo</span>`,
-    awaiting_handoff_confirmation: `<span class="badge badge-waiting"><span class="badge-dot"></span>Aguardando confirmação</span>`,
-    cooldown:                      `<span class="badge badge-cooldown"><span class="badge-dot"></span>Cooldown</span>`,
+  const m = {
+    ai_active:                    `<span class="badge badge-ai"><span class="bdot"></span>IA ativa</span>`,
+    human_active:                 `<span class="badge badge-human"><span class="bdot"></span>Humano ativo</span>`,
+    awaiting_handoff_confirmation:`<span class="badge badge-waiting"><span class="bdot"></span>Aguardando</span>`,
+    cooldown:                     `<span class="badge badge-cool"><span class="bdot"></span>Cooldown</span>`,
   };
-  return map[state] || `<span class="badge">${state}</span>`;
+  return m[state] || `<span class="badge">${state}</span>`;
 }
 
-const PRIORITY_STATES = ['human_active', 'awaiting_handoff_confirmation'];
+const PRIORITY = ['human_active','awaiting_handoff_confirmation'];
 
 async function loadConversations() {
   try {
-    let list = await api('/admin/conversations');
-    list = list.sort((a, b) => {
-      const aP = PRIORITY_STATES.includes(a.state) ? 0 : 1;
-      const bP = PRIORITY_STATES.includes(b.state) ? 0 : 1;
-      if (aP !== bP) return aP - bP;
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
+    allConversations = await api('/admin/conversations');
+    renderConversations(allConversations);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
 
-    const tbody = document.getElementById('conversationsBody');
+function filterConversations(q) {
+  const lower = q.toLowerCase();
+  const filtered = allConversations.filter(c =>
+    (c.contact_name || '').toLowerCase().includes(lower) ||
+    (c.phone || '').includes(lower)
+  );
+  renderConversations(filtered);
+}
 
-    if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5">
-        <div class="empty-state">
-          <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5C17 13.3284 16.3284 14 15.5 14H5.5L3 16.5V4.5C3 3.67157 3.67157 3 4.5 3H15.5C16.3284 3 17 3.67157 17 4.5V12.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
-          <div class="empty-title">Nenhuma conversa ainda</div>
-          <div class="empty-desc">As conversas aparecerão aqui quando o bot receber mensagens.</div>
+function renderConversations(list) {
+  const sorted = [...list].sort((a, b) => {
+    const aP = PRIORITY.includes(a.state) ? 0 : 1;
+    const bP = PRIORITY.includes(b.state) ? 0 : 1;
+    if (aP !== bP) return aP - bP;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  const empty = sorted.length === 0;
+  const emptyHtml = `<div class="empty-state">
+    <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="empty-title">Nenhuma conversa encontrada</div>
+    <div class="empty-desc">Tente buscar por outro nome ou telefone.</div>
+  </div>`;
+
+  // desktop table
+  document.getElementById('conversationsBody').innerHTML = empty ? `<tr><td colspan="5">${emptyHtml}</td></tr>` :
+    sorted.map(c => `<tr${PRIORITY.includes(c.state) ? ' class="priority"' : ''}>
+      <td>
+        <div class="cell-primary">${esc(c.contact_name || '(sem nome)')}</div>
+        <div class="cell-secondary">${esc(c.phone)}</div>
+      </td>
+      <td>${stateBadge(c.state)}</td>
+      <td><span class="text-muted">${c.handoff_score ?? 0}</span></td>
+      <td style="max-width:240px;">${c.handoff_summary ? `<div class="summary-box">${esc(c.handoff_summary)}</div>` : '<span class="text-muted text-sm">—</span>'}</td>
+      <td>
+        ${c.state !== 'human_active'
+          ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`
+          : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
+      </td>
+    </tr>`).join('');
+
+  // mobile cards
+  document.getElementById('convCards').innerHTML = empty ? emptyHtml :
+    sorted.map(c => `<div class="conv-card${PRIORITY.includes(c.state) ? ' priority' : ''}">
+      <div class="conv-card-top">
+        <div>
+          <div class="conv-card-name">${esc(c.contact_name || '(sem nome)')}</div>
+          <div class="conv-card-phone">${esc(c.phone)}</div>
         </div>
-      </td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = list.map(c => `
-      <tr${PRIORITY_STATES.includes(c.state) ? ' class="priority"' : ''}>
-        <td>
-          <div class="cell-primary">${c.contact_name || '(sem nome)'}</div>
-          <div class="cell-secondary">${c.phone}</div>
-        </td>
-        <td>${stateBadge(c.state)}</td>
-        <td><span class="text-muted">${c.handoff_score ?? 0}</span></td>
-        <td>${c.handoff_summary ? `<div class="summary-box">${c.handoff_summary}</div>` : '<span class="text-muted text-small">—</span>'}</td>
-        <td>
-          <div class="actions-row">
-            ${c.state !== 'human_active'
-              ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`
-              : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
-          </div>
-        </td>
-      </tr>
-    `).join('');
-  } catch (e) { alert('Erro ao carregar conversas: ' + e.message); }
+        ${stateBadge(c.state)}
+      </div>
+      ${c.handoff_summary ? `<div class="conv-card-summary">${esc(c.handoff_summary)}</div>` : ''}
+      <div class="conv-card-actions">
+        ${c.state !== 'human_active'
+          ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir atendimento</button>`
+          : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
+      </div>
+    </div>`).join('');
 }
 
 async function takeover(id) {
@@ -1160,51 +1194,72 @@ async function takeover(id) {
 }
 
 async function release(id) {
-  if (!confirm('Devolver esta conversa para o bot?')) return;
-  try { await api(`/admin/conversations/${id}/release`, 'POST'); loadConversations(); if (currentPage === 'dashboard') loadDashboard(); }
-  catch (e) { alert('Erro: ' + e.message); }
+  openConfirm(
+    'Devolver para a IA',
+    'O bot voltara a responder automaticamente esta conversa. O historico de atendimento sera limpo.',
+    'Devolver',
+    async () => {
+      try { await api(`/admin/conversations/${id}/release`, 'POST'); loadConversations(); if (currentPage === 'dashboard') loadDashboard(); }
+      catch (e) { alert('Erro: ' + e.message); }
+    }
+  );
 }
 
-// ===== CONTACTS =====
+// ═══════════════════════════════
+// CONTACTS
+// ═══════════════════════════════
+
+let contactSearchDebounce = null;
+function debounceContactSearch(q) {
+  clearTimeout(contactSearchDebounce);
+  contactSearchQuery = q;
+  contactPage = 1;
+  contactSearchDebounce = setTimeout(loadContacts, 300);
+}
 
 async function loadContacts() {
   try {
-    const result = await api(`/admin/contacts?page=${contactPage}&limit=${CONTACTS_PER_PAGE}`);
-    const tbody = document.getElementById('contactsBody');
+    const params = new URLSearchParams({ page: contactPage, limit: CONTACTS_PER_PAGE });
+    if (contactSearchQuery) params.set('search', contactSearchQuery);
+
+    const result = await api(`/admin/contacts?${params}`);
+    const tbody  = document.getElementById('contactsBody');
 
     if (result.data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4">
-        <div class="empty-state">
-          <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11C13.866 11 17 13.6863 17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-          <div class="empty-title">Nenhum contato ainda</div>
-          <div class="empty-desc">Contatos aparecem quando alguém envia uma mensagem ao bot.</div>
-        </div>
-      </td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">
+        <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11C13.866 11 17 13.6863 17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="empty-title">Nenhum contato encontrado</div>
+        <div class="empty-desc">Tente outro nome ou telefone.</div>
+      </div></td></tr>`;
     } else {
       tbody.innerHTML = result.data.map(c => {
         const hasProfile = c.profile && Object.keys(c.profile).length > 0;
-        return `
-          <tr>
-            <td>
-              <div class="cell-primary">${c.name || '(sem nome)'}</div>
-              <div class="cell-secondary">${c.phone}</div>
-            </td>
-            <td><span class="text-small text-muted">${c.last_seen ? new Date(c.last_seen).toLocaleString('pt-BR') : '—'}</span></td>
-            <td>${c.ai_blocked ? '<span class="badge badge-blocked">Bloqueado</span>' : '<span class="text-muted text-small">Ativo</span>'}</td>
-            <td>
-              <div class="actions-row">
-                <button class="btn btn-ghost btn-sm"
-                  onclick='openCrmModal(${JSON.stringify(c.name || "")}, ${JSON.stringify(c.phone || "")}, ${JSON.stringify(c.profile || {})})'
-                  ${!hasProfile ? 'title="Nenhum dado coletado ainda"' : ''}>
-                  ${hasProfile ? 'Ver CRM' : 'CRM vazio'}
-                </button>
-                ${c.ai_blocked
-                  ? `<button class="btn btn-ghost btn-sm" onclick="unblockContact(${c.id})">Desbloquear</button>`
-                  : `<button class="btn btn-danger btn-sm" onclick="blockContact(${c.id})">Bloquear bot</button>`}
-              </div>
-            </td>
-          </tr>
-        `;
+        const cleanPhone = c.phone.replace('@s.whatsapp.net','').replace('@g.us','');
+        return `<tr>
+          <td>
+            <div class="cell-primary">${esc(c.name || '(sem nome)')}</div>
+            <div class="cell-secondary">${esc(c.phone)}</div>
+          </td>
+          <td><span class="text-sm text-muted">${c.last_seen ? new Date(c.last_seen).toLocaleString('pt-BR') : '—'}</span></td>
+          <td>${c.ai_blocked ? '<span class="badge badge-blocked">Bloqueado</span>' : '<span class="text-muted text-sm">Ativo</span>'}</td>
+          <td>
+            <div class="actions-row">
+              <a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener"
+                class="btn btn-ghost btn-xs" title="Abrir no WhatsApp">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 10.5C5.5 10.5 6.5 12 8 12C9.5 12 10.5 11 10.5 9.5C10.5 8 9 7.5 8 7C7 6.5 5.5 6 5.5 4.5C5.5 3 6.5 2 8 2C9.5 2 10.5 3 10.5 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                WA
+              </a>
+              <button class="btn btn-ghost btn-xs${!hasProfile ? '" style="opacity:.45' : ''}"
+                onclick='openCrmModal(${c.id}, ${JSON.stringify(c.name||"")}, ${JSON.stringify(c.phone||"")}, ${JSON.stringify(c.profile||{})})'>
+                CRM${hasProfile ? '' : ' vazio'}
+              </button>
+              ${c.ai_blocked
+                ? `<button class="btn btn-ghost btn-xs" onclick="unblockContact(${c.id})">Desbloquear</button>`
+                : `<button class="btn btn-danger btn-xs" onclick="blockContact(${c.id})">Bloquear bot</button>`}
+              <button class="btn btn-ghost btn-xs" onclick="clearContactData(${c.id}, '${esc(c.name||c.phone)}')" title="Limpar todos os dados deste contato">Limpar</button>
+            </div>
+          </td>
+        </tr>`;
       }).join('');
     }
 
@@ -1217,20 +1272,18 @@ function renderPagination(total, page, limit) {
   const el = document.getElementById('contactPagination');
   if (!el || totalPages <= 1) { if (el) el.innerHTML = ''; return; }
 
-  el.innerHTML = `
-    <div class="pagination">
-      <span class="pagination-info">${total} contatos · página ${page} de ${totalPages}</span>
-      <div class="actions-row">
-        <button class="btn btn-ghost btn-sm" onclick="goContactPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>Anterior</button>
-        <button class="btn btn-ghost btn-sm" onclick="goContactPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Próxima</button>
-      </div>
-    </div>`;
+  el.innerHTML = `<div class="pagination">
+    <span class="pagination-info">${total} contatos — pagina ${page} de ${totalPages}</span>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-sm" onclick="goContactPage(${page-1})" ${page<=1?'disabled':''}>Anterior</button>
+      <button class="btn btn-ghost btn-sm" onclick="goContactPage(${page+1})" ${page>=totalPages?'disabled':''}>Proxima</button>
+    </div>
+  </div>`;
 }
 
 function goContactPage(p) { contactPage = p; loadContacts(); }
 
 async function blockContact(id) {
-  if (!confirm('O bot vai parar de responder este número. Confirmar?')) return;
   try { await api(`/admin/contacts/${id}/block`, 'POST'); loadContacts(); }
   catch (e) { alert('Erro: ' + e.message); }
 }
@@ -1240,35 +1293,271 @@ async function unblockContact(id) {
   catch (e) { alert('Erro: ' + e.message); }
 }
 
-// ===== SETTINGS =====
+async function blockByPhone() {
+  const phone = document.getElementById('blockPhoneInput').value.trim();
+  if (!phone) return alert('Informe o numero.');
+  try {
+    await api('/admin/contacts/block-phone', 'POST', { phone });
+    document.getElementById('blockPhoneInput').value = '';
+    alert(`Numero ${phone} bloqueado.`);
+    loadContacts();
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function clearContactData(id, name) {
+  openConfirm(
+    'Limpar dados de ' + name,
+    'Isso apagara todas as mensagens, o perfil CRM e o historico de handoff deste contato. Esta acao nao pode ser desfeita.',
+    'Limpar tudo',
+    async () => {
+      try { await api(`/admin/contacts/${id}/clear-data`, 'POST'); loadContacts(); }
+      catch (e) { alert('Erro: ' + e.message); }
+    }
+  );
+}
+
+// ═══════════════════════════════
+// SETTINGS
+// ═══════════════════════════════
 
 async function loadSettings() {
   try {
     const s = await api('/admin/settings');
     document.getElementById('s_botname').value = s.bot_name || '';
-    document.getElementById('s_prompt').value = s.system_prompt || '';
-  } catch (e) { alert('Erro ao carregar configurações: ' + e.message); }
+    document.getElementById('s_prompt').value  = s.system_prompt || '';
+
+    const toggle = document.getElementById('botActiveToggle');
+    toggle.checked = s.bot_active !== false;
+    updateBotStatusDesc(toggle.checked);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+function updateBotStatusDesc(active) {
+  document.getElementById('botStatusDesc').textContent = active
+    ? 'O bot responde mensagens automaticamente.'
+    : 'Bot desativado. Nenhuma mensagem sera respondida.';
+  document.getElementById('botStatusDesc').style.color = active ? '' : 'var(--red)';
+}
+
+async function toggleBotActive(checked) {
+  if (!checked) {
+    // pede confirmacao antes de desativar
+    openConfirm(
+      'Desativar o bot',
+      'O bot vai parar de responder todas as mensagens imediatamente. Clientes que enviarem mensagens nao receberao resposta automatica. Voce pode reativar a qualquer momento.',
+      'Desativar',
+      async () => {
+        try {
+          await api('/admin/settings', 'PATCH', { bot_active: false });
+          updateBotStatusDesc(false);
+          loadDashboard();
+        } catch (e) {
+          document.getElementById('botActiveToggle').checked = true;
+          alert('Erro: ' + e.message);
+        }
+      },
+      // cancelado — reverte o toggle
+      () => { document.getElementById('botActiveToggle').checked = true; }
+    );
+    return;
+  }
+
+  try {
+    await api('/admin/settings', 'PATCH', { bot_active: true });
+    updateBotStatusDesc(true);
+    loadDashboard();
+  } catch (e) {
+    document.getElementById('botActiveToggle').checked = false;
+    alert('Erro: ' + e.message);
+  }
 }
 
 async function saveSettings() {
-  const payload = {
-    bot_name: document.getElementById('s_botname').value,
-    system_prompt: document.getElementById('s_prompt').value,
-  };
+  const btn = document.getElementById('saveSettingsBtn');
+  btn.disabled = true; btn.textContent = 'Salvando...';
   try {
-    await api('/admin/settings', 'PATCH', payload);
-    const btn = document.querySelector('#page-settings .btn-primary');
-    const orig = btn.textContent;
-    btn.textContent = 'Salvo';
-    btn.disabled = true;
-    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+    await api('/admin/settings', 'PATCH', {
+      bot_name:      document.getElementById('s_botname').value,
+      system_prompt: document.getElementById('s_prompt').value,
+    });
+    btn.textContent = 'Salvo!';
+    setTimeout(() => { btn.textContent = 'Salvar alteracoes'; btn.disabled = false; }, 2000);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Salvar alteracoes';
+    alert('Erro: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════
+// CRM
+// ═══════════════════════════════
+
+const CRM_LABELS = {
+  nome: 'Nome', empresa: 'Empresa', cargo: 'Cargo', segmento: 'Segmento',
+  cidade: 'Cidade', tamanho_empresa: 'Porte da empresa', decisor: 'Decisor',
+  interesse: 'Interesse', orcamento: 'Orcamento', urgencia: 'Urgencia',
+  etapa_venda: 'Etapa de venda', produto_atual: 'Produto atual',
+  processo_atual: 'Processo atual', prazo_decisao: 'Prazo de decisao',
+  necessidades: 'Necessidades', objecoes: 'Objecoes', resumo_cliente: 'Resumo',
+};
+
+const ETAPA_STYLES = {
+  descoberta: { bg: 'rgba(33,150,243,.12)', color: '#2196f3' },
+  interesse:  { bg: 'rgba(168,85,247,.12)',  color: '#a855f7' },
+  orcamento:  { bg: 'rgba(245,158,11,.12)',  color: '#f59e0b' },
+  negociacao: { bg: 'rgba(239,68,68,.12)',   color: '#ef4444' },
+  cliente:    { bg: 'rgba(34,197,94,.12)',   color: '#22c55e' },
+};
+
+function openCrmModal(contactId, name, phone, profile) {
+  crmCurrentContactId = contactId;
+  crmCurrentProfile   = { ...profile };
+  crmEditMode         = false;
+
+  document.getElementById('crmContactName').textContent = `${name || '(sem nome)'} · ${phone}`;
+  document.getElementById('crmEditToggleBtn').textContent = 'Editar';
+  document.getElementById('crmEditActions').classList.add('hidden');
+
+  renderCrmView(profile);
+  document.getElementById('crmModal').classList.remove('hidden');
+}
+
+function renderCrmView(profile) {
+  const entries = Object.entries(CRM_LABELS)
+    .map(([key, label]) => ({ key, label, val: profile[key] }))
+    .filter(({ val }) => val !== null && val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0));
+
+  const content = document.getElementById('crmContent');
+
+  if (entries.length === 0) {
+    content.innerHTML = `<div class="crm-empty">
+      Nenhum dado coletado ainda.<br>
+      <span style="font-size:12px;color:var(--text-3);">As informacoes sao extraidas automaticamente durante as conversas. Voce tambem pode editar manualmente.</span>
+    </div>`;
+    return;
+  }
+
+  content.innerHTML = entries.map(({ key, label, val }) => {
+    let rendered;
+    if (key === 'etapa_venda') {
+      const s = ETAPA_STYLES[val] || { bg:'rgba(79,124,255,.12)', color:'var(--accent)' };
+      rendered = `<span class="etapa-pill" style="background:${s.bg};color:${s.color};">${val}</span>`;
+    } else if (Array.isArray(val)) {
+      rendered = `<div class="tag-list">${val.map(v => `<span class="tag">${esc(v)}</span>`).join('')}</div>`;
+    } else {
+      rendered = `<span>${esc(String(val))}</span>`;
+    }
+    return `<div class="crm-row"><span class="crm-label">${label}</span><span class="crm-value">${rendered}</span></div>`;
+  }).join('');
+}
+
+function renderCrmEdit(profile) {
+  const content = document.getElementById('crmContent');
+  content.innerHTML = Object.entries(CRM_LABELS).map(([key, label]) => {
+    const val = profile[key];
+    const displayVal = Array.isArray(val) ? val.join(', ') : (val || '');
+    return `<div class="crm-edit-row">
+      <span class="crm-edit-label">${label}</span>
+      <input class="crm-edit-input" data-key="${key}" value="${esc(String(displayVal))}" placeholder="—">
+    </div>`;
+  }).join('');
+}
+
+function toggleCrmEditMode() {
+  crmEditMode = !crmEditMode;
+  document.getElementById('crmEditToggleBtn').textContent = crmEditMode ? 'Visualizar' : 'Editar';
+  document.getElementById('crmEditActions').classList.toggle('hidden', !crmEditMode);
+
+  if (crmEditMode) renderCrmEdit(crmCurrentProfile);
+  else renderCrmView(crmCurrentProfile);
+}
+
+async function saveCrmEdit() {
+  const inputs = document.querySelectorAll('.crm-edit-input');
+  const updated = {};
+  const listKeys = ['necessidades', 'objecoes'];
+
+  inputs.forEach(input => {
+    const key = input.dataset.key;
+    const val = input.value.trim();
+    if (!val) return;
+    if (listKeys.includes(key)) {
+      updated[key] = val.split(',').map(v => v.trim()).filter(Boolean);
+    } else {
+      updated[key] = val;
+    }
+  });
+
+  try {
+    const res = await api(`/admin/contacts/${crmCurrentContactId}/profile`, 'PATCH', { profile: updated });
+    crmCurrentProfile = res.profile;
+    crmEditMode = false;
+    document.getElementById('crmEditToggleBtn').textContent = 'Editar';
+    document.getElementById('crmEditActions').classList.add('hidden');
+    renderCrmView(crmCurrentProfile);
+    loadContacts();
   } catch (e) { alert('Erro ao salvar: ' + e.message); }
 }
 
-// ===== NOTIFICATIONS =====
+async function clearCrm() {
+  openConfirm(
+    'Limpar perfil CRM',
+    'Todos os dados de perfil deste contato serao removidos. O historico de conversas nao e afetado.',
+    'Limpar CRM',
+    async () => {
+      try {
+        await api(`/admin/contacts/${crmCurrentContactId}/profile`, 'DELETE');
+        crmCurrentProfile = {};
+        renderCrmView({});
+        loadContacts();
+      } catch (e) { alert('Erro: ' + e.message); }
+    }
+  );
+}
 
-let notifiedIds = new Set();
-let audioCtx = null;
+function closeCrmModal() {
+  document.getElementById('crmModal').classList.add('hidden');
+  crmEditMode = false;
+}
+
+document.getElementById('crmModal').addEventListener('click', function(e) {
+  if (e.target === this) closeCrmModal();
+});
+
+// ═══════════════════════════════
+// CONFIRM MODAL
+// ═══════════════════════════════
+
+let cancelAction = null;
+
+function openConfirm(title, desc, okLabel, onOk, onCancel = null) {
+  document.getElementById('confirmTitle').textContent   = title;
+  document.getElementById('confirmDesc').textContent    = desc;
+  document.getElementById('confirmOkBtn').textContent   = okLabel;
+  confirmAction = onOk;
+  cancelAction  = onCancel;
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  if (cancelAction) { cancelAction(); cancelAction = null; }
+  confirmAction = null;
+}
+
+async function runConfirmAction() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  cancelAction = null;
+  if (confirmAction) { await confirmAction(); confirmAction = null; }
+}
+
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirmModal();
+});
+
+// ═══════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════
 
 function startAlertPolling() {
   if (alertIntervalId) return;
@@ -1281,7 +1570,9 @@ function stopAlertPolling() {
 }
 
 function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 }
 
 function playBeep() {
@@ -1292,29 +1583,46 @@ function playBeep() {
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.frequency.value = 880; gain.gain.value = 0.1;
     osc.start(); setTimeout(() => osc.stop(), 180);
-  } catch (e) {}
+  } catch (_) {}
+}
+
+function setTitleBlink(count) {
+  clearTitleBlink();
+  if (count === 0) { document.title = 'Vorasync'; return; }
+  let show = true;
+  titleBlinkId = setInterval(() => {
+    document.title = show ? `(${count}) Atendimento — Vorasync` : 'Vorasync';
+    show = !show;
+  }, 1800);
+}
+
+function clearTitleBlink() {
+  if (titleBlinkId) { clearInterval(titleBlinkId); titleBlinkId = null; }
+  document.title = 'Vorasync';
 }
 
 async function checkHandoffAlerts() {
   try {
-    const list = await api('/admin/conversations');
+    const list    = await api('/admin/conversations');
     const pending = list.filter(c => c.state === 'human_active');
-    const count = pending.length;
+    const count   = pending.length;
 
     const banner = document.getElementById('alertBanner');
     document.getElementById('alertCount').textContent = count === 1 ? '1 conversa' : `${count} conversas`;
 
-    const navBadge = document.getElementById('navBadge');
+    const navBadge    = document.getElementById('navBadge');
     const mobileBadge = document.getElementById('mobileBadge');
 
     if (count > 0) {
       banner.classList.remove('hidden');
-      navBadge.classList.remove('hidden'); navBadge.textContent = count;
+      navBadge.classList.remove('hidden');    navBadge.textContent    = count;
       mobileBadge.classList.remove('hidden'); mobileBadge.textContent = count;
+      setTitleBlink(count);
     } else {
       banner.classList.add('hidden');
       navBadge.classList.add('hidden');
       mobileBadge.classList.add('hidden');
+      clearTitleBlink();
     }
 
     const newOnes = pending.filter(c => !notifiedIds.has(c.id));
@@ -1322,6 +1630,7 @@ async function checkHandoffAlerts() {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Vorasync — Atendimento solicitado', {
           body: `${count} conversa${count > 1 ? 's' : ''} aguardando atendimento humano`,
+          tag:  'handoff',   // substitui notificacao anterior em vez de empilhar
         });
       }
       playBeep();
@@ -1330,69 +1639,21 @@ async function checkHandoffAlerts() {
 
     const pendingIds = new Set(pending.map(c => c.id));
     notifiedIds.forEach(id => { if (!pendingIds.has(id)) notifiedIds.delete(id); });
-  } catch (e) { /* silencioso */ }
+
+  } catch (_) {}
 }
 
-// ===== CRM =====
+// ═══════════════════════════════
+// UTIL
+// ═══════════════════════════════
 
-const CRM_LABELS = {
-  nome: 'Nome', empresa: 'Empresa', cargo: 'Cargo', segmento: 'Segmento',
-  cidade: 'Cidade', tamanho_empresa: 'Porte', decisor: 'Decisor',
-  interesse: 'Interesse', orcamento: 'Orçamento', urgencia: 'Urgência',
-  etapa_venda: 'Etapa', produto_atual: 'Produto atual', processo_atual: 'Processo atual',
-  prazo_decisao: 'Prazo de decisão', necessidades: 'Necessidades',
-  objecoes: 'Objeções', resumo_cliente: 'Resumo',
-};
-
-const ETAPA_STYLES = {
-  descoberta: { bg: 'rgba(33,150,243,0.12)', color: '#2196f3' },
-  interesse:  { bg: 'rgba(168,85,247,0.12)', color: '#a855f7' },
-  orcamento:  { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' },
-  negociacao: { bg: 'rgba(239,68,68,0.12)',  color: '#ef4444' },
-  cliente:    { bg: 'rgba(34,197,94,0.12)',  color: '#22c55e' },
-};
-
-function openCrmModal(name, phone, profile) {
-  document.getElementById('crmContactName').textContent = `${name || '(sem nome)'} · ${phone}`;
-
-  const entries = Object.entries(CRM_LABELS)
-    .map(([key, label]) => ({ key, label, val: profile[key] }))
-    .filter(({ val }) => val !== null && val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0));
-
-  const content = document.getElementById('crmContent');
-
-  if (entries.length === 0) {
-    content.innerHTML = `<div class="crm-empty">
-      Nenhum dado coletado ainda.<br>
-      <span style="font-size:12px;color:var(--text-3)">As informações são extraídas automaticamente pelo bot durante as conversas.</span>
-    </div>`;
-  } else {
-    content.innerHTML = entries.map(({ key, label, val }) => {
-      let rendered;
-      if (key === 'etapa_venda') {
-        const s = ETAPA_STYLES[val] || { bg: 'rgba(79,124,255,0.12)', color: 'var(--accent)' };
-        rendered = `<span class="etapa-pill" style="background:${s.bg};color:${s.color};">${val}</span>`;
-      } else if (Array.isArray(val)) {
-        rendered = `<div class="tag-list">${val.map(v => `<span class="tag">${v}</span>`).join('')}</div>`;
-      } else {
-        rendered = `<span>${val}</span>`;
-      }
-      return `<div class="crm-row"><span class="crm-label">${label}</span><span class="crm-value">${rendered}</span></div>`;
-    }).join('');
-  }
-
-  document.getElementById('crmModal').classList.remove('hidden');
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function closeCrmModal() {
-  document.getElementById('crmModal').classList.add('hidden');
-}
-
-document.getElementById('crmModal').addEventListener('click', function(e) {
-  if (e.target === this) closeCrmModal();
-});
-
-// ===== INIT =====
+// ═══════════════════════════════
+// INIT
+// ═══════════════════════════════
 
 if (getKey()) {
   document.getElementById('loginPage').style.display = 'none';

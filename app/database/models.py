@@ -12,10 +12,6 @@ import enum
 Base = declarative_base()
 
 
-# ================================
-# ENUMS
-# ================================
-
 class PlanEnum(str, enum.Enum):
     basic      = "basic"
     pro        = "pro"
@@ -42,10 +38,6 @@ class ConversationStateEnum(str, enum.Enum):
     cooldown                      = "cooldown"
 
 
-# ================================
-# TENANTS
-# ================================
-
 class Tenant(Base):
     __tablename__ = "tenants"
 
@@ -57,26 +49,21 @@ class Tenant(Base):
     status              = Column(Enum(StatusTenantEnum), default=StatusTenantEnum.active)
     whatsapp_instance   = Column(String, unique=True, nullable=False)
     whatsapp_number     = Column(String)
-
-    api_key             = Column(String, nullable=False)   # chave REAL da Evolution API
-    dashboard_key        = Column(String, unique=True, nullable=True)  # login do painel do cliente
-    webhook_secret       = Column(String, unique=True, nullable=True)  # identifica o tenant no webhook
-
+    api_key             = Column(String, nullable=False)
+    dashboard_key       = Column(String, unique=True, nullable=True)
+    webhook_secret      = Column(String, unique=True, nullable=True)
     max_messages_month  = Column(Integer, default=1000)
     created_at          = Column(DateTime, server_default=func.now())
     updated_at          = Column(DateTime, server_default=func.now(), onupdate=func.now())
     bot_name            = Column(String, default="Assistente")
     system_prompt       = Column(String, nullable=True)
     ai_model            = Column(String, default="gpt-4o-mini")
+    bot_active          = Column(Boolean, default=True)   # ← NOVO
 
     contacts      = relationship("Contact",      back_populates="tenant")
     conversations = relationship("Conversation", back_populates="tenant")
     messages      = relationship("Message",      back_populates="tenant")
 
-
-# ================================
-# CONTACTS
-# ================================
 
 class Contact(Base):
     __tablename__ = "contacts"
@@ -95,10 +82,6 @@ class Contact(Base):
     messages      = relationship("Message",      back_populates="contact")
 
 
-# ================================
-# CONVERSATIONS
-# ================================
-
 class Conversation(Base):
     __tablename__ = "conversations"
 
@@ -110,16 +93,16 @@ class Conversation(Base):
     state  = Column(Enum(ConversationStateEnum), default=ConversationStateEnum.ai_active, nullable=False)
     human_mode = Column(Boolean, default=False)
 
-    explicit_score = Column(Integer, default=0)
-    soft_score     = Column(Integer, default=0)
-    consecutive_friction = Column(Integer, default=0)   # ← NOVO
+    explicit_score       = Column(Integer, default=0)
+    soft_score           = Column(Integer, default=0)
+    consecutive_friction = Column(Integer, default=0)
 
-    handoff_offered      = Column(Boolean, default=False)
-    handoff_offer_count   = Column(Integer, default=0)
-    handoff_reason        = Column(String, nullable=True)
-    handoff_summary       = Column(String, nullable=True)
+    handoff_offered     = Column(Boolean, default=False)
+    handoff_offer_count  = Column(Integer, default=0)
+    handoff_reason       = Column(String, nullable=True)
+    handoff_summary      = Column(String, nullable=True)
 
-    cooldown_until = Column(DateTime, nullable=True)
+    cooldown_until   = Column(DateTime, nullable=True)
     last_activity_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     created_at = Column(DateTime, server_default=func.now())
@@ -133,10 +116,6 @@ class Conversation(Base):
     def handoff_score(self):
         return (self.explicit_score or 0) + (self.soft_score or 0)
 
-
-# ================================
-# MESSAGES
-# ================================
 
 class Message(Base):
     __tablename__ = "messages"
