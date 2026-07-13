@@ -16,3 +16,6 @@ def classify_task(message: str) -> str:
     if any(t in msg for t in complex_triggers):
         return "complex"
     return "simple"
+
+
+
