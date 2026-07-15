@@ -4,107 +4,224 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vorasync — Admin</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f7cff'/><path d='M8 22 L16 10 L24 22' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><circle cx='16' cy='22' r='2' fill='white'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; font-family: system-ui, sans-serif; }
-body { background:#0f1115; color:#e6e6e6; margin:0; padding:24px; }
-h1 { font-size:20px; }
-.card { background:#181b22; border-radius:10px; padding:20px; margin-bottom:20px; }
-input, select, button, textarea {
-  background:#0f1115; color:#fff; border:1px solid #2a2e38;
-  border-radius:6px; padding:8px 10px; margin:4px 0; width:100%;
+:root {
+  --bg: #0c0e12; --surface: #13161c; --surface-2: #1a1d25;
+  --border: #232630; --border-2: #2d3040;
+  --text: #e8eaf0; --text-2: #8b90a0; --text-3: #555b6e;
+  --accent: #4f7cff; --accent-2: #3a60d6;
+  --green: #22c55e; --orange: #f59e0b; --red: #ef4444;
+  --r: 8px; --rl: 12px;
 }
-button { background:#4f7cff; cursor:pointer; border:none; font-weight:600; }
-button:hover { background:#3f63d6; }
-button:disabled { opacity:0.5; cursor:not-allowed; }
-button.danger { background:#c0392b; }
-button.ghost { background:transparent; border:1px solid #444; }
-button.ghost:hover { background:#222; }
-table { width:100%; border-collapse:collapse; margin-top:12px; }
-th, td { padding:8px; border-bottom:1px solid #2a2e38; text-align:left; font-size:13px; }
-.status-active { color:#4caf50; }
-.status-suspended { color:#ff9800; }
-.status-cancelled { color:#f44336; }
-.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.hidden { display:none !important; }
-.actions { display:flex; gap:6px; }
-.actions button { width:auto; }
-.topbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+body{padding:24px;}
+h1{font-size:20px;font-weight:600;margin-bottom:20px;}
+h2{font-size:15px;font-weight:600;margin:24px 0 12px;}
 
-@media (max-width: 640px) {
-  body { padding: 12px; }
-  .grid2 { grid-template-columns: 1fr; }
-  table { display: block; overflow-x: auto; white-space: nowrap; }
-  #editModal .card { width: 92vw !important; max-width: 420px; max-height: 88vh; overflow-y: auto; }
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:16px;}
+.card-header{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.card-title{font-size:13.5px;font-weight:600;}
+.card-desc{font-size:12px;color:var(--text-2);margin-top:1px;}
+
+input,select,button,textarea{background:var(--bg);color:var(--text);border:1px solid var(--border-2);border-radius:var(--r);padding:8px 10px;margin:4px 0;width:100%;font-family:inherit;font-size:13px;outline:none;}
+button{cursor:pointer;font-weight:500;border:none;transition:background .12s;}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r);font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:background .12s;white-space:nowrap;font-family:inherit;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover:not(:disabled){background:var(--accent-2);}
+.btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--border-2);}
+.btn-ghost:hover:not(:disabled){background:var(--surface-2);color:var(--text);}
+.btn-danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);}
+.btn-danger:hover:not(:disabled){background:rgba(239,68,68,.18);}
+.btn-sm{padding:4px 9px;font-size:12px;}
+.btn-xs{padding:3px 7px;font-size:11px;}
+
+table{width:100%;border-collapse:collapse;margin-top:12px;}
+th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);padding:10px 20px;border-bottom:1px solid var(--border);}
+td{padding:10px 20px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.012);}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.bdot{width:5px;height:5px;border-radius:50%;}
+.badge-active{background:rgba(34,197,94,.1);color:var(--green);}
+.badge-active .bdot{background:var(--green);}
+.badge-suspended{background:rgba(245,158,11,.1);color:var(--orange);}
+.badge-suspended .bdot{background:var(--orange);}
+.badge-cancelled{background:rgba(239,68,68,.1);color:var(--red);}
+
+.toggle{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0;}
+.toggle input{display:none;}
+.toggle-track{position:absolute;inset:0;background:var(--surface-2);border:1px solid var(--border-2);border-radius:20px;transition:background .2s,border-color .2s;}
+.toggle input:checked~.toggle-track{background:var(--accent);border-color:var(--accent);}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:12px;height:12px;background:var(--text-3);border-radius:50%;transition:transform .2s,background .2s;}
+.toggle input:checked~.toggle-thumb{transform:translateX(16px);background:#fff;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+.hidden{display:none !important;}
+
+.actions{display:flex;gap:6px;align-items:center;}
+
+/* ALERT BANNER */
+.alert-overview{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--r);padding:12px 16px;margin-bottom:20px;}
+.alert-overview-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.alert-dot{width:8px;height:8px;background:var(--orange);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.alert-overview-title{font-size:13px;font-weight:600;color:var(--orange);}
+.handoff-item{padding:8px 0;border-bottom:1px solid rgba(245,158,11,.15);font-size:12px;color:var(--text-2);}
+.handoff-item:last-child{border-bottom:none;padding-bottom:0;}
+.handoff-item-name{font-weight:500;color:var(--text);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;backdrop-filter:blur(2px);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);width:100%;max-width:500px;max-height:88vh;display:flex;flex-direction:column;}
+.modal-header{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;}
+.modal-title{font-size:14px;font-weight:600;}
+.modal-body{padding:20px;overflow-y:auto;flex:1;}
+.modal-footer{padding:13px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.btn-icon{background:none;border:none;cursor:pointer;color:var(--text-3);padding:4px;display:flex;align-items:center;border-radius:4px;transition:color .12s;}
+.btn-icon:hover{color:var(--text);}
+
+.form-group{margin-bottom:14px;}
+label{display:block;font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:5px;}
+.form-hint{font-size:11px;color:var(--text-3);margin-top:3px;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.toggle-label{font-size:13px;font-weight:500;}
+.toggle-desc{font-size:11px;color:var(--text-2);margin-top:2px;}
+
+.login-card{max-width:360px;margin:80px auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:32px;}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:24px;}
+.logo-mark{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+
+@media(max-width:640px){
+  body{padding:12px;}
+  .grid2{grid-template-columns:1fr;}
+  table{display:block;overflow-x:auto;}
+  .modal{max-width:100%;margin:0;border-radius:var(--rl) var(--rl) 0 0;align-self:flex-end;}
+  .modal-overlay{align-items:flex-end;}
 }
 </style>
 </head>
 <body>
 
-<div id="login" class="card">
-  <h1>🔐 Vorasync — Painel Admin</h1>
-  <input id="adminKey" type="password" placeholder="X-Admin-Key">
-  <button onclick="saveKey()">Entrar</button>
+<div id="loginBox" class="login-card">
+  <div class="logo-row">
+    <div class="logo-mark">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg>
+    </div>
+    <span style="font-size:15px;font-weight:600;">Vorasync Admin</span>
+  </div>
+  <div class="form-group">
+    <label>X-Admin-Key</label>
+    <input type="password" id="adminKey" placeholder="••••••••••••" onkeydown="if(event.key==='Enter')saveKey()">
+  </div>
+  <button class="btn btn-primary" onclick="saveKey()" style="width:100%;padding:9px;font-size:14px;">Entrar</button>
 </div>
 
 <div id="app" class="hidden">
 
-  <div class="topbar">
-    <h1>📋 Tenants</h1>
-    <button class="ghost" onclick="logout()" style="width:auto;">🚪 Sair</button>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+    <h1 style="margin:0;">Painel Admin</h1>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
   </div>
 
+  <!-- HANDOFF OVERVIEW -->
+  <div id="handoffOverview" class="hidden"></div>
+
+  <!-- TENANTS -->
+  <h2>Clientes</h2>
   <div class="card">
-    <button onclick="loadTenants()">🔄 Atualizar lista</button>
-    <table id="tenantsTable">
+    <div class="card-header">
+      <div class="card-title">Todos os tenants</div>
+      <button class="btn btn-ghost btn-sm" onclick="loadTenants()">Atualizar</button>
+    </div>
+    <table>
       <thead>
-        <tr><th>ID</th><th>Nome</th><th>Plano</th><th>Status</th><th>Msgs/mês</th><th>Contatos</th><th>Ações</th></tr>
+        <tr><th>ID</th><th>Nome</th><th>Plano</th><th>Status</th><th>Msgs</th><th>Handoffs</th><th>Agenda</th><th>Acoes</th></tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="tenantsBody"></tbody>
     </table>
   </div>
 
-  <h1>➕ Novo Cliente</h1>
+  <!-- NOVO CLIENTE -->
+  <h2>Novo Cliente</h2>
   <div class="card">
-    <div class="grid2">
-      <input id="r_name" placeholder="Nome da empresa">
-      <input id="r_email" placeholder="Email">
-      <input id="r_instance" placeholder="whatsapp_instance (Evolution)">
-      <input id="r_number" placeholder="Número WhatsApp (opcional)">
-      <input id="r_apikey" placeholder="API Key da Evolution (do cliente)">
-      <select id="r_plan">
-        <option value="basic">Basic — 3.000 msgs/mês</option>
-        <option value="pro">Pro — 6.000 msgs/mês</option>
-        <option value="enterprise">Enterprise — ilimitado</option>
-      </select>
-      <input id="r_botname" value="Assistente" placeholder="Nome do bot">
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="form-group"><label>Nome da empresa</label><input id="r_name" placeholder="Empresa"></div>
+        <div class="form-group"><label>Email</label><input id="r_email" placeholder="email@empresa.com" type="email"></div>
+        <div class="form-group"><label>whatsapp_instance (Evolution)</label><input id="r_instance" placeholder="nomeinstancia"></div>
+        <div class="form-group"><label>Numero WhatsApp (opcional)</label><input id="r_number" placeholder="556299999999"></div>
+        <div class="form-group"><label>API Key da Evolution</label><input id="r_apikey" placeholder="Chave real da Evolution API"></div>
+        <div class="form-group">
+          <label>Plano</label>
+          <select id="r_plan">
+            <option value="basic">Basic — 3.000 msgs/mes</option>
+            <option value="pro">Pro — 6.000 msgs/mes</option>
+            <option value="enterprise">Enterprise — ilimitado</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Nome do bot</label><input id="r_botname" value="Assistente" placeholder="Nome do bot"></div>
+      </div>
+      <div class="form-group"><label>System prompt</label><textarea id="r_prompt" rows="4" placeholder="Voce e um assistente da [Empresa]..."></textarea></div>
+      <button class="btn btn-primary" onclick="registerTenant()">Cadastrar Cliente</button>
+      <div id="registerResult" style="margin-top:12px;"></div>
     </div>
-    <textarea id="r_prompt" rows="4" placeholder="System prompt"></textarea>
-    <button onclick="registerTenant()">Cadastrar Cliente</button>
-    <div id="registerResult"></div>
   </div>
 
 </div>
 
-<div id="editModal" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;">
-  <div class="card" style="width:420px;">
-    <h2>✏️ Editar Cliente #<span id="edit_id"></span></h2>
-    <input id="edit_name" placeholder="Nome">
-    <input id="edit_phone" placeholder="Telefone">
-    <input id="edit_apikey" placeholder="API Key da Evolution (deixe vazio para não alterar)">
-    <select id="edit_plan" onchange="applyPlanDefault()">
-      <option value="basic">Basic</option>
-      <option value="pro">Pro</option>
-      <option value="enterprise">Enterprise</option>
-    </select>
-    <label style="font-size:12px;color:#9aa3b2;">Limite de mensagens/mês</label>
-    <input id="edit_limit" type="number">
-    <input id="edit_botname" placeholder="Nome do bot">
-    <textarea id="edit_prompt" rows="4"></textarea>
-    <div style="display:flex;gap:8px;margin-top:8px; flex-wrap:wrap;">
-      <button onclick="saveTenantEdit()">Salvar</button>
-      <button class="ghost" onclick="closeEditModal()">Cancelar</button>
-      <button class="danger" onclick="regenerateDashboardKey()">Nova Dashboard Key</button>
-      <button class="danger" onclick="regenerateWebhookSecret()">Novo Webhook</button>
+<!-- EDIT MODAL -->
+<div id="editModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Editar Cliente #<span id="edit_id"></span></div>
+      </div>
+      <button class="btn-icon" onclick="closeEditModal()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="form-group"><label>Nome</label><input id="edit_name"></div>
+        <div class="form-group"><label>Telefone</label><input id="edit_phone"></div>
+        <div class="form-group">
+          <label>Plano</label>
+          <select id="edit_plan" onchange="applyPlanDefault()">
+            <option value="basic">Basic</option>
+            <option value="pro">Pro</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Limite mensagens</label><input id="edit_limit" type="number"></div>
+        <div class="form-group"><label>API Key da Evolution (deixe vazio para nao alterar)</label><input id="edit_apikey" placeholder="••••••"></div>
+        <div class="form-group"><label>Nome do bot</label><input id="edit_botname"></div>
+      </div>
+      <div class="form-group"><label>System prompt</label><textarea id="edit_prompt" rows="5"></textarea></div>
+
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:14px;">
+        <div class="toggle-row">
+          <div><div class="toggle-label">Agendamento habilitado</div><div class="toggle-desc">Permite que a IA consulte e ofereça horarios</div></div>
+          <label class="toggle"><input type="checkbox" id="edit_scheduling"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-danger btn-sm" onclick="regenerateDashboardKey()">Nova Dashboard Key</button>
+        <button class="btn btn-danger btn-sm" onclick="regenerateWebhookSecret()">Novo Webhook Secret</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveTenantEdit()">Salvar</button>
     </div>
   </div>
 </div>
@@ -113,26 +230,28 @@ th, td { padding:8px; border-bottom:1px solid #2a2e38; text-align:left; font-siz
 const API = window.location.origin;
 const PLAN_LIMITS = { basic: 3000, pro: 6000, enterprise: 999999 };
 let editingTenantId = null;
+let handoffIntervalId = null;
+let allTenants = [];
+let handoffData = [];
 
 function getKey() { return localStorage.getItem('adminKey'); }
 
 function logout() {
   localStorage.removeItem('adminKey');
+  clearInterval(handoffIntervalId);
   document.getElementById('app').classList.add('hidden');
-  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('loginBox').style.display = '';
 }
 
-function escapeHtml(value = '') {
-  const div = document.createElement('div');
-  div.textContent = value;
-  return div.innerHTML;
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function parseApiError(err, fallback) {
-  if (!err) return fallback;
+function parseApiError(err, fb) {
+  if (!err) return fb;
   if (typeof err === 'string') return err;
-  if (Array.isArray(err)) return err.map(e => `${(e.loc || []).join('.')}: ${e.msg}`).join(' | ');
-  return fallback;
+  if (Array.isArray(err)) return err.map(e => `${(e.loc||[]).join('.')}: ${e.msg}`).join(' | ');
+  return fb;
 }
 
 async function api(path, method = 'GET', body = null) {
@@ -142,9 +261,8 @@ async function api(path, method = 'GET', body = null) {
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) {
-    let err = {};
-    try { err = await res.json(); } catch (e) {}
-    throw new Error(parseApiError(err.detail, res.statusText));
+    let e = {}; try { e = await res.json(); } catch(_) {}
+    throw new Error(parseApiError(e.detail, res.statusText));
   }
   return res.json();
 }
@@ -155,39 +273,112 @@ async function saveKey() {
   localStorage.setItem('adminKey', key);
   try {
     await api('/super-admin/tenants');
-    document.getElementById('login').classList.add('hidden');
+    document.getElementById('loginBox').style.display = 'none';
     document.getElementById('app').classList.remove('hidden');
     loadTenants();
-  } catch (e) {
+    startHandoffPolling();
+  } catch(e) {
     localStorage.removeItem('adminKey');
-    alert('Chave inválida: ' + e.message);
+    alert('Chave invalida: ' + e.message);
   }
 }
 
+// ── HANDOFF OVERVIEW ──
+
+function startHandoffPolling() {
+  if (handoffIntervalId) return;
+  checkHandoffOverview();
+  handoffIntervalId = setInterval(checkHandoffOverview, 30000);
+}
+
+async function checkHandoffOverview() {
+  try {
+    handoffData = await api('/super-admin/handoff-overview');
+    renderHandoffOverview();
+    renderTenants(); // atualiza badges na tabela
+  } catch(_) {}
+}
+
+function renderHandoffOverview() {
+  const container = document.getElementById('handoffOverview');
+  if (!handoffData || handoffData.length === 0) {
+    container.classList.add('hidden');
+    document.title = 'Vorasync Admin';
+    return;
+  }
+
+  const total = handoffData.reduce((acc, t) => acc + t.count, 0);
+  document.title = `(${total}) Handoffs — Vorasync Admin`;
+  container.classList.remove('hidden');
+
+  const convHtml = handoffData.flatMap(t =>
+    t.conversations.map(c => `
+      <div class="handoff-item">
+        <span class="handoff-item-name">${esc(t.tenant_name)}</span> —
+        ${esc(c.contact_name)} (${esc(c.phone.replace('@s.whatsapp.net',''))})
+        ${c.handoff_summary ? `<br><span style="color:var(--text-3);">${esc(c.handoff_summary.substring(0,100))}${c.handoff_summary.length>100?'...':''}</span>` : ''}
+      </div>
+    `)
+  ).join('');
+
+  container.innerHTML = `
+    <div class="alert-overview">
+      <div class="alert-overview-header">
+        <div class="alert-dot"></div>
+        <span class="alert-overview-title">${total} handoff${total>1?'s':''} ativo${total>1?'s':''} aguardando atendimento</span>
+      </div>
+      ${convHtml}
+    </div>
+  `;
+}
+
+// ── TENANTS ──
+
 async function loadTenants() {
   try {
-    const tenants = await api('/super-admin/tenants');
-    const tbody = document.querySelector('#tenantsTable tbody');
-    tbody.innerHTML = '';
-    tenants.forEach(t => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${t.id}</td>
-        <td>${escapeHtml(t.name || '')}<br><small>${escapeHtml(t.email || '-')}</small></td>
-        <td>${escapeHtml(t.plan || '')}</td>
-        <td class="status-${t.status}">${escapeHtml(t.status || '')}</td>
-        <td>${t.messages_month || 0}/${t.max_messages_month || '∞'}</td>
-        <td>${t.contacts || 0}</td>
-        <td class="actions">
-          <button onclick="openEditModal(${t.id})">Editar</button>
-          ${t.status === 'active'
-            ? `<button class="danger" onclick="changeStatus(${t.id}, 'suspended', this)">Suspender</button>`
-            : `<button onclick="changeStatus(${t.id}, 'active', this)">Ativar</button>`}
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  } catch (e) { alert('Erro ao carregar tenants: ' + e.message); }
+    allTenants = await api('/super-admin/tenants');
+    renderTenants();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+function getHandoffCount(tenantId) {
+  const found = handoffData.find(t => t.tenant_id === tenantId);
+  return found ? found.count : 0;
+}
+
+function renderTenants() {
+  const tbody = document.getElementById('tenantsBody');
+  tbody.innerHTML = allTenants.map(t => {
+    const hcount = getHandoffCount(t.id);
+    return `<tr>
+      <td>${t.id}</td>
+      <td>
+        <div style="font-weight:500;">${esc(t.name)}</div>
+        <div style="font-size:11px;color:var(--text-2);">${esc(t.email)}</div>
+      </td>
+      <td>${esc(t.plan)}</td>
+      <td>
+        <span class="badge badge-${t.status}"><span class="bdot"></span>${esc(t.status)}</span>
+      </td>
+      <td style="font-size:12px;color:var(--text-2);">${t.messages_month||0}/${t.max_messages_month||'∞'}</td>
+      <td>
+        ${hcount > 0
+          ? `<span class="badge" style="background:rgba(245,158,11,.15);color:var(--orange);">${hcount} ativo${hcount>1?'s':''}</span>`
+          : '<span style="color:var(--text-3);font-size:12px;">—</span>'}
+      </td>
+      <td>
+        ${t.scheduling_enabled
+          ? `<span class="badge" style="background:rgba(34,197,94,.1);color:var(--green);">Ativo</span>`
+          : `<span style="color:var(--text-3);font-size:12px;">—</span>`}
+      </td>
+      <td class="actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditModal(${t.id})">Editar</button>
+        ${t.status==='active'
+          ? `<button class="btn btn-danger btn-sm" onclick="changeStatus(${t.id},'suspended',this)">Suspender</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="changeStatus(${t.id},'active',this)">Ativar</button>`}
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--text-2);padding:32px;">Nenhum cliente cadastrado</td></tr>`;
 }
 
 async function changeStatus(id, status, btn) {
@@ -196,11 +387,8 @@ async function changeStatus(id, status, btn) {
   try {
     await api(`/super-admin/tenants/${id}/status?status=${status}`, 'PATCH');
     await loadTenants();
-  } catch (e) {
-    alert('Erro ao alterar status: ' + e.message);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
+  } catch(e) { alert('Erro: ' + e.message); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 function applyPlanDefault() {
@@ -212,105 +400,107 @@ async function openEditModal(id) {
   try {
     const t = await api(`/super-admin/tenants/${id}`);
     editingTenantId = id;
-    document.getElementById('edit_id').textContent = id;
-    document.getElementById('edit_name').value = t.name || '';
-    document.getElementById('edit_phone').value = t.phone || '';
-    document.getElementById('edit_apikey').value = '';
-    document.getElementById('edit_plan').value = t.plan || 'basic';
-    document.getElementById('edit_limit').value = t.max_messages_month || '';
-    document.getElementById('edit_botname').value = t.bot_name || '';
-    document.getElementById('edit_prompt').value = t.system_prompt || '';
-    const modal = document.getElementById('editModal');
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  } catch (e) { alert(e.message); }
+    document.getElementById('edit_id').textContent    = id;
+    document.getElementById('edit_name').value        = t.name || '';
+    document.getElementById('edit_phone').value       = t.phone || '';
+    document.getElementById('edit_apikey').value      = '';
+    document.getElementById('edit_plan').value        = t.plan || 'basic';
+    document.getElementById('edit_limit').value       = t.max_messages_month || '';
+    document.getElementById('edit_botname').value     = t.bot_name || '';
+    document.getElementById('edit_prompt').value      = t.system_prompt || '';
+    document.getElementById('edit_scheduling').checked = !!t.scheduling_enabled;
+
+    document.getElementById('editModal').classList.remove('hidden');
+  } catch(e) { alert(e.message); }
 }
 
 function closeEditModal() {
   editingTenantId = null;
-  const modal = document.getElementById('editModal');
-  modal.classList.add('hidden');
-  modal.style.display = 'none';
+  document.getElementById('editModal').classList.add('hidden');
 }
 
 async function saveTenantEdit() {
   if (!editingTenantId) return;
-  const apiKeyValue = document.getElementById('edit_apikey').value.trim();
-
+  const apiKeyVal = document.getElementById('edit_apikey').value.trim();
   const payload = {
-    name: document.getElementById('edit_name').value,
-    phone: document.getElementById('edit_phone').value,
-    plan: document.getElementById('edit_plan').value,
+    name:               document.getElementById('edit_name').value,
+    phone:              document.getElementById('edit_phone').value,
+    plan:               document.getElementById('edit_plan').value,
     max_messages_month: parseInt(document.getElementById('edit_limit').value) || null,
-    bot_name: document.getElementById('edit_botname').value,
-    system_prompt: document.getElementById('edit_prompt').value,
+    bot_name:           document.getElementById('edit_botname').value,
+    system_prompt:      document.getElementById('edit_prompt').value,
   };
-  if (apiKeyValue) payload.api_key = apiKeyValue;
+  if (apiKeyVal) payload.api_key = apiKeyVal;
 
   try {
     await api(`/super-admin/tenants/${editingTenantId}`, 'PATCH', payload);
+
+    // Atualiza scheduling separado
+    const schedulingEnabled = document.getElementById('edit_scheduling').checked;
+    await api(`/super-admin/tenants/${editingTenantId}/scheduling?enabled=${schedulingEnabled}`, 'PATCH');
+
     closeEditModal();
     loadTenants();
-  } catch (e) { alert(e.message); }
+  } catch(e) { alert(e.message); }
 }
 
 async function regenerateDashboardKey() {
   if (!editingTenantId) return;
-  if (!confirm('Gerar nova Dashboard Key? A antiga deixará de funcionar.')) return;
+  if (!confirm('Gerar nova Dashboard Key? A atual deixara de funcionar.')) return;
   try {
-    const result = await api(`/super-admin/tenants/${editingTenantId}/regenerate-dashboard-key`, 'POST');
-    prompt('Nova Dashboard Key (copie e envie ao cliente):', result.new_dashboard_key);
-  } catch (e) { alert(e.message); }
+    const r = await api(`/super-admin/tenants/${editingTenantId}/regenerate-dashboard-key`, 'POST');
+    prompt('Nova Dashboard Key — envie ao cliente:', r.new_dashboard_key);
+  } catch(e) { alert(e.message); }
 }
 
 async function regenerateWebhookSecret() {
   if (!editingTenantId) return;
-  if (!confirm('Gerar novo Webhook? Será necessário reconfigurar na Evolution API.')) return;
+  if (!confirm('Gerar novo Webhook Secret? Sera necessario reconfigurar na Evolution API.')) return;
   try {
-    const result = await api(`/super-admin/tenants/${editingTenantId}/regenerate-webhook-secret`, 'POST');
-    prompt('Nova Webhook URL (configure na Evolution API):', result.new_webhook_url);
-  } catch (e) { alert(e.message); }
+    const r = await api(`/super-admin/tenants/${editingTenantId}/regenerate-webhook-secret`, 'POST');
+    prompt('Nova Webhook URL — configure na Evolution API:', r.new_webhook_url);
+  } catch(e) { alert(e.message); }
 }
 
 async function registerTenant() {
   const payload = {
-    name: document.getElementById('r_name').value,
-    email: document.getElementById('r_email').value,
-    whatsapp_instance: document.getElementById('r_instance').value,
-    whatsapp_number: document.getElementById('r_number').value || null,
-    api_key: document.getElementById('r_apikey').value,
-    plan: document.getElementById('r_plan').value,
-    bot_name: document.getElementById('r_botname').value,
-    system_prompt: document.getElementById('r_prompt').value || null
+    name:               document.getElementById('r_name').value,
+    email:              document.getElementById('r_email').value,
+    whatsapp_instance:  document.getElementById('r_instance').value,
+    whatsapp_number:    document.getElementById('r_number').value || null,
+    api_key:            document.getElementById('r_apikey').value,
+    plan:               document.getElementById('r_plan').value,
+    bot_name:           document.getElementById('r_botname').value,
+    system_prompt:      document.getElementById('r_prompt').value || null,
   };
-
   try {
-    const result = await api('/super-admin/tenants/register', 'POST', payload);
+    const r = await api('/super-admin/tenants/register', 'POST', payload);
     document.getElementById('registerResult').innerHTML = `
-      <div class="card" style="margin-top:12px;background:#1d2b1d;">
-        <strong>✅ Cliente criado!</strong><br><br>
-        <strong>Dashboard Key (login do painel cliente):</strong><br>
-        <code style="word-break:break-all;">${escapeHtml(result.dashboard_key)}</code><br><br>
-        <strong>Webhook URL (configurar na Evolution API):</strong><br>
-        <code style="word-break:break-all;">${escapeHtml(result.webhook_url)}</code>
+      <div style="background:#1d2b1d;border:1px solid #2d4a2d;border-radius:var(--r);padding:14px;margin-top:4px;">
+        <div style="font-weight:600;color:var(--green);margin-bottom:8px;">Cliente criado!</div>
+        <div style="font-size:12px;color:var(--text-2);margin-bottom:4px;">Dashboard Key (envie ao cliente — nao sera mostrada novamente):</div>
+        <code style="word-break:break-all;font-size:12px;color:var(--text);">${esc(r.dashboard_key)}</code>
+        <div style="font-size:12px;color:var(--text-2);margin:8px 0 4px;">Webhook URL (configure na Evolution API):</div>
+        <code style="word-break:break-all;font-size:12px;color:var(--text);">${esc(r.webhook_url)}</code>
       </div>
     `;
-    document.getElementById('r_name').value = '';
-    document.getElementById('r_email').value = '';
-    document.getElementById('r_instance').value = '';
-    document.getElementById('r_number').value = '';
-    document.getElementById('r_apikey').value = '';
-    document.getElementById('r_prompt').value = '';
+    // Limpa formulário
+    ['r_name','r_email','r_instance','r_number','r_apikey','r_prompt'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('r_plan').value = 'basic';
     document.getElementById('r_botname').value = 'Assistente';
     loadTenants();
-  } catch (e) { alert(e.message); }
+  } catch(e) { alert(e.message); }
 }
 
+// ── INIT ──
+
 if (getKey()) {
-  document.getElementById('login').classList.add('hidden');
+  document.getElementById('loginBox').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   loadTenants();
+  startHandoffPolling();
+} else {
+  document.getElementById('loginBox').style.display = '';
 }
 </script>
 </body>

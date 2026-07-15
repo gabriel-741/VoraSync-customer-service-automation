@@ -500,6 +500,19 @@ textarea { resize: vertical; line-height: 1.6; }
 
 .crm-empty { padding: 40px 20px; text-align: center; color: var(--text-2); font-size: 13px; }
 
+/* ── SCHEDULING ── */
+.tabs { display:flex; gap:2px; padding:0 20px; border-bottom:1px solid var(--border); background:var(--surface); }
+.tab-btn { padding:10px 14px; font-size:13px; font-weight:500; color:var(--text-2); cursor:pointer; border:none; background:none; font-family:inherit; border-bottom:2px solid transparent; transition:color .12s, border-color .12s; }
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.appt-status-pending   { background:rgba(245,158,11,.1); color:var(--orange); }
+.appt-status-confirmed { background:rgba(34,197,94,.1);  color:var(--green); }
+.appt-status-cancelled { background:rgba(239,68,68,.1);  color:var(--red); }
+.appt-status-completed { background:rgba(139,144,160,.1);color:var(--text-2); }
+.appt-status-no_show   { background:rgba(239,68,68,.1);  color:var(--red); }
+
+
 /* CRM edit fields */
 .crm-edit-row {
   display: flex; align-items: center; gap: 10px;
@@ -896,6 +909,7 @@ table{
 
   <!-- SIDEBAR -->
   <nav id="sidebar">
+    
     <div class="sidebar-logo">
       <div class="logo-mark">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg>
@@ -916,6 +930,10 @@ table{
       <button class="nav-item" onclick="goTo('contacts')" id="nav-contacts">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 13C2.5 10.5147 5.01472 8.5 8 8.5C10.9853 8.5 13.5 10.5147 13.5 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Contatos
+      </button>
+      <button class="nav-item hidden" onclick="goTo('scheduling')" id="nav-scheduling">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 2V4M11 2V4M2 7H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Agenda
       </button>
       <button class="nav-item" onclick="goTo('settings')" id="nav-settings">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5V3M8 13V14.5M14.5 8H13M3 8H1.5M12.7 3.3L11.6 4.4M4.4 11.6L3.3 12.7M12.7 12.7L11.6 11.6M4.4 4.4L3.3 3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -1135,6 +1153,10 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   <!-- MOBILE NAV -->
   <nav id="mobileNav">
     <div class="mobile-nav-items">
+      <button class="mobile-nav-item hidden" onclick="goTo('scheduling')" id="mnav-scheduling">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 2V4M11 2V4M2 7H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Agenda
+      </button>
       <button class="mobile-nav-item active" onclick="goTo('dashboard')" id="mnav-dashboard">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
         Visao geral
@@ -1155,6 +1177,74 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
     </div>
   </nav>
 
+</div>
+
+
+<!-- SCHEDULING -->
+<div class="page" id="page-scheduling">
+  <div class="tabs" id="schedulingTabs">
+    <button class="tab-btn active" onclick="switchTab('appts')">Agendamentos</button>
+    <button class="tab-btn" onclick="switchTab('services')">Servicos</button>
+    <button class="tab-btn" onclick="switchTab('rules')">Horarios</button>
+    <button class="tab-btn" onclick="switchTab('blocks')">Bloqueios</button>
+  </div>
+
+  <!-- APPOINTMENTS -->
+  <div class="tab-panel active card" id="tab-appts" style="border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div><div class="card-title">Agendamentos</div><div class="card-desc">Todos os agendamentos do sistema</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateApptModal()">+ Novo</button>
+    </div>
+    <div class="search-row" style="display:flex;gap:8px;align-items:center;">
+      <select id="apptStatusFilter" onchange="loadAppointments()" style="width:160px;flex-shrink:0;">
+        <option value="">Todos os status</option>
+        <option value="pending">Pendente</option>
+        <option value="confirmed">Confirmado</option>
+        <option value="completed">Realizado</option>
+        <option value="cancelled">Cancelado</option>
+        <option value="no_show">Nao compareceu</option>
+      </select>
+      <input type="date" id="apptDateFrom" onchange="loadAppointments()" style="width:150px;flex-shrink:0;">
+    </div>
+    <table>
+      <thead><tr><th>Cliente</th><th>Servico</th><th>Data/Hora</th><th>Status</th><th>Origem</th><th>Acoes</th></tr></thead>
+      <tbody id="apptsBody"></tbody>
+    </table>
+    <div id="apptsPagination"></div>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="tab-panel card" id="tab-services" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div><div class="card-title">Servicos</div><div class="card-desc">Servicos que podem ser agendados</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateServiceModal()">+ Novo</button>
+    </div>
+    <table>
+      <thead><tr><th>Nome</th><th>Duracao</th><th>Buffer</th><th>Preco</th><th>Ativo</th><th>Acoes</th></tr></thead>
+      <tbody id="servicesBody"></tbody>
+    </table>
+  </div>
+
+  <!-- RULES -->
+  <div class="tab-panel card" id="tab-rules" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div><div class="card-title">Horarios de funcionamento</div><div class="card-desc">Agendas semanais com versionamento</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateRuleModal()">+ Nova Agenda</button>
+    </div>
+    <div id="rulesList" style="padding:8px 0;"></div>
+  </div>
+
+  <!-- BLOCKS -->
+  <div class="tab-panel card" id="tab-blocks" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div><div class="card-title">Bloqueios</div><div class="card-desc">Feriados, ferias e dias fechados</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateBlockModal()">+ Bloquear data</button>
+    </div>
+    <table>
+      <thead><tr><th>Data</th><th>Horario</th><th>Motivo</th><th>Acoes</th></tr></thead>
+      <tbody id="blocksBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- CRM MODAL -->
@@ -1202,6 +1292,104 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   </div>
 </div>
 
+<!-- CREATE APPOINTMENT -->
+<div id="apptModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Novo Agendamento</div>
+      <button class="btn-icon" onclick="document.getElementById('apptModal').classList.add('hidden')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Servico</label><select id="appt_service"><option value="">Selecione...</option></select></div>
+      <div class="form-group"><label>Nome do cliente</label><input id="appt_name" placeholder="Nome completo"></div>
+      <div class="form-group"><label>Telefone</label><input id="appt_phone" placeholder="556299999999"></div>
+      <div class="form-group"><label>Data e Horario</label><input type="datetime-local" id="appt_datetime"></div>
+      <div class="form-group"><label>Observacoes</label><textarea id="appt_notes" rows="2"></textarea></div>
+      <div id="apptAvailability" style="font-size:12px;color:var(--text-2);margin-top:4px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('apptModal').classList.add('hidden')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="createAppointment()">Agendar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE SERVICE -->
+<div id="serviceModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="serviceModalTitle">Novo Servico</div>
+      <button class="btn-icon" onclick="document.getElementById('serviceModal').classList.add('hidden')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="svc_id">
+      <div class="form-group"><label>Nome do servico</label><input id="svc_name" placeholder="Ex: Corte de cabelo"></div>
+      <div class="form-group"><label>Descricao (opcional)</label><input id="svc_desc"></div>
+      <div class="form-group"><label>Duracao (minutos)</label><input id="svc_duration" type="number" placeholder="30"></div>
+      <div class="form-group"><label>Buffer apos atendimento (minutos)</label><input id="svc_buffer" type="number" placeholder="0"><div class="form-hint">Tempo de limpeza/preparo entre atendimentos</div></div>
+      <div class="form-group"><label>Preco (opcional)</label><input id="svc_price" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('serviceModal').classList.add('hidden')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveService()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE BLOCK -->
+<div id="blockModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Bloquear data</div>
+      <button class="btn-icon" onclick="document.getElementById('blockModal').classList.add('hidden')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Data</label><input id="blk_date" type="date"></div>
+      <div class="form-group"><label>Horario inicio (vazio = dia inteiro)</label><input id="blk_start" type="time"></div>
+      <div class="form-group"><label>Horario fim</label><input id="blk_end" type="time"></div>
+      <div class="form-group"><label>Motivo</label><input id="blk_reason" placeholder="Ex: Feriado, Ferias..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('blockModal').classList.add('hidden')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="createBlock()">Bloquear</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE RULE MODAL -->
+<div id="ruleModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header">
+      <div class="modal-title">Nova agenda semanal</div>
+      <button class="btn-icon" onclick="document.getElementById('ruleModal').classList.add('hidden')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Nome</label><input id="rule_name" value="Agenda padrão"></div>
+      <div style="display:flex;gap:12px;">
+        <div class="form-group" style="flex:1;"><label>Valida a partir de</label><input id="rule_from" type="date"></div>
+        <div class="form-group" style="flex:1;"><label>Valida ate (vazio = sem fim)</label><input id="rule_until" type="date"></div>
+      </div>
+      <div class="toggle-row" style="padding:8px 0;">
+        <div><div class="toggle-label">Confirmacao automatica</div><div class="toggle-desc">IA confirma sem precisar de operador</div></div>
+        <label class="toggle"><input type="checkbox" id="rule_autoconfirm" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      </div>
+      <div style="margin-top:12px;" id="ruleDaysConfig"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ruleModal').classList.add('hidden')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="createRule()">Criar Agenda</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = window.location.origin;
 const CONTACTS_PER_PAGE = 20;
@@ -1228,20 +1416,27 @@ function goTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
 
-  ['dashboard','conversations','contacts','settings'].forEach(p => {
+  ['dashboard','conversations','contacts','settings','scheduling'].forEach(p => {
     document.getElementById('nav-' + p)?.classList.remove('active');
     document.getElementById('mnav-' + p)?.classList.remove('active');
   });
   document.getElementById('nav-' + page)?.classList.add('active');
   document.getElementById('mnav-' + page)?.classList.add('active');
 
-  const titles = { dashboard: 'Visao geral', conversations: 'Conversas', contacts: 'Contatos', settings: 'Configuracoes' };
+  const titles = {
+    dashboard:     'Visao geral',
+    conversations: 'Conversas',
+    contacts:      'Contatos',
+    settings:      'Configuracoes',
+    scheduling:    'Agenda',          // ← NOVO
+  };
   document.getElementById('pageTitle').textContent = titles[page] || page;
 
   if (page === 'dashboard')     loadDashboard();
   if (page === 'conversations') loadConversations();
   if (page === 'contacts')      { contactPage = 1; loadContacts(); }
   if (page === 'settings')      loadSettings();
+  if (page === 'scheduling')    switchTab('appts');   // ← NOVO
 }
 
 // ═══════════════════════════════
@@ -1274,6 +1469,307 @@ async function saveKey() {
   await startApp();
 }
 
+// ═══════════════════════════════
+// SCHEDULING
+// ═══════════════════════════════
+
+let schedulingEnabled = false;
+let servicesCache = [];
+let apptPage = 1;
+
+const WEEKDAY_NAMES = ['Segunda','Terca','Quarta','Quinta','Sexta','Sabado','Domingo'];
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    const tabs = ['appts','services','rules','blocks'];
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('tab-' + tab);
+  if (panel) { panel.classList.add('active'); panel.style.display = 'block'; }
+
+  if (tab === 'appts')    loadAppointments();
+  if (tab === 'services') loadServices();
+  if (tab === 'rules')    loadRules();
+  if (tab === 'blocks')   loadBlocks();
+}
+
+// APPOINTMENTS
+async function loadAppointments() {
+  try {
+    const status = document.getElementById('apptStatusFilter').value;
+    const from   = document.getElementById('apptDateFrom').value;
+    const params = new URLSearchParams({ page: apptPage, limit: 20 });
+    if (status) params.set('status', status);
+    if (from)   params.set('from_date', from + 'T00:00:00');
+
+    const result = await api(`/scheduling/appointments?${params}`);
+    const tbody  = document.getElementById('apptsBody');
+
+    if (!result.data.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum agendamento</div><div class="empty-desc">Agendamentos aparecem aqui quando criados.</div></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = result.data.map(a => `<tr>
+      <td>
+        <div class="cell-primary">${esc(a.customer_name || '(sem nome)')}</div>
+        <div class="cell-secondary">${esc(a.customer_phone || '')}</div>
+      </td>
+      <td>${esc(a.service_name || '—')}</td>
+      <td><div class="cell-primary">${new Date(a.scheduled_at).toLocaleString('pt-BR')}</div></td>
+      <td><span class="badge appt-status-${a.status}">${esc(a.status)}</span></td>
+      <td><span class="text-muted text-sm">${a.source === 'ai' ? 'IA' : a.source === 'operator' ? 'Operador' : 'Manual'}</span></td>
+      <td class="actions-row">
+        ${a.status === 'pending'    ? `<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'confirmed')">Confirmar</button>` : ''}
+        ${a.status !== 'cancelled' && a.status !== 'completed' ? `<button class="btn btn-danger btn-xs" onclick="updateApptStatus(${a.id},'cancelled')">Cancelar</button>` : ''}
+        ${a.status === 'confirmed'  ? `<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'completed')">Concluir</button>` : ''}
+      </td>
+    </tr>`).join('');
+
+    // pagination
+    const el = document.getElementById('apptsPagination');
+    const totalPages = Math.ceil(result.total / result.limit);
+    el.innerHTML = totalPages <= 1 ? '' : `<div class="pagination">
+      <span class="pagination-info">${result.total} agendamentos</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage-1};loadAppointments()" ${apptPage<=1?'disabled':''}>Anterior</button>
+        <button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage+1};loadAppointments()" ${apptPage>=totalPages?'disabled':''}>Proxima</button>
+      </div>
+    </div>`;
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function updateApptStatus(id, status) {
+  try { await api(`/scheduling/appointments/${id}`, 'PATCH', { status, changed_by: 'operador' }); loadAppointments(); }
+  catch(e) { alert('Erro: ' + e.message); }
+}
+
+function openCreateApptModal() {
+  document.getElementById('appt_service').innerHTML = servicesCache.filter(s => s.is_active).map(s => `<option value="${s.id}">${esc(s.name)} (${s.duration_minutes}min)</option>`).join('') || '<option>Nenhum servico cadastrado</option>';
+  document.getElementById('appt_name').value = '';
+  document.getElementById('appt_phone').value = '';
+  document.getElementById('appt_notes').value = '';
+  document.getElementById('appt_datetime').value = '';
+  document.getElementById('apptModal').classList.remove('hidden');
+}
+
+async function createAppointment() {
+  const payload = {
+    service_id:    parseInt(document.getElementById('appt_service').value),
+    customer_name: document.getElementById('appt_name').value,
+    customer_phone:document.getElementById('appt_phone').value,
+    scheduled_at:  document.getElementById('appt_datetime').value,
+    notes:         document.getElementById('appt_notes').value,
+    source:        'operator',
+    status:        'confirmed',
+    check_availability: true
+  };
+  if (!payload.service_id || !payload.scheduled_at) return alert('Servico e data/hora sao obrigatorios');
+  try {
+    await api('/scheduling/appointments', 'POST', payload);
+    document.getElementById('apptModal').classList.add('hidden');
+    loadAppointments();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+// SERVICES
+async function loadServices() {
+  try {
+    servicesCache = await api('/scheduling/services');
+    const tbody   = document.getElementById('servicesBody');
+    tbody.innerHTML = servicesCache.map(s => `<tr>
+      <td><div class="cell-primary">${esc(s.name)}</div>${s.description ? `<div class="cell-secondary">${esc(s.description)}</div>` : ''}</td>
+      <td>${s.duration_minutes}min</td>
+      <td>${s.buffer_after_minutes}min</td>
+      <td>${s.price ? 'R$ ' + parseFloat(s.price).toFixed(2) : '—'}</td>
+      <td><span class="badge ${s.is_active ? 'badge-ai' : ''}">${s.is_active ? 'Ativo' : 'Inativo'}</span></td>
+      <td class="actions-row">
+        <button class="btn btn-ghost btn-xs" onclick="openEditServiceModal(${s.id})">Editar</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteService(${s.id})">Remover</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum servico</div><div class="empty-desc">Adicione os servicos que sua empresa oferece.</div></div></td></tr>`;
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+function openCreateServiceModal() {
+  document.getElementById('svc_id').value = '';
+  document.getElementById('svc_name').value = '';
+  document.getElementById('svc_desc').value = '';
+  document.getElementById('svc_duration').value = '';
+  document.getElementById('svc_buffer').value = '0';
+  document.getElementById('svc_price').value = '';
+  document.getElementById('serviceModalTitle').textContent = 'Novo Servico';
+  document.getElementById('serviceModal').classList.remove('hidden');
+}
+
+function openEditServiceModal(id) {
+  const s = servicesCache.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('svc_id').value = s.id;
+  document.getElementById('svc_name').value = s.name || '';
+  document.getElementById('svc_desc').value = s.description || '';
+  document.getElementById('svc_duration').value = s.duration_minutes || '';
+  document.getElementById('svc_buffer').value = s.buffer_after_minutes || 0;
+  document.getElementById('svc_price').value = s.price || '';
+  document.getElementById('serviceModalTitle').textContent = 'Editar Servico';
+  document.getElementById('serviceModal').classList.remove('hidden');
+}
+
+async function saveService() {
+  const id = document.getElementById('svc_id').value;
+  const payload = {
+    name:                 document.getElementById('svc_name').value,
+    description:          document.getElementById('svc_desc').value || null,
+    duration_minutes:     parseInt(document.getElementById('svc_duration').value),
+    buffer_after_minutes: parseInt(document.getElementById('svc_buffer').value) || 0,
+    price:                parseFloat(document.getElementById('svc_price').value) || null,
+  };
+  if (!payload.name || !payload.duration_minutes) return alert('Nome e duracao sao obrigatorios');
+  try {
+    if (id) { await api(`/scheduling/services/${id}`, 'PATCH', payload); }
+    else     { await api('/scheduling/services', 'POST', payload); }
+    document.getElementById('serviceModal').classList.add('hidden');
+    loadServices();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteService(id) {
+  if (!confirm('Desativar este servico?')) return;
+  try { await api(`/scheduling/services/${id}`, 'DELETE'); loadServices(); }
+  catch(e) { alert('Erro: ' + e.message); }
+}
+
+// RULES
+async function loadRules() {
+  try {
+    const rules = await api('/scheduling/rules');
+    const el    = document.getElementById('rulesList');
+    if (!rules.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-title">Nenhuma agenda configurada</div><div class="empty-desc">Crie uma agenda semanal para liberar agendamentos.</div></div>`;
+      return;
+    }
+    el.innerHTML = rules.map(r => `
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:500;">${esc(r.name)}</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:2px;">
+              Vigencia: ${r.valid_from} ate ${r.valid_until || 'sem fim'} ·
+              ${r.auto_confirm ? 'Confirma automaticamente' : 'Requer aprovacao manual'}
+            </div>
+          </div>
+          <button class="btn btn-danger btn-xs" onclick="deleteRule(${r.id})">Remover</button>
+        </div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;">
+          ${r.days.map(d => `
+            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;font-size:12px;">
+              <div style="font-weight:500;margin-bottom:2px;">${WEEKDAY_NAMES[d.weekday]}</div>
+              ${d.is_open && d.start_time
+                ? `<div style="color:var(--text-2);">${d.start_time} - ${d.end_time}</div>`
+                : `<div style="color:var(--text-3);">Fechado</div>`}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+function openCreateRuleModal() {
+  // Preenche os dias
+  const container = document.getElementById('ruleDaysConfig');
+  container.innerHTML = WEEKDAY_NAMES.map((name, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="width:80px;font-size:13px;font-weight:500;color:var(--text-2);">${name}</div>
+      <label class="toggle"><input type="checkbox" id="rd_open_${i}" checked ${i===6?'':''}><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      <input type="time" id="rd_start_${i}" value="08:00" style="width:90px;flex-shrink:0;">
+      <span style="color:var(--text-3);font-size:12px;">ate</span>
+      <input type="time" id="rd_end_${i}" value="18:00" style="width:90px;flex-shrink:0;">
+    </div>
+  `).join('');
+  // Domingo fechado por padrão
+  document.getElementById('rd_open_6').checked = false;
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('rule_from').value = today;
+  document.getElementById('rule_until').value = '';
+  document.getElementById('ruleModal').classList.remove('hidden');
+}
+
+async function createRule() {
+  const days = WEEKDAY_NAMES.map((_, i) => ({
+    weekday: i,
+    is_open: document.getElementById(`rd_open_${i}`).checked,
+    start_time: document.getElementById(`rd_start_${i}`).value,
+    end_time: document.getElementById(`rd_end_${i}`).value,
+    breaks: []
+  }));
+
+  const payload = {
+    name:         document.getElementById('rule_name').value,
+    valid_from:   document.getElementById('rule_from').value,
+    valid_until:  document.getElementById('rule_until').value || null,
+    auto_confirm: document.getElementById('rule_autoconfirm').checked,
+    timezone:     'America/Sao_Paulo',
+    days
+  };
+
+  if (!payload.valid_from) return alert('Data de inicio e obrigatoria');
+  try {
+    await api('/scheduling/rules', 'POST', payload);
+    document.getElementById('ruleModal').classList.add('hidden');
+    loadRules();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteRule(id) {
+  if (!confirm('Remover esta agenda?')) return;
+  try { await api(`/scheduling/rules/${id}`, 'DELETE'); loadRules(); }
+  catch(e) { alert('Erro: ' + e.message); }
+}
+
+// BLOCKS
+async function loadBlocks() {
+  try {
+    const blocks = await api('/scheduling/blocks');
+    const tbody  = document.getElementById('blocksBody');
+    tbody.innerHTML = blocks.map(b => `<tr>
+      <td>${new Date(b.block_date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+      <td>${b.start_time ? `${b.start_time} - ${b.end_time}` : 'Dia inteiro'}</td>
+      <td>${esc(b.reason || '—')}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="deleteBlock(${b.id})">Remover</button></td>
+    </tr>`).join('') || `<tr><td colspan="4"><div class="empty-state"><div class="empty-title">Nenhum bloqueio</div><div class="empty-desc">Feriados e dias fechados aparecem aqui.</div></div></td></tr>`;
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+function openCreateBlockModal() {
+  document.getElementById('blk_date').value = '';
+  document.getElementById('blk_start').value = '';
+  document.getElementById('blk_end').value = '';
+  document.getElementById('blk_reason').value = '';
+  document.getElementById('blockModal').classList.remove('hidden');
+}
+
+async function createBlock() {
+  const payload = {
+    block_date: document.getElementById('blk_date').value,
+    start_time: document.getElementById('blk_start').value || null,
+    end_time:   document.getElementById('blk_end').value || null,
+    reason:     document.getElementById('blk_reason').value || null,
+  };
+  if (!payload.block_date) return alert('Data e obrigatoria');
+  try {
+    await api('/scheduling/blocks', 'POST', payload);
+    document.getElementById('blockModal').classList.add('hidden');
+    loadBlocks();
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function deleteBlock(id) {
+  try { await api(`/scheduling/blocks/${id}`, 'DELETE'); loadBlocks(); }
+  catch(e) { alert('Erro: ' )}
+}
 // ═══════════════════════════════
 // API
 // ═══════════════════════════════
@@ -1322,6 +1818,7 @@ async function startApp() {
   goTo('dashboard');
   requestNotificationPermission();
   startAlertPolling();
+  await checkSchedulingEnabled(); 
 }
 
 // ═══════════════════════════════
@@ -1926,6 +2423,37 @@ async function checkHandoffAlerts() {
 
 function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════
+// INIT
+// ═══════════════════════════════
+
+async function deleteBlock(id) {
+  try { await api(`/scheduling/blocks/${id}`, 'DELETE'); loadBlocks(); }
+  catch(e) { alert('Erro: ' + e.message); }
+}
+
+// ── SCHEDULING INIT ──
+// Adiciona a aba na sidebar se habilitado
+async function checkSchedulingEnabled() {
+  try {
+    const s = await api('/admin/stats');
+    schedulingEnabled = s.scheduling_enabled === true;
+
+    const navEl   = document.getElementById('nav-scheduling');
+    const mnavEl  = document.getElementById('mnav-scheduling');
+
+    if (schedulingEnabled) {
+      navEl?.classList.remove('hidden');
+      mnavEl?.classList.remove('hidden');
+      // Carrega serviços em cache para o modal de agendamento
+      servicesCache = await api('/scheduling/services');
+    } else {
+      navEl?.classList.add('hidden');
+      mnavEl?.classList.add('hidden');
+    }
+  } catch(_) {}
 }
 
 // ═══════════════════════════════

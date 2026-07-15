@@ -12,8 +12,9 @@ from app.database.connection import get_db
 from app.database.models import (
     Tenant, Contact, Conversation, Message,
     DirectionEnum, PlanEnum, StatusTenantEnum
+    , ConversationStateEnum
 )
-from app.schemas.admin_schema import RegisterRequest, RegisterResponse, TenantUpdate
+from app.schemas.admin_schema import RegisterRequest, RegisterResponse, TenantUpdate, TenantUpdate
 from app.services.message_service import get_monthly_message_count
 from app.utils.logger import get_logger
 
@@ -28,7 +29,7 @@ router = APIRouter(
 PLAN_LIMITS = {
     "basic":      3000,
     "pro":        6000,
-    "enterprise": 999999,
+    "enterprise": 10000,
 }
 
 
@@ -55,6 +56,7 @@ async def list_tenants(db: Session = Depends(get_db)):
             "max_messages_month": t.max_messages_month,
             "contacts": contacts_count,
             "created_at": t.created_at,
+            "scheduling_enabled": t.scheduling_enabled,
         })
 
     return result
@@ -221,6 +223,7 @@ async def get_tenant_detail(tenant_id: int, db: Session = Depends(get_db)):
         "ai_model": tenant.ai_model,
         "webhook_url": webhook_url,
         "created_at": tenant.created_at,
+        "scheduling_enabled": tenant.scheduling_enabled,
     }
 
 
@@ -260,3 +263,51 @@ async def regenerate_webhook_secret(tenant_id: int, db: Session = Depends(get_db
     log.info(f"[SUPER ADMIN] Webhook secret regenerado para tenant {tenant.id}")
 
     return {"success": True, "tenant_id": tenant.id, "new_webhook_url": new_webhook_url}
+
+# ── HANDOFF OVERVIEW ──
+
+@router.get("/handoff-overview")
+async def handoff_overview(db: Session = Depends(get_db)):
+    """Retorna todos os tenants com handoffs humanos ativos — para o painel admin."""
+    active = (
+        db.query(Conversation, Contact, Tenant)
+        .join(Contact, Conversation.contact_id == Contact.id)
+        .join(Tenant, Conversation.tenant_id == Tenant.id)
+        .filter(Conversation.state == ConversationStateEnum.human_active)
+        .order_by(Conversation.created_at.desc())
+        .all()
+    )
+
+    by_tenant: dict[int, dict] = {}
+    for conv, contact, tenant in active:
+        if tenant.id not in by_tenant:
+            by_tenant[tenant.id] = {
+                "tenant_id":   tenant.id,
+                "tenant_name": tenant.name,
+                "count":       0,
+                "conversations": []
+            }
+        by_tenant[tenant.id]["count"] += 1
+        by_tenant[tenant.id]["conversations"].append({
+            "id":              conv.id,
+            "contact_name":    contact.name or "(sem nome)",
+            "phone":           contact.phone,
+            "handoff_reason":  conv.handoff_reason,
+            "handoff_summary": conv.handoff_summary,
+            "created_at":      conv.created_at.isoformat() if conv.created_at else None
+        })
+
+    return list(by_tenant.values())
+
+
+# ── SCHEDULING TOGGLE PER TENANT ──
+
+@router.patch("/tenants/{tenant_id}/scheduling")
+async def toggle_scheduling(tenant_id: int, enabled: bool, db: Session = Depends(get_db)):
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant.scheduling_enabled = enabled
+    db.commit()
+    log.info(f"[SUPER ADMIN] Scheduling {'ativado' if enabled else 'desativado'} para tenant {tenant_id}")
+    return {"success": True, "tenant_id": tenant_id, "scheduling_enabled": enabled}

@@ -7,17 +7,15 @@ from app.utils.logger import get_logger
 log = get_logger(__name__)
 
 DEFAULT_PROMPT = """
-Você é um assistente virtual simpático e profissional.
-Responda sempre em português brasileiro de forma clara e direta.
-Evite traduções literais do inglês
-Nunca utilize expressões pouco naturais em português
-Se não souber responder algo específico, diga que não sabe e ofereça ajuda alternativa.
-Nunca transfira para um humano antes de tentar ajudar com informações sobre planos, preços e serviços.
-Só sugira falar com um humano se o cliente insistir ou se for algo que realmente não consegue resolver.
+Você é um assistente virtual simpático e descontraído.
+Responda sempre em português brasileiro informal e natural.
+Use linguagem simples e direta. Evite expressões formais.
+Se não souber responder algo, diga de forma simples e ofereça ajuda alternativa.
+Nunca transfira para um humano antes de tentar ajudar.
 """
 
 MODELS = {
-    "simple": "gpt-4o-mini",
+    "simple":  "gpt-4o-mini",
     "complex": "gpt-4.1-mini",
 }
 
@@ -27,19 +25,24 @@ async def handle_message(
     system_prompt: str | None = None,
     model: str | None = None,
     recent_messages: list | None = None,
-    contact_profile: dict | None = None
+    contact_profile: dict | None = None,
+    scheduling_context: str = ""   # ← NOVO
 ) -> tuple[dict | None, dict]:
 
     if not message.strip():
         return None, {"model_tier": "simple"}
 
-    recent_messages = recent_messages or []
-    contact_profile = contact_profile or {}
+    recent_messages  = recent_messages or []
+    contact_profile  = contact_profile or {}
+    classification   = classify_message(message)
 
-    classification = classify_message(message)
     log.info(f"[IA] classificação: {classification}")
 
     prompt = system_prompt if system_prompt else DEFAULT_PROMPT
+
+    # Injeta contexto de agendamento se disponível
+    if scheduling_context:
+        prompt = prompt + "\n\n" + scheduling_context
 
     selected_model = model or MODELS.get(classification["model_tier"], MODELS["simple"])
 

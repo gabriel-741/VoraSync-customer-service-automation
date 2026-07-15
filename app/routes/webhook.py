@@ -25,7 +25,9 @@ async def webhook_evolution(
 ):
     try:
         token = request.query_params.get("token")
-        log.info(f"📥 Webhook recebido | token={token[:8] if token else 'NENHUM'}...")  # ← adiciona
+
+        if not token:
+            return {"ignored": True, "reason": "missing token"}
 
         tenant = (
             db.query(Tenant)
@@ -34,22 +36,22 @@ async def webhook_evolution(
         )
 
         if not tenant:
-            log.warning(f"❌ Token não corresponde a nenhum tenant: {token[:8] if token else 'NENHUM'}...")  # ← adiciona
+            log.warning(f"Token nao corresponde a nenhum tenant: {token[:8] if token else 'NONE'}...")
             return {"ignored": True, "reason": "invalid token"}
-
-
-        tenant = (
-            db.query(Tenant)
-            .filter(Tenant.webhook_secret == token)
-            .first()
-        )
 
         if tenant.status != StatusTenantEnum.active:
             log.warning(f"Tenant {tenant.id} inativo: {tenant.status}")
             return {"ignored": True, "reason": "tenant inactive"}
 
         # =========================
-        # 2. BODY
+        # BOT ATIVO? — verifica AQUI, antes de qualquer resposta
+        # =========================
+        if not tenant.bot_active:
+            log.info(f"[BOT] Tenant {tenant.id} com bot desativado — ignorando webhook")
+            return {"ignored": True, "reason": "bot inactive"}
+
+        # =========================
+        # BODY
         # =========================
         body = await request.body()
         if not body:
@@ -57,24 +59,22 @@ async def webhook_evolution(
 
         try:
             data = json.loads(body.decode("utf-8"))
-
         except Exception:
             return {"ignored": True, "reason": "invalid json"}
-        
 
         # =========================
-        # 3. SANIDADE — instance do body precisa bater com o tenant do TOKEN
+        # SANIDADE — instance do body bate com o tenant do token
         # =========================
         body_instance = data.get("instance")
         if body_instance and body_instance != tenant.whatsapp_instance:
             log.warning(
-                f"🚨 Tentativa de cross-tenant: body instance='{body_instance}' "
-                f"mas token pertence ao tenant {tenant.id} ('{tenant.whatsapp_instance}')"
+                f"Cross-tenant attempt: body='{body_instance}' "
+                f"token pertence ao tenant {tenant.id} ('{tenant.whatsapp_instance}')"
             )
             return {"ignored": True, "reason": "instance mismatch"}
 
         # =========================
-        # 4. RATE LIMITING
+        # RATE LIMITING
         # =========================
         redis = await get_redis()
         client_ip = request.client.host
@@ -96,13 +96,13 @@ async def webhook_evolution(
             )
 
         # =========================
-        # 5. EVENTO
+        # EVENTO
         # =========================
         if data.get("event") != "messages.upsert":
             return {"ignored": True, "reason": "invalid event"}
 
         inner = data.get("data") or {}
-        key = inner.get("key") or {}
+        key   = inner.get("key") or {}
 
         if key.get("fromMe"):
             return {"ignored": True, "reason": "fromMe"}
@@ -110,12 +110,12 @@ async def webhook_evolution(
         sender = key.get("remoteJid")
         if not sender:
             return {"ignored": True, "reason": "missing sender"}
-        
+
         if sender.endswith("@g.us"):
-            log.info(f"Mensagem de grupo ignorada: {sender}")
+            log.info(f"Grupo ignorado: {sender}")
             return {"ignored": True, "reason": "group message"}
 
-        # camada 3 — por contato
+        # Camada 3 — por contato
         allowed, info = await check_rate_limit(redis, "contact", f"{tenant.id}:{sender}")
         if not allowed:
             return JSONResponse(
@@ -125,48 +125,41 @@ async def webhook_evolution(
             )
 
         message_obj = inner.get("message") or {}
-
         message = (
             message_obj.get("conversation")
             or message_obj.get("extendedTextMessage", {}).get("text")
-                )
+        )
 
         # =========================
-        # DETECTA TIPO DE MÍDIA NÃO SUPORTADO AINDA
+        # MIDIA NAO SUPORTADA
         # =========================
         if not message:
-            unsupported_type = None
+            unsupported = None
+            if "audioMessage"    in message_obj: unsupported = "áudios"
+            elif "imageMessage"  in message_obj: unsupported = "imagens"
+            elif "videoMessage"  in message_obj: unsupported = "vídeos"
+            elif "documentMessage" in message_obj: unsupported = "documentos"
+            elif "stickerMessage"  in message_obj: unsupported = "stickers"
 
-            if "audioMessage" in message_obj:
-                unsupported_type = "áudio"
-            elif "imageMessage" in message_obj:
-                unsupported_type = "imagem"
-            elif "videoMessage" in message_obj:
-                unsupported_type = "vídeo"
-            elif "documentMessage" in message_obj:
-                unsupported_type = "documento"
-
-            if unsupported_type:
-                log.info(f"Mídia não suportada recebida: {unsupported_type} | sender={sender}")
-
-                tenant_for_reply = tenant  # já temos o tenant nesse ponto do código
+            if unsupported:
+                log.info(f"Midia nao suportada: {unsupported} | sender={sender}")
                 await send_message(
                     sender,
-                    f"Por enquanto eu ainda não consigo processar {unsupported_type}s. "
-                    f"Pode me mandar sua mensagem em texto, por favor? ",
-                    api_key=tenant_for_reply.api_key,
-                    instance=tenant_for_reply.whatsapp_instance
+                    f"Por enquanto ainda não consigo processar {unsupported}. "
+                    f"Pode me mandar em texto? ",
+                    api_key=tenant.api_key,
+                    instance=tenant.whatsapp_instance
                 )
-                return {"ignored": True, "reason": f"unsupported media: {unsupported_type}"}
+                return {"ignored": True, "reason": f"unsupported: {unsupported}"}
 
             return {"ignored": True, "reason": "empty message"}
 
         payload = {
-            "sender": sender,
-            "message": message,
-            "instance": tenant.whatsapp_instance, 
+            "sender":     sender,
+            "message":    message,
+            "instance":   tenant.whatsapp_instance,
             "message_id": key.get("id"),
-            "push_name": inner.get("pushName", "")
+            "push_name":  inner.get("pushName", "")
         }
 
         response = await process_message(payload, db, background_tasks)
@@ -174,5 +167,5 @@ async def webhook_evolution(
         return {"success": True, "response": response}
 
     except Exception as e:
-        log.error(f"Webhook Evolution error: {e}")
+        log.error(f"Webhook error: {e}")
         raise HTTPException(status_code=500, detail="Erro no webhook Evolution")
