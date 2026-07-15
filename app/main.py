@@ -3,26 +3,26 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.routes import webhook, auth, bots, admin, super_admin
-from app.routes import scheduling   # ← NOVO
-from app.database.connection import engine
-from app.database.models import Base
-from app.database.scheduling_models import (   # ← NOVO — garante que as tabelas são criadas
-    ScheduleRule, ScheduleDay, ScheduleBreak, ScheduleBlock,
-    Service, Appointment, AppointmentHistory
-)
-from app.database.redis import get_redis, close_redis
+# Base e engine primeiro
+from app.database.connection import engine, Base
 
+# Importa TODOS os models antes de create_all (garante que as tabelas são registradas)
+import app.database.models          # noqa: F401
+import app.database.scheduling_models  # noqa: F401
+
+# Cria tabelas
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Vorasync WhatsApp Bot API", version="1.0.0")
+# Rotas
+from app.routes import webhook, admin, super_admin, scheduling
+from app.database.redis import get_redis, close_redis
+
+app = FastAPI(title="Vorasync API", version="1.0.0")
 
 app.include_router(webhook.router)
-app.include_router(auth.router)
-app.include_router(bots.router)
 app.include_router(admin.router)
 app.include_router(super_admin.router)
-app.include_router(scheduling.router)   # ← NOVO
+app.include_router(scheduling.router)
 
 app.mount("/admin-panel",  StaticFiles(directory="app/static/admin_panel",  html=True), name="admin_panel")
 app.mount("/client-panel", StaticFiles(directory="app/static/client_panel", html=True), name="client_panel")

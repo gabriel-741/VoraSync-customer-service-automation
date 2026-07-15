@@ -4,12 +4,12 @@ from sqlalchemy import (
     Column, Integer, String, DateTime,
     ForeignKey, Enum, func, Boolean
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.postgresql import JSONB
 import enum
+from app.database.connection import Base  
 
-Base = declarative_base()
 
 
 class PlanEnum(str, enum.Enum):

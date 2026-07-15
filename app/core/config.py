@@ -1,28 +1,19 @@
-#app/core/config.py
+# app/core/config.py
 
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
-    DATABASE_URL: str
-    APP_ENV: str = "production"
+    DATABASE_URL:           str
+    OPENAI_API_KEY:         str
+    BASE_URL:               str = "http://localhost:8000"
+    PUBLIC_API_URL:         str = "https://api.vorasync.com.br"
+    REDIS_URL:              str = "redis://localhost:6379"
+    ADMIN_REGISTRATION_KEY: str   # ← X-Admin-Key do painel admin
 
-    BASE_URL: str
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
-    INSTANCE: str
-
-    OPENAI_API_KEY: str
-
-    WEBHOOK_TOKEN: str
-
-    REDIS_URL: str = "redis://localhost:6379/1"  
-
-    ADMIN_REGISTRATION_KEY: str       
-
-    PUBLIC_API_URL: str   
-    
-    model_config = {
-        "env_file": ".env",
-        "extra": "ignore"
-    }
 
 settings = Settings()

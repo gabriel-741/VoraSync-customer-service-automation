@@ -1,21 +1,23 @@
-#app/database/connection.py
-
+# app/database/connection.py
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
+
 from app.core.config import settings
+
+engine = SessionLocal = None  # definido abaixo
 
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    pool_recycle=300
+    pool_size=10,
+    max_overflow=20
 )
 
-SessionLocal = sessionmaker(         
-    autocommit=False,              
-    autoflush=False,
-    bind=engine,
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()   # ← Base fica aqui
+
 
 def get_db():
     db = SessionLocal()

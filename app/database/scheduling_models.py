@@ -5,7 +5,7 @@ from sqlalchemy import (
     ForeignKey, Enum, func, Boolean, Numeric, Text
 )
 from sqlalchemy.orm import relationship
-from app.database.models import Base
+from app.database.connection import Base   
 import enum
 
 
