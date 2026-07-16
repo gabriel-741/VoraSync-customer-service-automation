@@ -9,918 +9,236 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:        #0c0e12;
-  --surface:   #13161c;
-  --surface-2: #1a1d25;
-  --border:    #232630;
-  --border-2:  #2d3040;
-  --text:      #e8eaf0;
-  --text-2:    #8b90a0;
-  --text-3:    #555b6e;
-  --accent:    #4f7cff;
-  --accent-2:  #3a60d6;
-  --green:     #22c55e;
-  --orange:    #f59e0b;
-  --red:       #ef4444;
-  --sidebar-w: 220px;
-  --header-h:  56px;
-  --r:         8px;
-  --rl:        12px;
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html, body {
-  height: 100%;
-  font-family: 'Inter', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ── LAYOUT ── */
-#shell {
-    display: flex;
-    min-height: 100vh;
-    overflow-x: hidden;
-}
-
-/* ── SIDEBAR ── */
-#sidebar {
-  width: var(--sidebar-w);
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow-y: auto;
-}
-
-.sidebar-logo {
-  padding: 18px 18px 14px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-
-.logo-mark {
-  width: 28px; height: 28px;
-  background: var(--accent);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-.logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
-
-.nav-section { padding: 12px 10px 0; }
-
-.nav-item {
-  display: flex; align-items: center; gap: 9px;
-  padding: 7px 10px;
-  border-radius: var(--r);
-  color: var(--text-2);
-  font-size: 13.5px; font-weight: 500;
-  cursor: pointer;
-  border: none; background: none; width: 100%; text-align: left;
-  transition: background .12s, color .12s;
-  margin-bottom: 2px;
-  position: relative;
-  font-family: inherit;
-}
-
-.nav-item:hover { background: var(--surface-2); color: var(--text); }
-.nav-item.active { background: rgba(79,124,255,.12); color: var(--accent); }
-
-.nav-icon { width: 16px; height: 16px; opacity: .7; flex-shrink: 0; }
-.nav-item.active .nav-icon { opacity: 1; }
-
-.nav-badge {
-  margin-left: auto;
-  background: var(--red); color: #fff;
-  font-size: 10px; font-weight: 700;
-  padding: 1px 6px; border-radius: 20px; min-width: 18px; text-align: center;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  padding: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.user-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; border-radius: var(--r);
-  cursor: pointer; transition: background .12s;
-}
-.user-row:hover { background: var(--surface-2); }
-
-.user-avatar {
-  width: 28px; height: 28px;
-  background: rgba(79,124,255,.2);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 600; color: var(--accent);
-  flex-shrink: 0;
-}
-
-.user-info { flex: 1; min-width: 0; }
-.user-name { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.user-plan { font-size: 11px; color: var(--text-2); }
-
-.logout-btn {
-  background: none; border: none; cursor: pointer;
-  color: var(--text-3); padding: 4px; border-radius: 4px;
-  display: flex; align-items: center;
-  transition: color .12s;
-  flex-shrink: 0;
-}
-.logout-btn:hover { color: var(--red); }
-
-/* ── MAIN ── */
-#main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
-    min-width: 0;
-}
-
-.page-header {
-    min-height: var(--header-h);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 24px;
-    gap: 12px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-}
-
-.page-title { font-size: 15px; font-weight: 600; }
-
-.header-right{
-    margin-left:auto;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
-}
-.page-content { flex: 1; overflow-y: auto; padding: 24px; }
-
-.page { display: none; }
-.page.active { display: block; }
-
-/* ── ALERT ── */
-#alertBanner {
-  background: rgba(245,158,11,.08);
-  border: 1px solid rgba(245,158,11,.25);
-  border-radius: var(--r);
-  padding: 10px 14px; margin-bottom: 20px;
-  display: flex; align-items: center; gap: 10px;
-  cursor: pointer; transition: background .12s;
-}
-#alertBanner:hover { background: rgba(245,158,11,.13); }
-
-.alert-dot {
-  width: 7px; height: 7px;
-  background: var(--orange); border-radius: 50%; flex-shrink: 0;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-
-.alert-text { font-size: 13px; font-weight: 500; color: var(--orange); }
-.alert-link { margin-left: auto; font-size: 12px; color: var(--text-2); }
-
-/* ── STATS ── */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px; margin-bottom: 24px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--rl);
-  padding: 16px 18px;
-}
-
-.stat-label  { font-size: 11.5px; color: var(--text-2); font-weight: 500; margin-bottom: 6px; }
-.stat-value  { font-size: 24px; font-weight: 600; line-height: 1; }
-.stat-sub    { font-size: 11px; color: var(--text-3); margin-top: 4px; }
-.stat-card.warn   .stat-value { color: var(--orange); }
-.stat-card.danger .stat-value { color: var(--red); }
-
-/* ── CARD ── */
-.card{
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--rl);
-    overflow-x: auto;
-    margin-bottom: 20px;
-}
-
-
-.card-header {
-  padding: 13px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-}
-
-.card-title { font-size: 13.5px; font-weight: 600; }
-.card-desc  { font-size: 12px; color: var(--text-2); margin-top: 1px; }
-
-/* ── SEARCH ── */
-.search-row {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.search-input-wrap { position: relative; }
-
-.search-input-wrap svg {
-  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-  width: 14px; height: 14px; color: var(--text-3); pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  padding: 7px 12px 7px 32px;
-  font-size: 13px; color: var(--text);
-  font-family: inherit; outline: none;
-  transition: border-color .12s;
-}
-.search-input:focus { border-color: var(--accent); }
-
-/* ── TABLE ── */
-table { width: 100%; border-collapse: collapse; }
-th {
-  text-align: left;
-  font-size: 11px; font-weight: 600;
-  letter-spacing: .05em; text-transform: uppercase;
-  color: var(--text-3);
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--border);
-}
-td {
-  padding: 11px 20px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px; color: var(--text);
-  vertical-align: middle;
-}
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,.012); }
-tr.priority td { background: rgba(245,158,11,.04); }
-
-.cell-primary   { font-weight: 500; }
-.cell-secondary { font-size: 12px; color: var(--text-2); margin-top: 2px; }
-
-/* ── SUMMARY ── */
-.summary-box {
-    background: rgba(245,158,11,.06);
-    border-left: 2px solid var(--orange);
-    border-radius: 0 var(--r) var(--r) 0;
-    padding: 7px 11px;
-    font-size: 12px;
-    color: var(--text-2);
-    line-height: 1.5;
-    max-width: 100%;
-    display: block;
-    overflow-wrap: anywhere;
-}
-
-/* ── EMPTY ── */
-.empty-state { padding: 44px 24px; text-align: center; }
-.empty-icon {
-  width: 40px; height: 40px;
-  background: var(--surface-2); border-radius: 10px;
-  margin: 0 auto 12px;
-  display: flex; align-items: center; justify-content: center;
-}
-.empty-icon svg { width: 20px; height: 20px; color: var(--text-3); }
-.empty-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.empty-desc  { font-size: 13px; color: var(--text-2); }
-
-/* ── BADGES ── */
-.badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 8px; border-radius: 20px;
-  font-size: 11px; font-weight: 600; white-space: nowrap;
-}
-.bdot { width: 5px; height: 5px; border-radius: 50%; }
-
-.badge-ai      { background: rgba(34,197,94,.1);  color: var(--green); }
-.badge-ai      .bdot { background: var(--green); }
-.badge-human   { background: rgba(245,158,11,.1); color: var(--orange); }
-.badge-human   .bdot { background: var(--orange); }
-.badge-waiting { background: rgba(79,124,255,.1); color: var(--accent); }
-.badge-waiting .bdot { background: var(--accent); }
-.badge-cool    { background: rgba(139,144,160,.1); color: var(--text-2); }
-.badge-cool    .bdot { background: var(--text-2); }
-.badge-blocked { background: rgba(239,68,68,.1); color: var(--red); }
-
-/* ── BUTTONS ── */
-.btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; border-radius: var(--r);
-  font-size: 12.5px; font-weight: 500;
-  cursor: pointer; border: none;
-  transition: background .12s, opacity .12s;
-  white-space: nowrap; font-family: inherit;
-}
-.btn:disabled { opacity: .4; cursor: not-allowed; }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--accent-2); }
-.btn-ghost  { background: transparent; color: var(--text-2); border: 1px solid var(--border-2); }
-.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
-.btn-danger { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
-.btn-danger:hover:not(:disabled) { background: rgba(239,68,68,.18); }
-.btn-sm     { padding: 4px 9px; font-size: 12px; }
-.btn-xs     { padding: 3px 7px; font-size: 11px; }
-.btn-icon   { background: none; border: none; cursor: pointer; color: var(--text-3); padding: 4px; display: flex; align-items: center; border-radius: 4px; transition: color .12s, background .12s; }
-.btn-icon:hover { color: var(--text); background: var(--surface-2); }
-.full-w { width: 100%; }
-
-.actions-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-
-/* ── FORMS ── */
-.form-section { padding: 20px; }
-.form-group   { margin-bottom: 16px; }
-
-label {
-  display: block;
-  font-size: 12px; font-weight: 500; color: var(--text-2);
-  margin-bottom: 6px;
-}
-
-input[type="text"], input[type="password"], input[type="email"],
-textarea, select {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border-2);
-  border-radius: var(--r);
-  padding: 9px 12px;
-  font-size: 13.5px; color: var(--text);
-  font-family: inherit; outline: none;
-  transition: border-color .12s;
-}
-input:focus, textarea:focus, select:focus { border-color: var(--accent); }
-textarea { resize: vertical; line-height: 1.6; }
-
-.form-hint  { font-size: 11px; color: var(--text-3); margin-top: 4px; }
-.form-footer {
-  padding: 13px 20px;
-  border-top: 1px solid var(--border);
-  display: flex; justify-content: space-between; align-items: center; gap: 8px;
-}
-
-/* ── TOGGLE ── */
-.toggle-row {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 16px; padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-.toggle-info .toggle-label { font-size: 13.5px; font-weight: 500; margin-bottom: 3px; }
-.toggle-info .toggle-desc  { font-size: 12px; color: var(--text-2); }
-
-.toggle {
-  position: relative; width: 36px; height: 20px; flex-shrink: 0;
-  cursor: pointer;
-}
-.toggle input { display: none; }
-.toggle-track {
-  position: absolute; inset: 0;
-  background: var(--surface-2); border: 1px solid var(--border-2);
-  border-radius: 20px; transition: background .2s, border-color .2s;
-}
-.toggle input:checked ~ .toggle-track {
-  background: var(--accent); border-color: var(--accent);
-}
-.toggle-thumb {
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 12px; height: 12px;
-  background: var(--text-3);
-  border-radius: 50%;
-  transition: transform .2s, background .2s;
-}
-.toggle input:checked ~ .toggle-thumb {
-  transform: translateX(16px);
-  background: #fff;
-}
-
-.bot-offline-banner {
-  background: rgba(239,68,68,.08);
-  border: 1px solid rgba(239,68,68,.2);
-  border-radius: var(--r);
-  padding: 10px 14px; margin-bottom: 20px;
-  font-size: 13px; color: var(--red);
-  display: flex; align-items: center; gap: 8px;
-}
-
-/* ── PAGINATION ── */
-.pagination {
-  padding: 11px 20px; border-top: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-}
-.pagination-info { font-size: 12px; color: var(--text-2); }
-
-/* ── LOGIN ── */
-#loginPage {
-  min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--bg); padding: 24px;
-}
-.login-box { width: 100%; max-width: 360px; }
-.login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
-.login-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
-.login-sub   { font-size: 13px; color: var(--text-2); margin-bottom: 22px; }
-
-/* ── MODAL ── */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.65);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000; padding: 16px;
-  backdrop-filter: blur(2px);
-}
-
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--rl);
-  width: 100%; max-width: 480px;
-  max-height: 88vh;
-  display: flex; flex-direction: column;
-}
-
-.modal-lg { max-width: 560px; }
-
-.modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: flex-start; justify-content: space-between;
-  flex-shrink: 0;
-}
-.modal-title { font-size: 14px; font-weight: 600; }
-.modal-sub   { font-size: 12px; color: var(--text-2); margin-top: 2px; }
-.modal-body  { padding: 0; overflow-y: auto; flex: 1; }
-.modal-footer {
-  padding: 13px 20px;
-  border-top: 1px solid var(--border);
-  display: flex; justify-content: flex-end; gap: 8px;
-  flex-shrink: 0;
-}
-
-/* ── CRM ── */
-.crm-row {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 16px; padding: 10px 20px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-.crm-row:last-child { border-bottom: none; }
-.crm-label { color: var(--text-2); font-size: 12px; white-space: nowrap; padding-top: 1px; }
-.crm-value { text-align: right; word-break: break-word; }
-
-.tag-list { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
-.tag {
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 4px; padding: 2px 8px; font-size: 11px; color: var(--text-2);
-}
-
-.etapa-pill { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-
-.crm-empty { padding: 40px 20px; text-align: center; color: var(--text-2); font-size: 13px; }
-
-/* ── SCHEDULING ── */
-.tabs { display:flex; gap:2px; padding:0 20px; border-bottom:1px solid var(--border); background:var(--surface); }
-.tab-btn { padding:10px 14px; font-size:13px; font-weight:500; color:var(--text-2); cursor:pointer; border:none; background:none; font-family:inherit; border-bottom:2px solid transparent; transition:color .12s, border-color .12s; }
-.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-.tab-panel { display:none; }
-.tab-panel.active { display:block; }
-.appt-status-pending   { background:rgba(245,158,11,.1); color:var(--orange); }
-.appt-status-confirmed { background:rgba(34,197,94,.1);  color:var(--green); }
-.appt-status-cancelled { background:rgba(239,68,68,.1);  color:var(--red); }
-.appt-status-completed { background:rgba(139,144,160,.1);color:var(--text-2); }
-.appt-status-no_show   { background:rgba(239,68,68,.1);  color:var(--red); }
-
-
-/* CRM edit fields */
-.crm-edit-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 20px;
-  border-bottom: 1px solid var(--border);
-}
-.crm-edit-label { color: var(--text-2); font-size: 12px; width: 140px; flex-shrink: 0; }
-.crm-edit-input {
-  flex: 1; background: var(--bg);
-  border: 1px solid var(--border-2); border-radius: var(--r);
-  padding: 5px 9px; font-size: 13px; color: var(--text);
-  font-family: inherit; outline: none;
-}
-.crm-edit-input:focus { border-color: var(--accent); }
-
-/* ── CONFIRM ── */
-.confirm-icon {
-  width: 44px; height: 44px;
-  background: rgba(239,68,68,.1);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  margin: 20px auto 0;
-  color: var(--red);
-}
-.confirm-text {
-  padding: 16px 20px 20px;
-  text-align: center;
-  font-size: 13px; color: var(--text-2); line-height: 1.6;
-}
-.confirm-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-
-/* ── MOBILE NAV ── */
-#mobileNav {
-  display: none;
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  z-index: 100;
-  padding: 0 4px env(safe-area-inset-bottom);
-}
-
-.mobile-nav-items { display: flex; }
-
-.mobile-nav-item {
-  flex: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 9px 4px;
-  border: none; background: none; cursor: pointer;
-  color: var(--text-3); font-size: 10px; font-weight: 500;
-  font-family: inherit; transition: color .12s;
-  position: relative;
-}
-.mobile-nav-item.active { color: var(--accent); }
-.mobile-nav-item svg { width: 20px; height: 20px; }
-
-.mobile-badge {
-  position: absolute; top: 7px; right: calc(50% - 16px);
-  background: var(--red); color: #fff;
-  font-size: 9px; font-weight: 700;
-  width: 16px; height: 16px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-}
-
-/* ── RESPONSIVE ── */
-@media (max-width: 768px) {
-  #sidebar { display: none; }
-  #mobileNav { display: block; }
-  #main { height: auto; min-height: 100vh; }
-  .page-content { padding: 16px; padding-bottom: 80px; }
-  .page-header { padding: 0 16px; }
-  .stats-grid { grid-template-columns:1fr; }
-
-  /* CONVERSATIONS → CARDS on mobile */
-  #convTable { display: none; }
-  #convCards { display: block; }
-
-  .modal { max-width: 100%; margin: 0; border-radius: var(--rl) var(--rl) 0 0; align-self: flex-end; }
-  .modal-overlay { align-items: flex-end; }
-
-  .crm-edit-label { width: 110px; }
-
-
-  .stats-grid{
-      grid-template-columns:1fr;
-  }
-
-  .card-header{
-      flex-direction:column;
-      align-items:flex-start;
-  }
-
-  .form-footer{
-      flex-direction:column;
-  }
-
-  .form-footer .btn{
-      width:100%;
-  }
-
-  .actions-row{
-      width:100%;
-  }
-
-  .actions-row .btn{
-      flex:1;
-  }
-
-  .pagination{
-      flex-direction:column;
-      align-items:flex-start;
-  }
-
-  .crm-edit-row{
-      flex-direction:column;
-      align-items:stretch;
-  }
-
-  .crm-edit-label{
-      width:auto;
-  }
-
-  .search-row{
-      padding:16px;
-  }
-
-  table{
-      display:block;
-      overflow-x:auto;
-  }
-
-}
-
-@media (min-width: 769px) {
-  #convCards { display: none; }
-}
-
-/* CONVERSATION CARD (mobile) */
-.conv-card {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.conv-card:last-child { border-bottom: none; }
-.conv-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.conv-card-name { font-weight: 500; font-size: 13.5px; }
-.conv-card-phone { font-size: 12px; color: var(--text-2); }
-.conv-card-summary {
-  font-size: 12px; color: var(--text-2);
-  background: rgba(245,158,11,.06);
-  border-left: 2px solid var(--orange);
-  padding: 6px 10px; border-radius: 0 6px 6px 0;
-  margin-bottom: 10px; line-height: 1.5;
-}
-.conv-card-actions { display: flex; gap: 8px; }
-.conv-card-actions .btn { flex: 1; justify-content: center; }
-
-/* ── UTILS ── */
-.hidden    { display: none !important; }
-.text-muted { color: var(--text-2); }
-.text-sm   { font-size: 12px; }
-.divider   { height: 1px; background: var(--border); }
-
-
-/* ===========================
-   RESPONSIVIDADE GLOBAL
-=========================== */
-
-html,
-body{
-    width:100%;
-    overflow-x:hidden;
-}
-
-*{
-    min-width:0;
-}
-
-img,
-svg,
-video,
-canvas{
-    max-width:100%;
-    height:auto;
-}
-
-.page-content{
-    width:100%;
-    max-width:100%;
-}
-
-.card{
-    width:100%;
-}
-
-.card-header{
-    flex-wrap:wrap;
-    align-items:flex-start;
-}
-
-.card-title,
-.card-desc{
-    word-break:break-word;
-}
-
-.summary-box{
-    max-width:100%;
-    white-space:normal;
-    overflow-wrap:anywhere;
-}
-
-.cell-primary,
-.cell-secondary{
-    overflow-wrap:anywhere;
-}
-
-.btn{
-    white-space:normal;
-    text-align:center;
-}
-
-/* ===========================
-DESKTOP / NOTEBOOK
-=========================== */
-
-@media (max-width:1400px){
-
-.stats-grid{
-    grid-template-columns:repeat(2,1fr);
-}
-
-.page-content{
-    padding:20px;
-}
-
-table{
-    font-size:12px;
-}
-
-th,
-td{
-    padding:12px;
-}
-
-
-}
-
-@media (max-width:1200px){
-
-.page-header{
-    padding:16px;
-}
-
-.card-header{
-    gap:12px;
-}
-
-.actions-row{
-    flex-wrap:wrap;
-}
-
-.crm-row{
-    flex-direction:column;
-    align-items:flex-start;
-}
-
-.crm-value{
-    flex:1;
-    min-width:0;
-}
-
-.form-footer{
-    flex-wrap:wrap;
-}
-
-.stats-grid{
-    grid-template-columns:repeat(2,1fr);
-}
-
-}
-
-input,
-textarea,
-select{
-    max-width:100%;
-    box-sizing:border-box;
-}
-
-.form-group{
-
-    width:100%;
-
-}
-
-.form-section{
-
-    width:100%;
-
-}
-
-.stat-card{
-
-    min-width:0;
-
-}
-
-.stat-value{
-
-    overflow-wrap:anywhere;
-
-}
-
-.stat-label{
-
-    overflow-wrap:anywhere;
-
-}
-.modal{
-    max-width:95vw;
-}
-
-
-.modal-body{
-
-    overflow-x:hidden;
-
-}
-
-.confirm-text{
-
-    overflow-wrap:anywhere;
-
-}
-
-.card{
-
-    overflow-x:auto;
-
-}
-
-table{
-
-    min-width:700px;
-
-}
-
+  --bg:#0c0e12;--surface:#13161c;--surface-2:#1a1d25;
+  --border:#232630;--border-2:#2d3040;
+  --text:#e8eaf0;--text-2:#8b90a0;--text-3:#555b6e;
+  --accent:#4f7cff;--accent-2:#3a60d6;
+  --green:#22c55e;--orange:#f59e0b;--red:#ef4444;
+  --sidebar-w:220px;--header-h:56px;--r:8px;--rl:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;width:100%;overflow-x:hidden}
+*{min-width:0}
+#shell{display:flex;min-height:100vh;overflow-x:hidden}
+#sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-logo{padding:18px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-mark{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.nav-section{padding:12px 10px 0}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--r);color:var(--text-2);font-size:13.5px;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:background .12s,color .12s;margin-bottom:2px;position:relative;font-family:inherit}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item.active{background:rgba(79,124,255,.12);color:var(--accent)}
+.nav-icon{width:16px;height:16px;opacity:.7;flex-shrink:0}
+.nav-item.active .nav-icon{opacity:1}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:12px;border-top:1px solid var(--border)}
+.user-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;transition:background .12s}
+.user-row:hover{background:var(--surface-2)}
+.user-avatar{width:28px;height:28px;background:rgba(79,124,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--accent);flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-plan{font-size:11px;color:var(--text-2)}
+.logout-btn{background:none;border:none;cursor:pointer;color:var(--text-3);padding:4px;border-radius:4px;display:flex;align-items:center;transition:color .12s;flex-shrink:0}
+.logout-btn:hover{color:var(--red)}
+#main{flex:1;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;min-width:0}
+.page-header{min-height:var(--header-h);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:12px;flex-wrap:wrap;flex-shrink:0}
+.page-title{font-size:15px;font-weight:600}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.page-content{flex:1;overflow-y:auto;padding:24px;width:100%;max-width:100%}
+.page{display:none}
+.page.active{display:block}
+#alertBanner{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--r);padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .12s}
+#alertBanner:hover{background:rgba(245,158,11,.13)}
+.alert-dot{width:7px;height:7px;background:var(--orange);border-radius:50%;flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.alert-text{font-size:13px;font-weight:500;color:var(--orange)}
+.alert-link{margin-left:auto;font-size:12px;color:var(--text-2)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;min-width:0}
+.stat-label{font-size:11.5px;color:var(--text-2);font-weight:500;margin-bottom:6px;overflow-wrap:anywhere}
+.stat-value{font-size:24px;font-weight:600;line-height:1;overflow-wrap:anywhere}
+.stat-sub{font-size:11px;color:var(--text-3);margin-top:4px}
+.stat-card.warn .stat-value{color:var(--orange)}
+.stat-card.danger .stat-value{color:var(--red)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto;margin-bottom:20px;width:100%}
+.card-header{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.card-title{font-size:13.5px;font-weight:600;word-break:break-word}
+.card-desc{font-size:12px;color:var(--text-2);margin-top:1px;word-break:break-word}
+.search-row{padding:12px 20px;border-bottom:1px solid var(--border)}
+.search-input-wrap{position:relative}
+.search-input-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-3);pointer-events:none}
+.search-input{width:100%;background:var(--bg);border:1px solid var(--border-2);border-radius:var(--r);padding:7px 12px 7px 32px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border-color .12s;max-width:100%;box-sizing:border-box}
+.search-input:focus{border-color:var(--accent)}
+table{width:100%;border-collapse:collapse;min-width:700px}
+th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);padding:10px 20px;border-bottom:1px solid var(--border)}
+td{padding:11px 20px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.012)}
+tr.priority td{background:rgba(245,158,11,.04)}
+.cell-primary{font-weight:500;overflow-wrap:anywhere}
+.cell-secondary{font-size:12px;color:var(--text-2);margin-top:2px;overflow-wrap:anywhere}
+.summary-box{background:rgba(245,158,11,.06);border-left:2px solid var(--orange);border-radius:0 var(--r) var(--r) 0;padding:7px 11px;font-size:12px;color:var(--text-2);line-height:1.5;max-width:100%;display:block;overflow-wrap:anywhere;white-space:normal}
+.empty-state{padding:44px 24px;text-align:center}
+.empty-icon{width:40px;height:40px;background:var(--surface-2);border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
+.empty-icon svg{width:20px;height:20px;color:var(--text-3)}
+.empty-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.empty-desc{font-size:13px;color:var(--text-2)}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.bdot{width:5px;height:5px;border-radius:50%}
+.badge-ai{background:rgba(34,197,94,.1);color:var(--green)}.badge-ai .bdot{background:var(--green)}
+.badge-human{background:rgba(245,158,11,.1);color:var(--orange)}.badge-human .bdot{background:var(--orange)}
+.badge-waiting{background:rgba(79,124,255,.1);color:var(--accent)}.badge-waiting .bdot{background:var(--accent)}
+.badge-cool{background:rgba(139,144,160,.1);color:var(--text-2)}.badge-cool .bdot{background:var(--text-2)}
+.badge-blocked{background:rgba(239,68,68,.1);color:var(--red)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r);font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:background .12s,opacity .12s;white-space:normal;text-align:center;font-family:inherit}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-2)}
+.btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--border-2)}
+.btn-ghost:hover:not(:disabled){background:var(--surface-2);color:var(--text)}
+.btn-danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover:not(:disabled){background:rgba(239,68,68,.18)}
+.btn-sm{padding:4px 9px;font-size:12px}
+.btn-xs{padding:3px 7px;font-size:11px}
+.btn-icon{background:none;border:none;cursor:pointer;color:var(--text-3);padding:4px;display:flex;align-items:center;border-radius:4px;transition:color .12s,background .12s}
+.btn-icon:hover{color:var(--text);background:var(--surface-2)}
+.full-w{width:100%}
+.actions-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.form-section{padding:20px;width:100%}
+.form-group{margin-bottom:16px;width:100%}
+label{display:block;font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:6px}
+input[type="text"],input[type="password"],input[type="email"],textarea,select{width:100%;background:var(--bg);border:1px solid var(--border-2);border-radius:var(--r);padding:9px 12px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;transition:border-color .12s;max-width:100%;box-sizing:border-box}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;line-height:1.6}
+.form-hint{font-size:11px;color:var(--text-3);margin-top:4px}
+.form-footer{padding:13px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.toggle-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.toggle-info .toggle-label{font-size:13.5px;font-weight:500;margin-bottom:3px}
+.toggle-info .toggle-desc{font-size:12px;color:var(--text-2)}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0;cursor:pointer}
+.toggle input{display:none}
+.toggle-track{position:absolute;inset:0;background:var(--surface-2);border:1px solid var(--border-2);border-radius:20px;transition:background .2s,border-color .2s}
+.toggle input:checked~.toggle-track{background:var(--accent);border-color:var(--accent)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:12px;height:12px;background:var(--text-3);border-radius:50%;transition:transform .2s,background .2s}
+.toggle input:checked~.toggle-thumb{transform:translateX(16px);background:#fff}
+.bot-offline-banner{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);padding:10px 14px;margin-bottom:20px;font-size:13px;color:var(--red);display:flex;align-items:center;gap:8px}
+.pagination{padding:11px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pagination-info{font-size:12px;color:var(--text-2)}
+#loginPage{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px}
+.login-box{width:100%;max-width:360px}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-title{font-size:20px;font-weight:600;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text-2);margin-bottom:22px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;backdrop-filter:blur(2px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;max-width:95vw}
+.modal-lg{max-width:560px}
+.modal-header{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:14px;font-weight:600}
+.modal-sub{font-size:12px;color:var(--text-2);margin-top:2px}
+.modal-body{padding:0;overflow-y:auto;overflow-x:hidden;flex:1}
+.modal-footer{padding:13px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.crm-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:13px}
+.crm-row:last-child{border-bottom:none}
+.crm-label{color:var(--text-2);font-size:12px;white-space:nowrap;padding-top:1px}
+.crm-value{text-align:right;word-break:break-word;flex:1;min-width:0}
+.tag-list{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+.tag{background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--text-2)}
+.etapa-pill{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.crm-empty{padding:40px 20px;text-align:center;color:var(--text-2);font-size:13px}
+.crm-edit-row{display:flex;align-items:center;gap:10px;padding:8px 20px;border-bottom:1px solid var(--border)}
+.crm-edit-label{color:var(--text-2);font-size:12px;width:140px;flex-shrink:0}
+.crm-edit-input{flex:1;background:var(--bg);border:1px solid var(--border-2);border-radius:var(--r);padding:5px 9px;font-size:13px;color:var(--text);font-family:inherit;outline:none}
+.crm-edit-input:focus{border-color:var(--accent)}
+.confirm-icon{width:44px;height:44px;background:rgba(239,68,68,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:20px auto 0;color:var(--red)}
+.confirm-text{padding:16px 20px 20px;text-align:center;font-size:13px;color:var(--text-2);line-height:1.6;overflow-wrap:anywhere}
+.confirm-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px}
+.tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface)}
+.tab-btn{padding:10px 14px;font-size:13px;font-weight:500;color:var(--text-2);cursor:pointer;border:none;background:none;font-family:inherit;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.appt-status-pending{background:rgba(245,158,11,.1);color:var(--orange)}
+.appt-status-confirmed{background:rgba(34,197,94,.1);color:var(--green)}
+.appt-status-cancelled{background:rgba(239,68,68,.1);color:var(--red)}
+.appt-status-completed{background:rgba(139,144,160,.1);color:var(--text-2)}
+.appt-status-no_show{background:rgba(239,68,68,.1);color:var(--red)}
+#mobileNav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:100;padding:0 4px env(safe-area-inset-bottom)}
+.mobile-nav-items{display:flex}
+.mobile-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border:none;background:none;cursor:pointer;color:var(--text-3);font-size:10px;font-weight:500;font-family:inherit;transition:color .12s;position:relative}
+.mobile-nav-item.active{color:var(--accent)}
+.mobile-nav-item svg{width:20px;height:20px}
+.mobile-badge{position:absolute;top:7px;right:calc(50% - 16px);background:var(--red);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.hidden{display:none !important}
+.text-muted{color:var(--text-2)}
+.text-sm{font-size:12px}
+.conv-card{padding:14px 16px;border-bottom:1px solid var(--border)}
+.conv-card:last-child{border-bottom:none}
+.conv-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.conv-card-name{font-weight:500;font-size:13.5px}
+.conv-card-phone{font-size:12px;color:var(--text-2)}
+.conv-card-summary{font-size:12px;color:var(--text-2);background:rgba(245,158,11,.06);border-left:2px solid var(--orange);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:10px;line-height:1.5}
+.conv-card-actions{display:flex;gap:8px}
+.conv-card-actions .btn{flex:1;justify-content:center}
 @media(max-width:768px){
-
-table{
-
-    min-width:100%;
-
+  #sidebar{display:none}
+  #mobileNav{display:block}
+  #main{height:auto;min-height:100vh}
+  .page-content{padding:16px;padding-bottom:80px}
+  .page-header{padding:0 16px}
+  .stats-grid{grid-template-columns:1fr}
+  #convTable{display:none}
+  #convCards{display:block}
+  .modal{max-width:100%;margin:0;border-radius:var(--rl) var(--rl) 0 0;align-self:flex-end}
+  .modal-overlay{align-items:flex-end}
+  .crm-edit-label{width:110px}
+  .card-header{flex-direction:column}
+  .form-footer{flex-direction:column}
+  .form-footer .btn{width:100%}
+  .actions-row{width:100%}
+  .actions-row .btn{flex:1}
+  .pagination{flex-direction:column;align-items:flex-start}
+  .crm-edit-row{flex-direction:column;align-items:stretch}
+  .crm-edit-label{width:auto}
+  .search-row{padding:16px}
+  table{display:block;overflow-x:auto;min-width:100%}
 }
-
-}
-
-:root{
-    --sidebar-w: clamp(160px, 18vw, 220px);
-}
-
-@media (max-width:900px){
-
-.stats-grid{
-    grid-template-columns:1fr;
-}
-
-}
-
+@media(min-width:769px){#convCards{display:none}}
+@media(max-width:1400px){.stats-grid{grid-template-columns:repeat(2,1fr)}.page-content{padding:20px}table{font-size:12px}th,td{padding:12px}}
+@media(max-width:1200px){.page-header{padding:16px}.actions-row{flex-wrap:wrap}.crm-row{flex-direction:column;align-items:flex-start}.form-footer{flex-wrap:wrap}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.stats-grid{grid-template-columns:1fr}}
+:root{--sidebar-w:clamp(160px,18vw,220px)}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginPage">
   <div class="login-box">
     <div class="login-logo">
-      <div class="logo-mark">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg>
-      </div>
+      <div class="logo-mark"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg></div>
       <span class="logo-text">Vorasync</span>
     </div>
     <div class="login-title">Entrar no painel</div>
     <div class="login-sub">Use sua Dashboard Key para acessar.</div>
     <div class="form-group">
       <label for="apiKeyInput">Dashboard Key</label>
-      <input type="password" id="apiKeyInput" placeholder="••••••••••••••••••••••••"
-        onkeydown="if(event.key==='Enter') saveKey()">
-      <div class="form-hint">Chave enviada no cadastro. Não compartilhe.</div>
+      <input type="password" id="apiKeyInput" placeholder="••••••••••••••••••••••••" onkeydown="if(event.key==='Enter') saveKey()">
+      <div class="form-hint">Chave enviada no cadastro. Nao compartilhe.</div>
     </div>
     <button class="btn btn-primary full-w" onclick="saveKey()" style="padding:10px;font-size:14px;">Entrar</button>
   </div>
 </div>
 
-<!-- APP SHELL -->
 <div id="shell" class="hidden">
 
-  <!-- SIDEBAR -->
   <nav id="sidebar">
-    
     <div class="sidebar-logo">
-      <div class="logo-mark">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg>
-      </div>
+      <div class="logo-mark"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 11L7 3L12 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.5" fill="white"/></svg></div>
       <span class="logo-text">Vorasync</span>
     </div>
-
     <div class="nav-section" style="padding-top:14px;">
       <button class="nav-item active" onclick="goTo('dashboard')" id="nav-dashboard">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
-        Visão geral
+        Visao geral
       </button>
       <button class="nav-item" onclick="goTo('conversations')" id="nav-conversations">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M14 10.5C14 11.3284 13.3284 12 12.5 12H4.5L2 14V3.5C2 2.67157 2.67157 2 3.5 2H12.5C13.3284 2 14 2.67157 14 3.5V10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -937,10 +255,9 @@ table{
       </button>
       <button class="nav-item" onclick="goTo('settings')" id="nav-settings">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5V3M8 13V14.5M14.5 8H13M3 8H1.5M12.7 3.3L11.6 4.4M4.4 11.6L3.3 12.7M12.7 12.7L11.6 11.6M4.4 4.4L3.3 3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Configurações
+        Configuracoes
       </button>
     </div>
-
     <div class="sidebar-footer">
       <div class="user-row">
         <div class="user-avatar" id="userAvatar">V</div>
@@ -955,16 +272,14 @@ table{
     </div>
   </nav>
 
-  <!-- MAIN -->
   <div id="main">
     <header class="page-header">
-      <div id="pageTitle" class="page-title">Visão geral</div>
+      <div id="pageTitle" class="page-title">Visao geral</div>
       <div class="header-right" id="headerActions"></div>
     </header>
 
     <div class="page-content">
 
-      <!-- ALERT -->
       <div id="alertBanner" class="hidden" onclick="goTo('conversations')">
         <div class="alert-dot"></div>
         <span class="alert-text"><span id="alertCount">0</span> conversa aguardando atendimento</span>
@@ -975,36 +290,18 @@ table{
       <div class="page active" id="page-dashboard">
         <div id="botOfflineBanner" class="bot-offline-banner hidden">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".75" fill="currentColor"/></svg>
-          Bot desativado. Nenhuma mensagem será respondida automaticamente.
+          Bot desativado. Nenhuma mensagem sera respondida automaticamente.
           <button class="btn btn-sm" onclick="goTo('settings')" style="margin-left:auto;background:rgba(239,68,68,.2);color:var(--red);border:none;">Reativar</button>
         </div>
-
         <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">Contatos</div>
-            <div class="stat-value" id="statContacts">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Conversas</div>
-            <div class="stat-value" id="statConversations">—</div>
-          </div>
-          <div class="stat-card" id="statMsgCard">
-            <div class="stat-label">Mensagens restantes</div>
-            <div class="stat-value" id="statRemaining">—</div>
-            <div class="stat-sub" id="statMsgSub"></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Plano</div>
-            <div class="stat-value" id="statPlan">—</div>
-          </div>
+          <div class="stat-card"><div class="stat-label">Contatos</div><div class="stat-value" id="statContacts">—</div></div>
+          <div class="stat-card"><div class="stat-label">Conversas</div><div class="stat-value" id="statConversations">—</div></div>
+          <div class="stat-card" id="statMsgCard"><div class="stat-label">Mensagens restantes</div><div class="stat-value" id="statRemaining">—</div><div class="stat-sub" id="statMsgSub"></div></div>
+          <div class="stat-card"><div class="stat-label">Plano</div><div class="stat-value" id="statPlan">—</div></div>
         </div>
-
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">Atenção necessária</div>
-              <div class="card-desc">Conversas que precisam de um atendente humano</div>
-            </div>
+            <div><div class="card-title">Atencao necessaria</div><div class="card-desc">Conversas que precisam de um atendente humano</div></div>
             <button class="btn btn-ghost btn-sm" onclick="goTo('conversations')">Ver todas</button>
           </div>
           <div id="dashConversations"></div>
@@ -1015,10 +312,7 @@ table{
       <div class="page" id="page-conversations">
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">Conversas</div>
-              <div class="card-desc">Gerencie atendimentos em andamento</div>
-            </div>
+            <div><div class="card-title">Conversas</div><div class="card-desc">Gerencie atendimentos em andamento</div></div>
             <button class="btn btn-ghost btn-sm" onclick="loadConversations()">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.68629 4.68629 2 8 2C10.4183 2 12.5 3.34315 13.5 5.5M14 8C14 11.3137 11.3137 14 8 14C5.58172 14 3.5 12.6569 2.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 2.5V5.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Atualizar
@@ -1030,22 +324,10 @@ table{
               <input class="search-input" id="convSearch" placeholder="Buscar por nome ou telefone..." oninput="filterConversations(this.value)">
             </div>
           </div>
-
-          <!-- DESKTOP TABLE -->
           <table id="convTable">
-            <thead>
-              <tr>
-                <th>Contato</th>
-                <th>Status</th>
-                <th>Score</th>
-                <th>Resumo</th>
-                <th>Acao</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Contato</th><th>Status</th><th>Score</th><th>Resumo</th><th>Acao</th></tr></thead>
             <tbody id="conversationsBody"></tbody>
           </table>
-
-          <!-- MOBILE CARDS -->
           <div id="convCards"></div>
         </div>
       </div>
@@ -1054,25 +336,18 @@ table{
       <div class="page" id="page-contacts">
         <div class="card" style="margin-bottom:12px;">
           <div class="card-header">
-            <div>
-              <div class="card-title">Bloquear numero</div>
-              <div class="card-desc">O bot nao respondera mensagens deste numero</div>
-            </div>
+            <div><div class="card-title">Bloquear numero</div><div class="card-desc">O bot nao respondera mensagens deste numero</div></div>
           </div>
           <div class="form-section" style="padding:14px 20px;">
             <div style="display:flex;gap:8px;">
-              <input type="text" id="blockPhoneInput" placeholder="556299999999@s.whatsapp.net " style="flex:1;">
+              <input type="text" id="blockPhoneInput" placeholder="556299999999" style="flex:1;">
               <button class="btn btn-danger" onclick="blockByPhone()">Bloquear</button>
             </div>
           </div>
         </div>
-
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">Contatos</div>
-              <div class="card-desc">Historico de quem interagiu com o bot</div>
-            </div>
+            <div><div class="card-title">Contatos</div><div class="card-desc">Historico de quem interagiu com o bot</div></div>
             <button class="btn btn-ghost btn-sm" onclick="loadContacts()">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.68629 4.68629 2 8 2C10.4183 2 12.5 3.34315 13.5 5.5M14 8C14 11.3137 11.3137 14 8 14C5.58172 14 3.5 12.6569 2.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 2.5V5.5H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Atualizar
@@ -1085,18 +360,16 @@ table{
             </div>
           </div>
           <table>
-            <thead>
-              <tr><th>Contato</th><th>Ultimo acesso</th><th>Status</th><th>Acoes</th></tr>
-            </thead>
+            <thead><tr><th>Contato</th><th>Ultimo acesso</th><th>Status</th><th>Acoes</th></tr></thead>
             <tbody id="contactsBody"></tbody>
           </table>
           <div id="contactPagination"></div>
         </div>
       </div>
 
-<!-- SCHEDULING -->
+      <!-- SCHEDULING — dentro do page-content, ID unico -->
       <div class="page" id="page-scheduling">
-        <div class="tabs" id="schedulingTabs">
+        <div class="tabs">
           <button class="tab-btn active" onclick="switchTab('appts')">Agendamentos</button>
           <button class="tab-btn" onclick="switchTab('services')">Servicos</button>
           <button class="tab-btn" onclick="switchTab('rules')">Horarios</button>
@@ -1107,7 +380,7 @@ table{
             <div><div class="card-title">Agendamentos</div><div class="card-desc">Todos os agendamentos</div></div>
             <button class="btn btn-ghost btn-sm" onclick="openCreateApptModal()">+ Novo</button>
           </div>
-          <div class="search-row" style="display:flex;gap:8px;align-items:center;">
+          <div class="search-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <select id="apptStatusFilter" onchange="loadAppointments()" style="width:160px;flex-shrink:0;">
               <option value="">Todos os status</option>
               <option value="pending">Pendente</option>
@@ -1157,10 +430,7 @@ table{
       <div class="page" id="page-settings">
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">Bot</div>
-              <div class="card-desc">Ative ou desative o atendimento automatico</div>
-            </div>
+            <div><div class="card-title">Bot</div><div class="card-desc">Ative ou desative o atendimento automatico</div></div>
           </div>
           <div class="toggle-row">
             <div class="toggle-info">
@@ -1169,18 +439,13 @@ table{
             </div>
             <label class="toggle">
               <input type="checkbox" id="botActiveToggle" onchange="toggleBotActive(this.checked)">
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
+              <div class="toggle-track"></div><div class="toggle-thumb"></div>
             </label>
           </div>
         </div>
-
         <div class="card">
           <div class="card-header">
-            <div>
-              <div class="card-title">Personalidade do bot</div>
-              <div class="card-desc">Ajuste como o assistente se comporta nas conversas</div>
-            </div>
+            <div><div class="card-title">Personalidade do bot</div><div class="card-desc">Ajuste como o assistente se comporta nas conversas</div></div>
           </div>
           <div class="form-section">
             <div class="form-group">
@@ -1189,13 +454,7 @@ table{
             </div>
             <div class="form-group">
               <label for="s_prompt">Instrucoes do bot</label>
-              <textarea id="s_prompt" rows="9" placeholder="Voce e um assistente da [Empresa]. Responda sobre [topicos].
-
-Voce NAO tem acesso a:
-- Agendamento de horarios
-- Consulta de estoque em tempo real
-
-Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></textarea>
+              <textarea id="s_prompt" rows="9" placeholder="Voce e um assistente da [Empresa]..."></textarea>
               <div class="form-hint">Defina a personalidade, o que o bot sabe, e o que deve encaminhar para atendente humano.</div>
             </div>
           </div>
@@ -1206,19 +465,15 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
         </div>
       </div>
 
-    </div>
-  </div>
+    </div><!-- /page-content -->
+  </div><!-- /main -->
 
   <!-- MOBILE NAV -->
   <nav id="mobileNav">
     <div class="mobile-nav-items">
-      <button class="mobile-nav-item hidden" onclick="goTo('scheduling')" id="mnav-scheduling">
-        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 2V4M11 2V4M2 7H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Agenda
-      </button>
       <button class="mobile-nav-item active" onclick="goTo('dashboard')" id="mnav-dashboard">
         <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
-        Visao geral
+        Inicio
       </button>
       <button class="mobile-nav-item" onclick="goTo('conversations')" id="mnav-conversations" style="position:relative;">
         <svg viewBox="0 0 16 16" fill="none"><path d="M14 10.5C14 11.3284 13.3284 12 12.5 12H4.5L2 14V3.5C2 2.67157 2.67157 2 3.5 2H12.5C13.3284 2 14 2.67157 14 3.5V10.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -1229,6 +484,10 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
         <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 13C2.5 10.5147 5.01472 8.5 8 8.5C10.9853 8.5 13.5 10.5147 13.5 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Contatos
       </button>
+      <button class="mobile-nav-item hidden" onclick="goTo('scheduling')" id="mnav-scheduling">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 2V4M11 2V4M2 7H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Agenda
+      </button>
       <button class="mobile-nav-item" onclick="goTo('settings')" id="mnav-settings">
         <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5V3M8 13V14.5M14.5 8H13M3 8H1.5M12.7 3.3L11.6 4.4M4.4 11.6L3.3 12.7M12.7 12.7L11.6 11.6M4.4 4.4L3.3 3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Config
@@ -1236,83 +495,20 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
     </div>
   </nav>
 
-</div>
+</div><!-- /shell -->
 
-  <!-- APPOINTMENTS -->
-  <div class="tab-panel active card" id="tab-appts" style="border-radius:0 0 var(--rl) var(--rl);">
-    <div class="card-header">
-      <div><div class="card-title">Agendamentos</div><div class="card-desc">Todos os agendamentos do sistema</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="openCreateApptModal()">+ Novo</button>
-    </div>
-    <div class="search-row" style="display:flex;gap:8px;align-items:center;">
-      <select id="apptStatusFilter" onchange="loadAppointments()" style="width:160px;flex-shrink:0;">
-        <option value="">Todos os status</option>
-        <option value="pending">Pendente</option>
-        <option value="confirmed">Confirmado</option>
-        <option value="completed">Realizado</option>
-        <option value="cancelled">Cancelado</option>
-        <option value="no_show">Nao compareceu</option>
-      </select>
-      <input type="date" id="apptDateFrom" onchange="loadAppointments()" style="width:150px;flex-shrink:0;">
-    </div>
-    <table>
-      <thead><tr><th>Cliente</th><th>Servico</th><th>Data/Hora</th><th>Status</th><th>Origem</th><th>Acoes</th></tr></thead>
-      <tbody id="apptsBody"></tbody>
-    </table>
-    <div id="apptsPagination"></div>
-  </div>
-
-  <!-- SERVICES -->
-  <div class="tab-panel card" id="tab-services" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
-    <div class="card-header">
-      <div><div class="card-title">Servicos</div><div class="card-desc">Servicos que podem ser agendados</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="openCreateServiceModal()">+ Novo</button>
-    </div>
-    <table>
-      <thead><tr><th>Nome</th><th>Duracao</th><th>Buffer</th><th>Preco</th><th>Ativo</th><th>Acoes</th></tr></thead>
-      <tbody id="servicesBody"></tbody>
-    </table>
-  </div>
-
-  <!-- RULES -->
-  <div class="tab-panel card" id="tab-rules" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
-    <div class="card-header">
-      <div><div class="card-title">Horarios de funcionamento</div><div class="card-desc">Agendas semanais com versionamento</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="openCreateRuleModal()">+ Nova Agenda</button>
-    </div>
-    <div id="rulesList" style="padding:8px 0;"></div>
-  </div>
-
-  <!-- BLOCKS -->
-  <div class="tab-panel card" id="tab-blocks" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
-    <div class="card-header">
-      <div><div class="card-title">Bloqueios</div><div class="card-desc">Feriados, ferias e dias fechados</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="openCreateBlockModal()">+ Bloquear data</button>
-    </div>
-    <table>
-      <thead><tr><th>Data</th><th>Horario</th><th>Motivo</th><th>Acoes</th></tr></thead>
-      <tbody id="blocksBody"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- CRM MODAL -->
+<!-- MODAIS — fora do shell, mas IDs únicos -->
 <div id="crmModal" class="modal-overlay hidden">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <div>
-        <div class="modal-title">Perfil do contato</div>
-        <div class="modal-sub" id="crmContactName"></div>
-      </div>
+      <div><div class="modal-title">Perfil do contato</div><div class="modal-sub" id="crmContactName"></div></div>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-ghost btn-sm" id="crmEditToggleBtn" onclick="toggleCrmEditMode()">Editar</button>
-        <button class="btn-icon" onclick="closeCrmModal()">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
+        <button class="btn-icon" onclick="closeCrmModal()"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
       </div>
     </div>
     <div class="modal-body" id="crmContent"></div>
-    <div class="modal-footer" id="crmFooter" style="justify-content:space-between;">
+    <div class="modal-footer" style="justify-content:space-between;">
       <button class="btn btn-danger btn-sm" onclick="clearCrm()">Limpar CRM</button>
       <div style="display:flex;gap:8px;" id="crmEditActions" class="hidden">
         <button class="btn btn-ghost btn-sm" onclick="toggleCrmEditMode()">Cancelar</button>
@@ -1322,13 +518,10 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   </div>
 </div>
 
-<!-- CONFIRM MODAL -->
 <div id="confirmModal" class="modal-overlay hidden">
   <div class="modal" style="max-width:380px;">
     <div class="modal-body" style="padding-bottom:4px;">
-      <div class="confirm-icon" id="confirmIcon">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 6V10.5M10 14H10.01M3 17L10 3L17 17H3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
+      <div class="confirm-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 6V10.5M10 14H10.01M3 17L10 3L17 17H3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div class="confirm-text">
         <div class="confirm-title" id="confirmTitle">Confirmar acao</div>
         <div id="confirmDesc"></div>
@@ -1341,22 +534,18 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   </div>
 </div>
 
-<!-- CREATE APPOINTMENT -->
 <div id="apptModal" class="modal-overlay hidden">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Novo Agendamento</div>
-      <button class="btn-icon" onclick="document.getElementById('apptModal').classList.add('hidden')">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
+      <button class="btn-icon" onclick="document.getElementById('apptModal').classList.add('hidden')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="padding:20px;">
       <div class="form-group"><label>Servico</label><select id="appt_service"><option value="">Selecione...</option></select></div>
       <div class="form-group"><label>Nome do cliente</label><input id="appt_name" placeholder="Nome completo"></div>
       <div class="form-group"><label>Telefone</label><input id="appt_phone" placeholder="556299999999"></div>
       <div class="form-group"><label>Data e Horario</label><input type="datetime-local" id="appt_datetime"></div>
       <div class="form-group"><label>Observacoes</label><textarea id="appt_notes" rows="2"></textarea></div>
-      <div id="apptAvailability" style="font-size:12px;color:var(--text-2);margin-top:4px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('apptModal').classList.add('hidden')">Cancelar</button>
@@ -1365,21 +554,18 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   </div>
 </div>
 
-<!-- CREATE SERVICE -->
 <div id="serviceModal" class="modal-overlay hidden">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="serviceModalTitle">Novo Servico</div>
-      <button class="btn-icon" onclick="document.getElementById('serviceModal').classList.add('hidden')">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
+      <button class="btn-icon" onclick="document.getElementById('serviceModal').classList.add('hidden')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="padding:20px;">
       <input type="hidden" id="svc_id">
-      <div class="form-group"><label>Nome do servico</label><input id="svc_name" placeholder="Ex: Corte de cabelo"></div>
+      <div class="form-group"><label>Nome do servico</label><input id="svc_name" placeholder="Ex: Consulta"></div>
       <div class="form-group"><label>Descricao (opcional)</label><input id="svc_desc"></div>
       <div class="form-group"><label>Duracao (minutos)</label><input id="svc_duration" type="number" placeholder="30"></div>
-      <div class="form-group"><label>Buffer apos atendimento (minutos)</label><input id="svc_buffer" type="number" placeholder="0"><div class="form-hint">Tempo de limpeza/preparo entre atendimentos</div></div>
+      <div class="form-group"><label>Buffer apos atendimento (min)</label><input id="svc_buffer" type="number" placeholder="0"><div class="form-hint">Tempo de preparo entre atendimentos</div></div>
       <div class="form-group"><label>Preco (opcional)</label><input id="svc_price" type="number" step="0.01" placeholder="0.00"></div>
     </div>
     <div class="modal-footer">
@@ -1389,16 +575,13 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   </div>
 </div>
 
-<!-- CREATE BLOCK -->
 <div id="blockModal" class="modal-overlay hidden">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">Bloquear data</div>
-      <button class="btn-icon" onclick="document.getElementById('blockModal').classList.add('hidden')">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
+      <button class="btn-icon" onclick="document.getElementById('blockModal').classList.add('hidden')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="padding:20px;">
       <div class="form-group"><label>Data</label><input id="blk_date" type="date"></div>
       <div class="form-group"><label>Horario inicio (vazio = dia inteiro)</label><input id="blk_start" type="time"></div>
       <div class="form-group"><label>Horario fim</label><input id="blk_end" type="time"></div>
@@ -1411,20 +594,17 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   </div>
 </div>
 
-<!-- CREATE RULE MODAL -->
 <div id="ruleModal" class="modal-overlay hidden">
   <div class="modal" style="max-width:580px;">
     <div class="modal-header">
       <div class="modal-title">Nova agenda semanal</div>
-      <button class="btn-icon" onclick="document.getElementById('ruleModal').classList.add('hidden')">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
+      <button class="btn-icon" onclick="document.getElementById('ruleModal').classList.add('hidden')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     </div>
-    <div class="modal-body">
-      <div class="form-group"><label>Nome</label><input id="rule_name" value="Agenda padrão"></div>
-      <div style="display:flex;gap:12px;">
-        <div class="form-group" style="flex:1;"><label>Valida a partir de</label><input id="rule_from" type="date"></div>
-        <div class="form-group" style="flex:1;"><label>Valida ate (vazio = sem fim)</label><input id="rule_until" type="date"></div>
+    <div class="modal-body" style="padding:20px;">
+      <div class="form-group"><label>Nome</label><input id="rule_name" value="Agenda padrao"></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:140px;"><label>Valida a partir de</label><input id="rule_from" type="date"></div>
+        <div class="form-group" style="flex:1;min-width:140px;"><label>Valida ate (vazio = sem fim)</label><input id="rule_until" type="date"></div>
       </div>
       <div class="toggle-row" style="padding:8px 0;">
         <div><div class="toggle-label">Confirmacao automatica</div><div class="toggle-desc">IA confirma sem precisar de operador</div></div>
@@ -1453,59 +633,45 @@ let crmEditMode = false;
 let crmCurrentContactId = null;
 let crmCurrentProfile = {};
 let confirmAction = null;
+let cancelAction = null;
 let titleBlinkId = null;
+let schedulingEnabled = false;
+let servicesCache = [];
+let apptPage = 1;
+let contactSearchDebounce = null;
+const WEEKDAY_NAMES = ['Segunda','Terca','Quarta','Quinta','Sexta','Sabado','Domingo'];
 
-// ═══════════════════════════════
-// NAV
-// ═══════════════════════════════
+// ── NAV ──
 
 function goTo(page) {
   currentPage = page;
-
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-
   ['dashboard','conversations','contacts','settings','scheduling'].forEach(p => {
     document.getElementById('nav-' + p)?.classList.remove('active');
     document.getElementById('mnav-' + p)?.classList.remove('active');
   });
   document.getElementById('nav-' + page)?.classList.add('active');
   document.getElementById('mnav-' + page)?.classList.add('active');
-
-  const titles = {
-    dashboard:     'Visao geral',
-    conversations: 'Conversas',
-    contacts:      'Contatos',
-    settings:      'Configuracoes',
-    scheduling:    'Agenda',          // ← NOVO
-  };
+  const titles = {dashboard:'Visao geral',conversations:'Conversas',contacts:'Contatos',settings:'Configuracoes',scheduling:'Agenda'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
-
   if (page === 'dashboard')     loadDashboard();
   if (page === 'conversations') loadConversations();
   if (page === 'contacts')      { contactPage = 1; loadContacts(); }
   if (page === 'settings')      loadSettings();
-  if (page === 'scheduling')    switchTab('appts');   // ← NOVO
+  if (page === 'scheduling')    switchTab('appts');
 }
 
-// ═══════════════════════════════
-// AUTH
-// ═══════════════════════════════
+// ── AUTH ──
 
 function getKey() { return localStorage.getItem('clientApiKey'); }
 
 function confirmLogout() {
-  openConfirm(
-    'Sair do painel',
-    'Voce tera que inserir sua Dashboard Key novamente para acessar.',
-    'Sair',
-    logout
-  );
+  openConfirm('Sair do painel','Voce tera que inserir sua Dashboard Key novamente para acessar.','Sair',logout);
 }
 
 function logout() {
-  stopAlertPolling();
-  clearTitleBlink();
+  stopAlertPolling(); clearTitleBlink();
   localStorage.removeItem('clientApiKey');
   document.getElementById('shell').classList.add('hidden');
   document.getElementById('loginPage').style.display = 'flex';
@@ -1518,426 +684,89 @@ async function saveKey() {
   await startApp();
 }
 
-// ═══════════════════════════════
-// SCHEDULING
-// ═══════════════════════════════
+// ── API ──
 
-let schedulingEnabled = false;
-let servicesCache = [];
-let apptPage = 1;
-
-const WEEKDAY_NAMES = ['Segunda','Terca','Quarta','Quinta','Sexta','Sabado','Domingo'];
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    const tabs = ['appts','services','rules','blocks'];
-    b.classList.toggle('active', tabs[i] === tab);
-  });
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  const panel = document.getElementById('tab-' + tab);
-  if (panel) { panel.classList.add('active'); panel.style.display = 'block'; }
-
-  if (tab === 'appts')    loadAppointments();
-  if (tab === 'services') loadServices();
-  if (tab === 'rules')    loadRules();
-  if (tab === 'blocks')   loadBlocks();
-}
-
-// APPOINTMENTS
-async function loadAppointments() {
-  try {
-    const status = document.getElementById('apptStatusFilter').value;
-    const from   = document.getElementById('apptDateFrom').value;
-    const params = new URLSearchParams({ page: apptPage, limit: 20 });
-    if (status) params.set('status', status);
-    if (from)   params.set('from_date', from + 'T00:00:00');
-
-    const result = await api(`/scheduling/appointments?${params}`);
-    const tbody  = document.getElementById('apptsBody');
-
-    if (!result.data.length) {
-      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum agendamento</div><div class="empty-desc">Agendamentos aparecem aqui quando criados.</div></div></td></tr>`;
-      return;
-    }
-
-    tbody.innerHTML = result.data.map(a => `<tr>
-      <td>
-        <div class="cell-primary">${esc(a.customer_name || '(sem nome)')}</div>
-        <div class="cell-secondary">${esc(a.customer_phone || '')}</div>
-      </td>
-      <td>${esc(a.service_name || '—')}</td>
-      <td><div class="cell-primary">${new Date(a.scheduled_at).toLocaleString('pt-BR')}</div></td>
-      <td><span class="badge appt-status-${a.status}">${esc(a.status)}</span></td>
-      <td><span class="text-muted text-sm">${a.source === 'ai' ? 'IA' : a.source === 'operator' ? 'Operador' : 'Manual'}</span></td>
-      <td class="actions-row">
-        ${a.status === 'pending'    ? `<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'confirmed')">Confirmar</button>` : ''}
-        ${a.status !== 'cancelled' && a.status !== 'completed' ? `<button class="btn btn-danger btn-xs" onclick="updateApptStatus(${a.id},'cancelled')">Cancelar</button>` : ''}
-        ${a.status === 'confirmed'  ? `<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'completed')">Concluir</button>` : ''}
-      </td>
-    </tr>`).join('');
-
-    // pagination
-    const el = document.getElementById('apptsPagination');
-    const totalPages = Math.ceil(result.total / result.limit);
-    el.innerHTML = totalPages <= 1 ? '' : `<div class="pagination">
-      <span class="pagination-info">${result.total} agendamentos</span>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage-1};loadAppointments()" ${apptPage<=1?'disabled':''}>Anterior</button>
-        <button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage+1};loadAppointments()" ${apptPage>=totalPages?'disabled':''}>Proxima</button>
-      </div>
-    </div>`;
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-async function updateApptStatus(id, status) {
-  try { await api(`/scheduling/appointments/${id}`, 'PATCH', { status, changed_by: 'operador' }); loadAppointments(); }
-  catch(e) { alert('Erro: ' + e.message); }
-}
-
-function openCreateApptModal() {
-  document.getElementById('appt_service').innerHTML = servicesCache.filter(s => s.is_active).map(s => `<option value="${s.id}">${esc(s.name)} (${s.duration_minutes}min)</option>`).join('') || '<option>Nenhum servico cadastrado</option>';
-  document.getElementById('appt_name').value = '';
-  document.getElementById('appt_phone').value = '';
-  document.getElementById('appt_notes').value = '';
-  document.getElementById('appt_datetime').value = '';
-  document.getElementById('apptModal').classList.remove('hidden');
-}
-
-async function createAppointment() {
-  const payload = {
-    service_id:    parseInt(document.getElementById('appt_service').value),
-    customer_name: document.getElementById('appt_name').value,
-    customer_phone:document.getElementById('appt_phone').value,
-    scheduled_at:  document.getElementById('appt_datetime').value,
-    notes:         document.getElementById('appt_notes').value,
-    source:        'operator',
-    status:        'confirmed',
-    check_availability: true
-  };
-  if (!payload.service_id || !payload.scheduled_at) return alert('Servico e data/hora sao obrigatorios');
-  try {
-    await api('/scheduling/appointments', 'POST', payload);
-    document.getElementById('apptModal').classList.add('hidden');
-    loadAppointments();
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-// SERVICES
-async function loadServices() {
-  try {
-    servicesCache = await api('/scheduling/services');
-    const tbody   = document.getElementById('servicesBody');
-    tbody.innerHTML = servicesCache.map(s => `<tr>
-      <td><div class="cell-primary">${esc(s.name)}</div>${s.description ? `<div class="cell-secondary">${esc(s.description)}</div>` : ''}</td>
-      <td>${s.duration_minutes}min</td>
-      <td>${s.buffer_after_minutes}min</td>
-      <td>${s.price ? 'R$ ' + parseFloat(s.price).toFixed(2) : '—'}</td>
-      <td><span class="badge ${s.is_active ? 'badge-ai' : ''}">${s.is_active ? 'Ativo' : 'Inativo'}</span></td>
-      <td class="actions-row">
-        <button class="btn btn-ghost btn-xs" onclick="openEditServiceModal(${s.id})">Editar</button>
-        <button class="btn btn-danger btn-xs" onclick="deleteService(${s.id})">Remover</button>
-      </td>
-    </tr>`).join('') || `<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum servico</div><div class="empty-desc">Adicione os servicos que sua empresa oferece.</div></div></td></tr>`;
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-function openCreateServiceModal() {
-  document.getElementById('svc_id').value = '';
-  document.getElementById('svc_name').value = '';
-  document.getElementById('svc_desc').value = '';
-  document.getElementById('svc_duration').value = '';
-  document.getElementById('svc_buffer').value = '0';
-  document.getElementById('svc_price').value = '';
-  document.getElementById('serviceModalTitle').textContent = 'Novo Servico';
-  document.getElementById('serviceModal').classList.remove('hidden');
-}
-
-function openEditServiceModal(id) {
-  const s = servicesCache.find(x => x.id === id);
-  if (!s) return;
-  document.getElementById('svc_id').value = s.id;
-  document.getElementById('svc_name').value = s.name || '';
-  document.getElementById('svc_desc').value = s.description || '';
-  document.getElementById('svc_duration').value = s.duration_minutes || '';
-  document.getElementById('svc_buffer').value = s.buffer_after_minutes || 0;
-  document.getElementById('svc_price').value = s.price || '';
-  document.getElementById('serviceModalTitle').textContent = 'Editar Servico';
-  document.getElementById('serviceModal').classList.remove('hidden');
-}
-
-async function saveService() {
-  const id = document.getElementById('svc_id').value;
-  const payload = {
-    name:                 document.getElementById('svc_name').value,
-    description:          document.getElementById('svc_desc').value || null,
-    duration_minutes:     parseInt(document.getElementById('svc_duration').value),
-    buffer_after_minutes: parseInt(document.getElementById('svc_buffer').value) || 0,
-    price:                parseFloat(document.getElementById('svc_price').value) || null,
-  };
-  if (!payload.name || !payload.duration_minutes) return alert('Nome e duracao sao obrigatorios');
-  try {
-    if (id) { await api(`/scheduling/services/${id}`, 'PATCH', payload); }
-    else     { await api('/scheduling/services', 'POST', payload); }
-    document.getElementById('serviceModal').classList.add('hidden');
-    loadServices();
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-async function deleteService(id) {
-  if (!confirm('Desativar este servico?')) return;
-  try { await api(`/scheduling/services/${id}`, 'DELETE'); loadServices(); }
-  catch(e) { alert('Erro: ' + e.message); }
-}
-
-// RULES
-async function loadRules() {
-  try {
-    const rules = await api('/scheduling/rules');
-    const el    = document.getElementById('rulesList');
-    if (!rules.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-title">Nenhuma agenda configurada</div><div class="empty-desc">Crie uma agenda semanal para liberar agendamentos.</div></div>`;
-      return;
-    }
-    el.innerHTML = rules.map(r => `
-      <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-          <div>
-            <div style="font-weight:500;">${esc(r.name)}</div>
-            <div style="font-size:12px;color:var(--text-2);margin-top:2px;">
-              Vigencia: ${r.valid_from} ate ${r.valid_until || 'sem fim'} ·
-              ${r.auto_confirm ? 'Confirma automaticamente' : 'Requer aprovacao manual'}
-            </div>
-          </div>
-          <button class="btn btn-danger btn-xs" onclick="deleteRule(${r.id})">Remover</button>
-        </div>
-        <div style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;">
-          ${r.days.map(d => `
-            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;font-size:12px;">
-              <div style="font-weight:500;margin-bottom:2px;">${WEEKDAY_NAMES[d.weekday]}</div>
-              ${d.is_open && d.start_time
-                ? `<div style="color:var(--text-2);">${d.start_time} - ${d.end_time}</div>`
-                : `<div style="color:var(--text-3);">Fechado</div>`}
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-function openCreateRuleModal() {
-  // Preenche os dias
-  const container = document.getElementById('ruleDaysConfig');
-  container.innerHTML = WEEKDAY_NAMES.map((name, i) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <div style="width:80px;font-size:13px;font-weight:500;color:var(--text-2);">${name}</div>
-      <label class="toggle"><input type="checkbox" id="rd_open_${i}" checked ${i===6?'':''}><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-      <input type="time" id="rd_start_${i}" value="08:00" style="width:90px;flex-shrink:0;">
-      <span style="color:var(--text-3);font-size:12px;">ate</span>
-      <input type="time" id="rd_end_${i}" value="18:00" style="width:90px;flex-shrink:0;">
-    </div>
-  `).join('');
-  // Domingo fechado por padrão
-  document.getElementById('rd_open_6').checked = false;
-
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('rule_from').value = today;
-  document.getElementById('rule_until').value = '';
-  document.getElementById('ruleModal').classList.remove('hidden');
-}
-
-async function createRule() {
-  const days = WEEKDAY_NAMES.map((_, i) => ({
-    weekday: i,
-    is_open: document.getElementById(`rd_open_${i}`).checked,
-    start_time: document.getElementById(`rd_start_${i}`).value,
-    end_time: document.getElementById(`rd_end_${i}`).value,
-    breaks: []
-  }));
-
-  const payload = {
-    name:         document.getElementById('rule_name').value,
-    valid_from:   document.getElementById('rule_from').value,
-    valid_until:  document.getElementById('rule_until').value || null,
-    auto_confirm: document.getElementById('rule_autoconfirm').checked,
-    timezone:     'America/Sao_Paulo',
-    days
-  };
-
-  if (!payload.valid_from) return alert('Data de inicio e obrigatoria');
-  try {
-    await api('/scheduling/rules', 'POST', payload);
-    document.getElementById('ruleModal').classList.add('hidden');
-    loadRules();
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-async function deleteRule(id) {
-  if (!confirm('Remover esta agenda?')) return;
-  try { await api(`/scheduling/rules/${id}`, 'DELETE'); loadRules(); }
-  catch(e) { alert('Erro: ' + e.message); }
-}
-
-// BLOCKS
-async function loadBlocks() {
-  try {
-    const blocks = await api('/scheduling/blocks');
-    const tbody  = document.getElementById('blocksBody');
-    tbody.innerHTML = blocks.map(b => `<tr>
-      <td>${new Date(b.block_date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-      <td>${b.start_time ? `${b.start_time} - ${b.end_time}` : 'Dia inteiro'}</td>
-      <td>${esc(b.reason || '—')}</td>
-      <td><button class="btn btn-danger btn-xs" onclick="deleteBlock(${b.id})">Remover</button></td>
-    </tr>`).join('') || `<tr><td colspan="4"><div class="empty-state"><div class="empty-title">Nenhum bloqueio</div><div class="empty-desc">Feriados e dias fechados aparecem aqui.</div></div></td></tr>`;
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-function openCreateBlockModal() {
-  document.getElementById('blk_date').value = '';
-  document.getElementById('blk_start').value = '';
-  document.getElementById('blk_end').value = '';
-  document.getElementById('blk_reason').value = '';
-  document.getElementById('blockModal').classList.remove('hidden');
-}
-
-async function createBlock() {
-  const payload = {
-    block_date: document.getElementById('blk_date').value,
-    start_time: document.getElementById('blk_start').value || null,
-    end_time:   document.getElementById('blk_end').value || null,
-    reason:     document.getElementById('blk_reason').value || null,
-  };
-  if (!payload.block_date) return alert('Data e obrigatoria');
-  try {
-    await api('/scheduling/blocks', 'POST', payload);
-    document.getElementById('blockModal').classList.add('hidden');
-    loadBlocks();
-  } catch(e) { alert('Erro: ' + e.message); }
-}
-
-async function deleteBlock(id) {
-  try { await api(`/scheduling/blocks/${id}`, 'DELETE'); loadBlocks(); }
-  catch(e) { alert('Erro: ' )}
-}
-// ═══════════════════════════════
-// API
-// ═══════════════════════════════
-
-function parseApiError(err, fallback) {
-  if (!err) return fallback;
+function parseApiError(err, fb) {
+  if (!err) return fb;
   if (typeof err === 'string') return err;
   if (Array.isArray(err)) return err.map(e => `${(e.loc||[]).join('.')}: ${e.msg}`).join(' | ');
-  return fallback;
+  return fb;
 }
 
 async function api(path, method = 'GET', body = null) {
   const res = await fetch(API + path, {
     method,
-    headers: { 'Content-Type': 'application/json', 'x-api-key': getKey() },
+    headers: {'Content-Type':'application/json','x-api-key':getKey()},
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) {
-    let e = {}; try { e = await res.json(); } catch (_) {}
+    let e = {}; try { e = await res.json(); } catch(_) {}
     throw new Error(parseApiError(e.detail, res.statusText));
   }
   return res.json();
 }
 
-// ═══════════════════════════════
-// APP START
-// ═══════════════════════════════
+// ── APP START ──
 
 async function startApp() {
   let stats;
   try { stats = await api('/admin/stats'); }
-  catch (e) {
+  catch(e) {
     alert('Dashboard Key invalida. Verifique e tente novamente.');
-    localStorage.removeItem('clientApiKey');
-    return;
+    localStorage.removeItem('clientApiKey'); return;
   }
-
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('shell').classList.remove('hidden');
-
-  const initials = (stats.tenant_name || 'V').charAt(0).toUpperCase();
-  document.getElementById('userAvatar').textContent = initials;
+  document.getElementById('userAvatar').textContent = (stats.tenant_name||'V').charAt(0).toUpperCase();
   document.getElementById('userName').textContent = stats.tenant_name || 'Minha conta';
-  document.getElementById('userPlan').textContent = 'Plano ' + (stats.plan || '—');
-
+  document.getElementById('userPlan').textContent = 'Plano ' + (stats.plan||'—');
   goTo('dashboard');
   requestNotificationPermission();
   startAlertPolling();
-  await checkSchedulingEnabled(); 
+  await checkSchedulingEnabled();
 }
 
-// ═══════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════
+// ── DASHBOARD ──
 
 async function loadDashboard() {
   try {
     const s = await api('/admin/stats');
-
     document.getElementById('statContacts').textContent      = s.contacts ?? '—';
     document.getElementById('statConversations').textContent = s.conversations ?? '—';
     document.getElementById('statRemaining').textContent     = s.messages_remaining ?? '∞';
-    document.getElementById('statMsgSub').textContent        = `${s.messages_month ?? 0} de ${s.max_messages_month ?? 0} usadas`;
-    document.getElementById('statPlan').textContent          = (s.plan || '—').charAt(0).toUpperCase() + (s.plan || '').slice(1);
+    document.getElementById('statMsgSub').textContent        = `${s.messages_month??0} de ${s.max_messages_month??0} usadas`;
+    document.getElementById('statPlan').textContent          = (s.plan||'—').charAt(0).toUpperCase()+(s.plan||'').slice(1);
     document.getElementById('userName').textContent          = s.tenant_name || 'Minha conta';
-    document.getElementById('userPlan').textContent          = 'Plano ' + (s.plan || '—');
-
+    document.getElementById('userPlan').textContent          = 'Plano ' + (s.plan||'—');
     const card = document.getElementById('statMsgCard');
-    card.classList.remove('warn', 'danger');
+    card.classList.remove('warn','danger');
     if (s.messages_remaining !== null && s.max_messages_month) {
       const pct = s.messages_remaining / s.max_messages_month;
       if (pct <= 0.1) card.classList.add('danger');
       else if (pct <= 0.3) card.classList.add('warn');
     }
-
     const offBanner = document.getElementById('botOfflineBanner');
     if (s.bot_active === false) offBanner.classList.remove('hidden');
     else offBanner.classList.add('hidden');
-
     const list  = await api('/admin/conversations');
     const prior = list.filter(c => ['human_active','awaiting_handoff_confirmation'].includes(c.state));
-
     const container = document.getElementById('dashConversations');
     if (prior.length === 0) {
-      container.innerHTML = `<div class="empty-state">
-        <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5C17 13.3284 16.3284 14 15.5 14H5.5L3 16.5V4.5C3 3.67157 3.67157 3 4.5 3H15.5C16.3284 3 17 3.67157 17 4.5V12.5Z" stroke="currentColor" stroke-width="1.5"/></svg></div>
-        <div class="empty-title">Tudo em dia</div>
-        <div class="empty-desc">Nenhuma conversa precisa de atencao agora.</div>
-      </div>`;
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><path d="M17 12.5C17 13.3284 16.3284 14 15.5 14H5.5L3 16.5V4.5C3 3.67157 3.67157 3 4.5 3H15.5C16.3284 3 17 3.67157 17 4.5V12.5Z" stroke="currentColor" stroke-width="1.5"/></svg></div><div class="empty-title">Tudo em dia</div><div class="empty-desc">Nenhuma conversa precisa de atencao agora.</div></div>`;
     } else {
-      container.innerHTML = `<table>
-        <thead><tr><th>Contato</th><th>Status</th><th>Resumo</th><th>Acao</th></tr></thead>
-        <tbody>${prior.map(c => `<tr class="priority">
-          <td>
-            <div class="cell-primary">${esc(c.contact_name || '(sem nome)')}</div>
-            <div class="cell-secondary">${esc(c.phone)}</div>
-          </td>
-          <td>${stateBadge(c.state)}</td>
-          <td>${c.handoff_summary ? `<div class="summary-box">${esc(c.handoff_summary)}</div>` : '<span class="text-muted text-sm">—</span>'}</td>
-          <td>${c.state !== 'human_active'
-            ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`
-            : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
-          </td>
-        </tr>`).join('')}</tbody>
-      </table>`;
+      container.innerHTML = `<table><thead><tr><th>Contato</th><th>Status</th><th>Resumo</th><th>Acao</th></tr></thead><tbody>${prior.map(c=>`<tr class="priority"><td><div class="cell-primary">${esc(c.contact_name||'(sem nome)')}</div><div class="cell-secondary">${esc(c.phone)}</div></td><td>${stateBadge(c.state)}</td><td>${c.handoff_summary?`<div class="summary-box">${esc(c.handoff_summary)}</div>`:'<span class="text-muted text-sm">—</span>'}</td><td>${c.state!=='human_active'?`<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`:`<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}</td></tr>`).join('')}</tbody></table>`;
     }
-  } catch (e) { console.error('Dashboard:', e); }
+  } catch(e) { console.error('Dashboard:', e); }
 }
 
-// ═══════════════════════════════
-// CONVERSATIONS
-// ═══════════════════════════════
+// ── CONVERSATIONS ──
 
 function stateBadge(state) {
   const m = {
-    ai_active:                    `<span class="badge badge-ai"><span class="bdot"></span>IA ativa</span>`,
-    human_active:                 `<span class="badge badge-human"><span class="bdot"></span>Humano ativo</span>`,
+    ai_active:`<span class="badge badge-ai"><span class="bdot"></span>IA ativa</span>`,
+    human_active:`<span class="badge badge-human"><span class="bdot"></span>Humano ativo</span>`,
     awaiting_handoff_confirmation:`<span class="badge badge-waiting"><span class="bdot"></span>Aguardando</span>`,
-    cooldown:                     `<span class="badge badge-cool"><span class="bdot"></span>Cooldown</span>`,
+    cooldown:`<span class="badge badge-cool"><span class="bdot"></span>Cooldown</span>`,
   };
   return m[state] || `<span class="badge">${state}</span>`;
 }
@@ -1945,569 +774,521 @@ function stateBadge(state) {
 const PRIORITY = ['human_active','awaiting_handoff_confirmation'];
 
 async function loadConversations() {
-  try {
-    allConversations = await api('/admin/conversations');
-    renderConversations(allConversations);
-  } catch (e) { alert('Erro: ' + e.message); }
+  try { allConversations = await api('/admin/conversations'); renderConversations(allConversations); }
+  catch(e) { alert('Erro: ' + e.message); }
 }
 
 function filterConversations(q) {
   const lower = q.toLowerCase();
-  const filtered = allConversations.filter(c =>
-    (c.contact_name || '').toLowerCase().includes(lower) ||
-    (c.phone || '').includes(lower)
-  );
-  renderConversations(filtered);
+  renderConversations(allConversations.filter(c => (c.contact_name||'').toLowerCase().includes(lower)||(c.phone||'').includes(lower)));
 }
 
 function renderConversations(list) {
-  const sorted = [...list].sort((a, b) => {
-    const aP = PRIORITY.includes(a.state) ? 0 : 1;
-    const bP = PRIORITY.includes(b.state) ? 0 : 1;
-    if (aP !== bP) return aP - bP;
-    return new Date(b.created_at) - new Date(a.created_at);
+  const sorted = [...list].sort((a,b) => {
+    const aP = PRIORITY.includes(a.state)?0:1, bP = PRIORITY.includes(b.state)?0:1;
+    if (aP!==bP) return aP-bP;
+    return new Date(b.created_at)-new Date(a.created_at);
   });
-
   const empty = sorted.length === 0;
-  const emptyHtml = `<div class="empty-state">
-    <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-    <div class="empty-title">Nenhuma conversa encontrada</div>
-    <div class="empty-desc">Tente buscar por outro nome ou telefone.</div>
-  </div>`;
-
-  // desktop table
+  const emptyHtml = `<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div class="empty-title">Nenhuma conversa encontrada</div><div class="empty-desc">Tente buscar por outro nome ou telefone.</div></div>`;
   document.getElementById('conversationsBody').innerHTML = empty ? `<tr><td colspan="5">${emptyHtml}</td></tr>` :
-    sorted.map(c => `<tr${PRIORITY.includes(c.state) ? ' class="priority"' : ''}>
-      <td>
-        <div class="cell-primary">${esc(c.contact_name || '(sem nome)')}</div>
-        <div class="cell-secondary">${esc(c.phone)}</div>
-      </td>
+    sorted.map(c=>`<tr${PRIORITY.includes(c.state)?' class="priority"':''}>
+      <td><div class="cell-primary">${esc(c.contact_name||'(sem nome)')}</div><div class="cell-secondary">${esc(c.phone)}</div></td>
       <td>${stateBadge(c.state)}</td>
-      <td><span class="text-muted">${c.handoff_score ?? 0}</span></td>
-      <td style="max-width:240px;">${c.handoff_summary ? `<div class="summary-box">${esc(c.handoff_summary)}</div>` : '<span class="text-muted text-sm">—</span>'}</td>
-      <td>
-        ${c.state !== 'human_active'
-          ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`
-          : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
-      </td>
+      <td><span class="text-muted">${c.handoff_score??0}</span></td>
+      <td style="max-width:240px;">${c.handoff_summary?`<div class="summary-box">${esc(c.handoff_summary)}</div>`:'<span class="text-muted text-sm">—</span>'}</td>
+      <td>${c.state!=='human_active'?`<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir</button>`:`<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}</td>
     </tr>`).join('');
-
-  // mobile cards
   document.getElementById('convCards').innerHTML = empty ? emptyHtml :
-    sorted.map(c => `<div class="conv-card${PRIORITY.includes(c.state) ? ' priority' : ''}">
-      <div class="conv-card-top">
-        <div>
-          <div class="conv-card-name">${esc(c.contact_name || '(sem nome)')}</div>
-          <div class="conv-card-phone">${esc(c.phone)}</div>
-        </div>
-        ${stateBadge(c.state)}
-      </div>
-      ${c.handoff_summary ? `<div class="conv-card-summary">${esc(c.handoff_summary)}</div>` : ''}
-      <div class="conv-card-actions">
-        ${c.state !== 'human_active'
-          ? `<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir atendimento</button>`
-          : `<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}
-      </div>
+    sorted.map(c=>`<div class="conv-card${PRIORITY.includes(c.state)?' priority':''}">
+      <div class="conv-card-top"><div><div class="conv-card-name">${esc(c.contact_name||'(sem nome)')}</div><div class="conv-card-phone">${esc(c.phone)}</div></div>${stateBadge(c.state)}</div>
+      ${c.handoff_summary?`<div class="conv-card-summary">${esc(c.handoff_summary)}</div>`:''}
+      <div class="conv-card-actions">${c.state!=='human_active'?`<button class="btn btn-ghost btn-sm" onclick="takeover(${c.id})">Assumir atendimento</button>`:`<button class="btn btn-danger btn-sm" onclick="release(${c.id})">Devolver para IA</button>`}</div>
     </div>`).join('');
 }
 
 async function takeover(id) {
-  try { await api(`/admin/conversations/${id}/takeover`, 'POST'); loadConversations(); if (currentPage === 'dashboard') loadDashboard(); }
-  catch (e) { alert('Erro: ' + e.message); }
+  try { await api(`/admin/conversations/${id}/takeover`,'POST'); loadConversations(); if(currentPage==='dashboard') loadDashboard(); }
+  catch(e) { alert('Erro: '+e.message); }
 }
 
 async function release(id) {
-  openConfirm(
-    'Devolver para a IA',
-    'O bot voltara a responder automaticamente esta conversa. O historico de atendimento sera limpo.',
-    'Devolver',
-    async () => {
-      try { await api(`/admin/conversations/${id}/release`, 'POST'); loadConversations(); if (currentPage === 'dashboard') loadDashboard(); }
-      catch (e) { alert('Erro: ' + e.message); }
-    }
-  );
+  openConfirm('Devolver para a IA','O bot voltara a responder automaticamente esta conversa. O historico de atendimento sera limpo.','Devolver',async()=>{
+    try { await api(`/admin/conversations/${id}/release`,'POST'); loadConversations(); if(currentPage==='dashboard') loadDashboard(); }
+    catch(e) { alert('Erro: '+e.message); }
+  });
 }
 
-// ═══════════════════════════════
-// CONTACTS
-// ═══════════════════════════════
+// ── CONTACTS ──
 
-let contactSearchDebounce = null;
 function debounceContactSearch(q) {
   clearTimeout(contactSearchDebounce);
-  contactSearchQuery = q;
-  contactPage = 1;
+  contactSearchQuery = q; contactPage = 1;
   contactSearchDebounce = setTimeout(loadContacts, 300);
 }
 
 async function loadContacts() {
   try {
-    const params = new URLSearchParams({ page: contactPage, limit: CONTACTS_PER_PAGE });
+    const params = new URLSearchParams({page:contactPage,limit:CONTACTS_PER_PAGE});
     if (contactSearchQuery) params.set('search', contactSearchQuery);
-
     const result = await api(`/admin/contacts?${params}`);
-    const tbody  = document.getElementById('contactsBody');
-
+    const tbody = document.getElementById('contactsBody');
     if (result.data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">
-        <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11C13.866 11 17 13.6863 17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-        <div class="empty-title">Nenhum contato encontrado</div>
-        <div class="empty-desc">Tente outro nome ou telefone.</div>
-      </div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11C13.866 11 17 13.6863 17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div class="empty-title">Nenhum contato encontrado</div><div class="empty-desc">Tente outro nome ou telefone.</div></div></td></tr>`;
     } else {
       tbody.innerHTML = result.data.map(c => {
         const hasProfile = c.profile && Object.keys(c.profile).length > 0;
         const cleanPhone = c.phone.replace('@s.whatsapp.net','').replace('@g.us','');
         return `<tr>
-          <td>
-            <div class="cell-primary">${esc(c.name || '(sem nome)')}</div>
-            <div class="cell-secondary">${esc(c.phone)}</div>
-          </td>
-          <td><span class="text-sm text-muted">${c.last_seen ? new Date(c.last_seen).toLocaleString('pt-BR') : '—'}</span></td>
-          <td>${c.ai_blocked ? '<span class="badge badge-blocked">Bloqueado</span>' : '<span class="text-muted text-sm">Ativo</span>'}</td>
-          <td>
-            <div class="actions-row">
-              <a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener"
-                class="btn btn-ghost btn-xs" title="Abrir no WhatsApp">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 10.5C5.5 10.5 6.5 12 8 12C9.5 12 10.5 11 10.5 9.5C10.5 8 9 7.5 8 7C7 6.5 5.5 6 5.5 4.5C5.5 3 6.5 2 8 2C9.5 2 10.5 3 10.5 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-                WA
-              </a>
-              <button class="btn btn-ghost btn-xs${!hasProfile ? '" style="opacity:.45' : ''}"
-                onclick='openCrmModal(${c.id}, ${JSON.stringify(c.name||"")}, ${JSON.stringify(c.phone||"")}, ${JSON.stringify(c.profile||{})})'>
-                CRM${hasProfile ? '' : ' vazio'}
-              </button>
-              ${c.ai_blocked
-                ? `<button class="btn btn-ghost btn-xs" onclick="unblockContact(${c.id})">Desbloquear</button>`
-                : `<button class="btn btn-danger btn-xs" onclick="blockContact(${c.id})">Bloquear bot</button>`}
-              <button class="btn btn-ghost btn-xs" onclick="clearContactData(${c.id}, '${esc(c.name||c.phone)}')" title="Limpar todos os dados deste contato">Limpar</button>
-            </div>
-          </td>
+          <td><div class="cell-primary">${esc(c.name||'(sem nome)')}</div><div class="cell-secondary">${esc(c.phone)}</div></td>
+          <td><span class="text-sm text-muted">${c.last_seen?new Date(c.last_seen).toLocaleString('pt-BR'):'—'}</span></td>
+          <td>${c.ai_blocked?'<span class="badge badge-blocked">Bloqueado</span>':'<span class="text-muted text-sm">Ativo</span>'}</td>
+          <td><div class="actions-row">
+            <a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs" title="Abrir no WhatsApp">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 10.5C5.5 10.5 6.5 12 8 12C9.5 12 10.5 11 10.5 9.5C10.5 8 9 7.5 8 7C7 6.5 5.5 6 5.5 4.5C5.5 3 6.5 2 8 2C9.5 2 10.5 3 10.5 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> WA
+            </a>
+            <button class="btn btn-ghost btn-xs${!hasProfile?'" style="opacity:.45':''}" onclick='openCrmModal(${c.id},${JSON.stringify(c.name||"")},${JSON.stringify(c.phone||"")},${JSON.stringify(c.profile||{})})'>CRM${hasProfile?'':' vazio'}</button>
+            ${c.ai_blocked?`<button class="btn btn-ghost btn-xs" onclick="unblockContact(${c.id})">Desbloquear</button>`:`<button class="btn btn-danger btn-xs" onclick="blockContact(${c.id})">Bloquear bot</button>`}
+            <button class="btn btn-ghost btn-xs" onclick="clearContactData(${c.id},'${esc(c.name||c.phone)}')">Limpar</button>
+          </div></td>
         </tr>`;
       }).join('');
     }
-
     renderPagination(result.total, result.page, result.limit);
-  } catch (e) { alert('Erro ao carregar contatos: ' + e.message); }
+  } catch(e) { alert('Erro ao carregar contatos: ' + e.message); }
 }
 
 function renderPagination(total, page, limit) {
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.ceil(total/limit);
   const el = document.getElementById('contactPagination');
-  if (!el || totalPages <= 1) { if (el) el.innerHTML = ''; return; }
-
-  el.innerHTML = `<div class="pagination">
-    <span class="pagination-info">${total} contatos — pagina ${page} de ${totalPages}</span>
-    <div style="display:flex;gap:6px;">
-      <button class="btn btn-ghost btn-sm" onclick="goContactPage(${page-1})" ${page<=1?'disabled':''}>Anterior</button>
-      <button class="btn btn-ghost btn-sm" onclick="goContactPage(${page+1})" ${page>=totalPages?'disabled':''}>Proxima</button>
-    </div>
-  </div>`;
+  if (!el || totalPages<=1) { if(el) el.innerHTML=''; return; }
+  el.innerHTML = `<div class="pagination"><span class="pagination-info">${total} contatos — pagina ${page} de ${totalPages}</span><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="goContactPage(${page-1})" ${page<=1?'disabled':''}>Anterior</button><button class="btn btn-ghost btn-sm" onclick="goContactPage(${page+1})" ${page>=totalPages?'disabled':''}>Proxima</button></div></div>`;
 }
 
 function goContactPage(p) { contactPage = p; loadContacts(); }
 
 async function blockContact(id) {
-  try { await api(`/admin/contacts/${id}/block`, 'POST'); loadContacts(); }
-  catch (e) { alert('Erro: ' + e.message); }
+  try { await api(`/admin/contacts/${id}/block`,'POST'); loadContacts(); }
+  catch(e) { alert('Erro: '+e.message); }
 }
 
 async function unblockContact(id) {
-  try { await api(`/admin/contacts/${id}/unblock`, 'POST'); loadContacts(); }
-  catch (e) { alert('Erro: ' + e.message); }
+  try { await api(`/admin/contacts/${id}/unblock`,'POST'); loadContacts(); }
+  catch(e) { alert('Erro: '+e.message); }
 }
 
 async function blockByPhone() {
   const phone = document.getElementById('blockPhoneInput').value.trim();
   if (!phone) return alert('Informe o numero.');
   try {
-    await api('/admin/contacts/block-phone', 'POST', { phone });
-    document.getElementById('blockPhoneInput').value = '';
+    await api('/admin/contacts/block-phone','POST',{phone});
+    document.getElementById('blockPhoneInput').value='';
     alert(`Numero ${phone} bloqueado.`);
     loadContacts();
-  } catch (e) { alert('Erro: ' + e.message); }
+  } catch(e) { alert('Erro: '+e.message); }
 }
 
 function clearContactData(id, name) {
-  openConfirm(
-    'Limpar dados de ' + name,
-    'Isso apagara todas as mensagens, o perfil CRM e o historico de handoff deste contato. Esta acao nao pode ser desfeita.',
-    'Limpar tudo',
-    async () => {
-      try { await api(`/admin/contacts/${id}/clear-data`, 'POST'); loadContacts(); }
-      catch (e) { alert('Erro: ' + e.message); }
-    }
-  );
+  openConfirm('Limpar dados de '+name,'Isso apagara todas as mensagens, o perfil CRM e o historico de handoff deste contato. Esta acao nao pode ser desfeita.','Limpar tudo',async()=>{
+    try { await api(`/admin/contacts/${id}/clear-data`,'POST'); loadContacts(); }
+    catch(e) { alert('Erro: '+e.message); }
+  });
 }
 
-// ═══════════════════════════════
-// SETTINGS
-// ═══════════════════════════════
+// ── SETTINGS ──
 
 async function loadSettings() {
   try {
     const s = await api('/admin/settings');
     document.getElementById('s_botname').value = s.bot_name || '';
     document.getElementById('s_prompt').value  = s.system_prompt || '';
-
     const toggle = document.getElementById('botActiveToggle');
     toggle.checked = s.bot_active !== false;
     updateBotStatusDesc(toggle.checked);
-  } catch (e) { alert('Erro: ' + e.message); }
+  } catch(e) { alert('Erro: '+e.message); }
 }
 
 function updateBotStatusDesc(active) {
-  document.getElementById('botStatusDesc').textContent = active
-    ? 'O bot responde mensagens automaticamente.'
-    : 'Bot desativado. Nenhuma mensagem sera respondida.';
+  document.getElementById('botStatusDesc').textContent = active ? 'O bot responde mensagens automaticamente.' : 'Bot desativado. Nenhuma mensagem sera respondida.';
   document.getElementById('botStatusDesc').style.color = active ? '' : 'var(--red)';
 }
 
 async function toggleBotActive(checked) {
   if (!checked) {
-    // pede confirmacao antes de desativar
-    openConfirm(
-      'Desativar o bot',
-      'O bot vai parar de responder todas as mensagens imediatamente. Clientes que enviarem mensagens nao receberao resposta automatica. Voce pode reativar a qualquer momento.',
-      'Desativar',
-      async () => {
-        try {
-          await api('/admin/settings', 'PATCH', { bot_active: false });
-          updateBotStatusDesc(false);
-          loadDashboard();
-        } catch (e) {
-          document.getElementById('botActiveToggle').checked = true;
-          alert('Erro: ' + e.message);
-        }
+    openConfirm('Desativar o bot','O bot vai parar de responder todas as mensagens imediatamente. Voce pode reativar a qualquer momento.','Desativar',
+      async()=>{
+        try { await api('/admin/settings','PATCH',{bot_active:false}); updateBotStatusDesc(false); loadDashboard(); }
+        catch(e) { document.getElementById('botActiveToggle').checked=true; alert('Erro: '+e.message); }
       },
-      // cancelado — reverte o toggle
-      () => { document.getElementById('botActiveToggle').checked = true; }
+      ()=>{ document.getElementById('botActiveToggle').checked=true; }
     );
     return;
   }
-
-  try {
-    await api('/admin/settings', 'PATCH', { bot_active: true });
-    updateBotStatusDesc(true);
-    loadDashboard();
-  } catch (e) {
-    document.getElementById('botActiveToggle').checked = false;
-    alert('Erro: ' + e.message);
-  }
+  try { await api('/admin/settings','PATCH',{bot_active:true}); updateBotStatusDesc(true); loadDashboard(); }
+  catch(e) { document.getElementById('botActiveToggle').checked=false; alert('Erro: '+e.message); }
 }
 
 async function saveSettings() {
   const btn = document.getElementById('saveSettingsBtn');
-  btn.disabled = true; btn.textContent = 'Salvando...';
+  btn.disabled=true; btn.textContent='Salvando...';
   try {
-    await api('/admin/settings', 'PATCH', {
-      bot_name:      document.getElementById('s_botname').value,
-      system_prompt: document.getElementById('s_prompt').value,
-    });
-    btn.textContent = 'Salvo!';
-    setTimeout(() => { btn.textContent = 'Salvar alteracoes'; btn.disabled = false; }, 2000);
-  } catch (e) {
-    btn.disabled = false; btn.textContent = 'Salvar alteracoes';
-    alert('Erro: ' + e.message);
-  }
+    await api('/admin/settings','PATCH',{bot_name:document.getElementById('s_botname').value,system_prompt:document.getElementById('s_prompt').value});
+    btn.textContent='Salvo!';
+    setTimeout(()=>{btn.textContent='Salvar alteracoes';btn.disabled=false;},2000);
+  } catch(e) { btn.disabled=false; btn.textContent='Salvar alteracoes'; alert('Erro: '+e.message); }
 }
 
-// ═══════════════════════════════
-// CRM
-// ═══════════════════════════════
+// ── SCHEDULING ──
 
-const CRM_LABELS = {
-  nome: 'Nome', empresa: 'Empresa', cargo: 'Cargo', segmento: 'Segmento',
-  cidade: 'Cidade', tamanho_empresa: 'Porte da empresa', decisor: 'Decisor',
-  interesse: 'Interesse', orcamento: 'Orcamento', urgencia: 'Urgencia',
-  etapa_venda: 'Etapa de venda', produto_atual: 'Produto atual',
-  processo_atual: 'Processo atual', prazo_decisao: 'Prazo de decisao',
-  necessidades: 'Necessidades', objecoes: 'Objecoes', resumo_cliente: 'Resumo',
-};
+function switchTab(tab) {
+  const tabs = ['appts','services','rules','blocks'];
+  document.querySelectorAll('#page-scheduling .tab-btn').forEach((b,i) => b.classList.toggle('active', tabs[i]===tab));
+  document.querySelectorAll('#page-scheduling .tab-panel').forEach(p => { p.classList.remove('active'); p.style.display='none'; });
+  const panel = document.getElementById('tab-' + tab);
+  if (panel) { panel.classList.add('active'); panel.style.display='block'; }
+  if (tab==='appts')    loadAppointments();
+  if (tab==='services') loadServices();
+  if (tab==='rules')    loadRules();
+  if (tab==='blocks')   loadBlocks();
+}
 
-const ETAPA_STYLES = {
-  descoberta: { bg: 'rgba(33,150,243,.12)', color: '#2196f3' },
-  interesse:  { bg: 'rgba(168,85,247,.12)',  color: '#a855f7' },
-  orcamento:  { bg: 'rgba(245,158,11,.12)',  color: '#f59e0b' },
-  negociacao: { bg: 'rgba(239,68,68,.12)',   color: '#ef4444' },
-  cliente:    { bg: 'rgba(34,197,94,.12)',   color: '#22c55e' },
-};
+async function loadAppointments() {
+  try {
+    const status = document.getElementById('apptStatusFilter').value;
+    const from   = document.getElementById('apptDateFrom').value;
+    const params = new URLSearchParams({page:apptPage,limit:20});
+    if (status) params.set('status',status);
+    if (from)   params.set('from_date',from+'T00:00:00');
+    const result = await api(`/scheduling/appointments?${params}`);
+    const tbody  = document.getElementById('apptsBody');
+    if (!result.data.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum agendamento</div><div class="empty-desc">Agendamentos aparecem aqui quando criados.</div></div></td></tr>`;
+    } else {
+      tbody.innerHTML = result.data.map(a=>`<tr>
+        <td><div class="cell-primary">${esc(a.customer_name||'(sem nome)')}</div><div class="cell-secondary">${esc(a.customer_phone||'')}</div></td>
+        <td>${esc(a.service_name||'—')}</td>
+        <td><div class="cell-primary">${new Date(a.scheduled_at).toLocaleString('pt-BR')}</div></td>
+        <td><span class="badge appt-status-${a.status}">${esc(a.status)}</span></td>
+        <td><span class="text-muted text-sm">${a.source==='ai'?'IA':a.source==='operator'?'Operador':'Manual'}</span></td>
+        <td class="actions-row">
+          ${a.status==='pending'?`<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'confirmed')">Confirmar</button>`:''}
+          ${a.status!=='cancelled'&&a.status!=='completed'?`<button class="btn btn-danger btn-xs" onclick="updateApptStatus(${a.id},'cancelled')">Cancelar</button>`:''}
+          ${a.status==='confirmed'?`<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'completed')">Concluir</button>`:''}
+        </td>
+      </tr>`).join('');
+    }
+    const el = document.getElementById('apptsPagination');
+    const totalPages = Math.ceil(result.total/result.limit);
+    el.innerHTML = totalPages<=1?'':`<div class="pagination"><span class="pagination-info">${result.total} agendamentos</span><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage-1};loadAppointments()" ${apptPage<=1?'disabled':''}>Anterior</button><button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage+1};loadAppointments()" ${apptPage>=totalPages?'disabled':''}>Proxima</button></div></div>`;
+  } catch(e) { alert('Erro: '+e.message); }
+}
+
+async function updateApptStatus(id, status) {
+  try { await api(`/scheduling/appointments/${id}`,'PATCH',{status,changed_by:'operador'}); loadAppointments(); }
+  catch(e) { alert('Erro: '+e.message); }
+}
+
+function openCreateApptModal() {
+  document.getElementById('appt_service').innerHTML = servicesCache.filter(s=>s.is_active).map(s=>`<option value="${s.id}">${esc(s.name)} (${s.duration_minutes}min)</option>`).join('')||'<option>Nenhum servico cadastrado</option>';
+  ['appt_name','appt_phone','appt_notes','appt_datetime'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('apptModal').classList.remove('hidden');
+}
+
+async function createAppointment() {
+  const payload = {service_id:parseInt(document.getElementById('appt_service').value),customer_name:document.getElementById('appt_name').value,customer_phone:document.getElementById('appt_phone').value,scheduled_at:document.getElementById('appt_datetime').value,notes:document.getElementById('appt_notes').value,source:'operator',status:'confirmed',check_availability:true};
+  if (!payload.service_id||!payload.scheduled_at) return alert('Servico e data/hora sao obrigatorios');
+  try { await api('/scheduling/appointments','POST',payload); document.getElementById('apptModal').classList.add('hidden'); loadAppointments(); }
+  catch(e) { alert('Erro: '+e.message); }
+}
+
+async function loadServices() {
+  try {
+    servicesCache = await api('/scheduling/services');
+    document.getElementById('servicesBody').innerHTML = servicesCache.map(s=>`<tr>
+      <td><div class="cell-primary">${esc(s.name)}</div>${s.description?`<div class="cell-secondary">${esc(s.description)}</div>`:''}</td>
+      <td>${s.duration_minutes}min</td><td>${s.buffer_after_minutes}min</td>
+      <td>${s.price?'R$ '+parseFloat(s.price).toFixed(2):'—'}</td>
+      <td><span class="badge ${s.is_active?'badge-ai':''}">${s.is_active?'Ativo':'Inativo'}</span></td>
+      <td class="actions-row"><button class="btn btn-ghost btn-xs" onclick="openEditServiceModal(${s.id})">Editar</button><button class="btn btn-danger btn-xs" onclick="deleteService(${s.id})">Remover</button></td>
+    </tr>`).join('')||`<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum servico</div><div class="empty-desc">Adicione os servicos que sua empresa oferece.</div></div></td></tr>`;
+  } catch(e) { alert('Erro: '+e.message); }
+}
+
+function openCreateServiceModal() {
+  document.getElementById('svc_id').value='';
+  ['svc_name','svc_desc','svc_duration','svc_price'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('svc_buffer').value='0';
+  document.getElementById('serviceModalTitle').textContent='Novo Servico';
+  document.getElementById('serviceModal').classList.remove('hidden');
+}
+
+function openEditServiceModal(id) {
+  const s = servicesCache.find(x=>x.id===id); if(!s) return;
+  document.getElementById('svc_id').value=s.id;
+  document.getElementById('svc_name').value=s.name||'';
+  document.getElementById('svc_desc').value=s.description||'';
+  document.getElementById('svc_duration').value=s.duration_minutes||'';
+  document.getElementById('svc_buffer').value=s.buffer_after_minutes||0;
+  document.getElementById('svc_price').value=s.price||'';
+  document.getElementById('serviceModalTitle').textContent='Editar Servico';
+  document.getElementById('serviceModal').classList.remove('hidden');
+}
+
+async function saveService() {
+  const id = document.getElementById('svc_id').value;
+  const payload = {name:document.getElementById('svc_name').value,description:document.getElementById('svc_desc').value||null,duration_minutes:parseInt(document.getElementById('svc_duration').value),buffer_after_minutes:parseInt(document.getElementById('svc_buffer').value)||0,price:parseFloat(document.getElementById('svc_price').value)||null};
+  if (!payload.name||!payload.duration_minutes) return alert('Nome e duracao sao obrigatorios');
+  try {
+    if(id) await api(`/scheduling/services/${id}`,'PATCH',payload);
+    else   await api('/scheduling/services','POST',payload);
+    document.getElementById('serviceModal').classList.add('hidden'); loadServices();
+  } catch(e) { alert('Erro: '+e.message); }
+}
+
+async function deleteService(id) {
+  if(!confirm('Desativar este servico?')) return;
+  try { await api(`/scheduling/services/${id}`,'DELETE'); loadServices(); }
+  catch(e) { alert('Erro: '+e.message); }
+}
+
+async function loadRules() {
+  try {
+    const rules = await api('/scheduling/rules');
+    const el = document.getElementById('rulesList');
+    if (!rules.length) { el.innerHTML=`<div class="empty-state"><div class="empty-title">Nenhuma agenda configurada</div><div class="empty-desc">Crie uma agenda semanal para liberar agendamentos.</div></div>`; return; }
+    el.innerHTML = rules.map(r=>`<div style="padding:14px 20px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div><div style="font-weight:500;">${esc(r.name)}</div><div style="font-size:12px;color:var(--text-2);margin-top:2px;">Vigencia: ${r.valid_from} ate ${r.valid_until||'sem fim'} · ${r.auto_confirm?'Confirma automaticamente':'Requer aprovacao manual'}</div></div>
+        <button class="btn btn-danger btn-xs" onclick="deleteRule(${r.id})">Remover</button>
+      </div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;">
+        ${r.days.map(d=>`<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;font-size:12px;"><div style="font-weight:500;margin-bottom:2px;">${WEEKDAY_NAMES[d.weekday]}</div>${d.is_open&&d.start_time?`<div style="color:var(--text-2);">${d.start_time} - ${d.end_time}</div>`:'<div style="color:var(--text-3);">Fechado</div>'}</div>`).join('')}
+      </div>
+    </div>`).join('');
+  } catch(e) { alert('Erro: '+e.message); }
+}
+
+function openCreateRuleModal() {
+  const container = document.getElementById('ruleDaysConfig');
+  container.innerHTML = WEEKDAY_NAMES.map((name,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+    <div style="width:70px;font-size:13px;font-weight:500;color:var(--text-2);">${name}</div>
+    <label class="toggle"><input type="checkbox" id="rd_open_${i}" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+    <input type="time" id="rd_start_${i}" value="08:00" style="width:90px;flex-shrink:0;">
+    <span style="color:var(--text-3);font-size:12px;">ate</span>
+    <input type="time" id="rd_end_${i}" value="18:00" style="width:90px;flex-shrink:0;">
+  </div>`).join('');
+  document.getElementById('rd_open_6').checked = false;
+  document.getElementById('rule_from').value = new Date().toISOString().split('T')[0];
+  document.getElementById('rule_until').value = '';
+  document.getElementById('ruleModal').classList.remove('hidden');
+}
+
+async function createRule() {
+  const days = WEEKDAY_NAMES.map((_,i)=>({weekday:i,is_open:document.getElementById(`rd_open_${i}`).checked,start_time:document.getElementById(`rd_start_${i}`).value,end_time:document.getElementById(`rd_end_${i}`).value,breaks:[]}));
+  const payload = {name:document.getElementById('rule_name').value,valid_from:document.getElementById('rule_from').value,valid_until:document.getElementById('rule_until').value||null,auto_confirm:document.getElementById('rule_autoconfirm').checked,timezone:'America/Sao_Paulo',days};
+  if(!payload.valid_from) return alert('Data de inicio e obrigatoria');
+  try { await api('/scheduling/rules','POST',payload); document.getElementById('ruleModal').classList.add('hidden'); loadRules(); }
+  catch(e) { alert('Erro: '+e.message); }
+}
+
+async function deleteRule(id) {
+  if(!confirm('Remover esta agenda?')) return;
+  try { await api(`/scheduling/rules/${id}`,'DELETE'); loadRules(); }
+  catch(e) { alert('Erro: '+e.message); }
+}
+
+async function loadBlocks() {
+  try {
+    const blocks = await api('/scheduling/blocks');
+    document.getElementById('blocksBody').innerHTML = blocks.map(b=>`<tr>
+      <td>${new Date(b.block_date+'T12:00:00').toLocaleDateString('pt-BR')}</td>
+      <td>${b.start_time?`${b.start_time} - ${b.end_time}`:'Dia inteiro'}</td>
+      <td>${esc(b.reason||'—')}</td>
+      <td><button class="btn btn-danger btn-xs" onclick="deleteBlock(${b.id})">Remover</button></td>
+    </tr>`).join('')||`<tr><td colspan="4"><div class="empty-state"><div class="empty-title">Nenhum bloqueio</div><div class="empty-desc">Feriados e dias fechados aparecem aqui.</div></div></td></tr>`;
+  } catch(e) { alert('Erro: '+e.message); }
+}
+
+function openCreateBlockModal() {
+  ['blk_date','blk_start','blk_end','blk_reason'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('blockModal').classList.remove('hidden');
+}
+
+async function createBlock() {
+  const payload = {block_date:document.getElementById('blk_date').value,start_time:document.getElementById('blk_start').value||null,end_time:document.getElementById('blk_end').value||null,reason:document.getElementById('blk_reason').value||null};
+  if(!payload.block_date) return alert('Data e obrigatoria');
+  try { await api('/scheduling/blocks','POST',payload); document.getElementById('blockModal').classList.add('hidden'); loadBlocks(); }
+  catch(e) { alert('Erro: '+e.message); }
+}
+
+async function deleteBlock(id) {
+  try { await api(`/scheduling/blocks/${id}`,'DELETE'); loadBlocks(); }
+  catch(e) { alert('Erro: '+e.message); }
+}
+
+async function checkSchedulingEnabled() {
+  try {
+    const s = await api('/admin/stats');
+    schedulingEnabled = s.scheduling_enabled === true;
+    document.getElementById('nav-scheduling')?.classList.toggle('hidden', !schedulingEnabled);
+    document.getElementById('mnav-scheduling')?.classList.toggle('hidden', !schedulingEnabled);
+    if (schedulingEnabled) servicesCache = await api('/scheduling/services');
+  } catch(_) {}
+}
+
+// ── CRM ──
+
+const CRM_LABELS = {nome:'Nome',empresa:'Empresa',cargo:'Cargo',segmento:'Segmento',cidade:'Cidade',tamanho_empresa:'Porte da empresa',decisor:'Decisor',interesse:'Interesse',orcamento:'Orcamento',urgencia:'Urgencia',etapa_venda:'Etapa de venda',produto_atual:'Produto atual',processo_atual:'Processo atual',prazo_decisao:'Prazo de decisao',necessidades:'Necessidades',objecoes:'Objecoes',resumo_cliente:'Resumo'};
+const ETAPA_STYLES = {descoberta:{bg:'rgba(33,150,243,.12)',color:'#2196f3'},interesse:{bg:'rgba(168,85,247,.12)',color:'#a855f7'},orcamento:{bg:'rgba(245,158,11,.12)',color:'#f59e0b'},negociacao:{bg:'rgba(239,68,68,.12)',color:'#ef4444'},cliente:{bg:'rgba(34,197,94,.12)',color:'#22c55e'}};
 
 function openCrmModal(contactId, name, phone, profile) {
-  crmCurrentContactId = contactId;
-  crmCurrentProfile   = { ...profile };
-  crmEditMode         = false;
-
-  document.getElementById('crmContactName').textContent = `${name || '(sem nome)'} · ${phone}`;
+  crmCurrentContactId = contactId; crmCurrentProfile = {...profile}; crmEditMode = false;
+  document.getElementById('crmContactName').textContent = `${name||'(sem nome)'} · ${phone}`;
   document.getElementById('crmEditToggleBtn').textContent = 'Editar';
   document.getElementById('crmEditActions').classList.add('hidden');
-
   renderCrmView(profile);
   document.getElementById('crmModal').classList.remove('hidden');
 }
 
 function renderCrmView(profile) {
-  const entries = Object.entries(CRM_LABELS)
-    .map(([key, label]) => ({ key, label, val: profile[key] }))
-    .filter(({ val }) => val !== null && val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0));
-
+  const entries = Object.entries(CRM_LABELS).map(([key,label])=>({key,label,val:profile[key]})).filter(({val})=>val!==null&&val!==undefined&&val!==''&&!(Array.isArray(val)&&val.length===0));
   const content = document.getElementById('crmContent');
-
-  if (entries.length === 0) {
-    content.innerHTML = `<div class="crm-empty">
-      Nenhum dado coletado ainda.<br>
-      <span style="font-size:12px;color:var(--text-3);">As informacoes sao extraidas automaticamente durante as conversas. Voce tambem pode editar manualmente.</span>
-    </div>`;
-    return;
-  }
-
-  content.innerHTML = entries.map(({ key, label, val }) => {
+  if (entries.length===0) { content.innerHTML=`<div class="crm-empty">Nenhum dado coletado ainda.<br><span style="font-size:12px;color:var(--text-3);">As informacoes sao extraidas automaticamente durante as conversas.</span></div>`; return; }
+  content.innerHTML = entries.map(({key,label,val})=>{
     let rendered;
-    if (key === 'etapa_venda') {
-      const s = ETAPA_STYLES[val] || { bg:'rgba(79,124,255,.12)', color:'var(--accent)' };
-      rendered = `<span class="etapa-pill" style="background:${s.bg};color:${s.color};">${val}</span>`;
-    } else if (Array.isArray(val)) {
-      rendered = `<div class="tag-list">${val.map(v => `<span class="tag">${esc(v)}</span>`).join('')}</div>`;
-    } else {
-      rendered = `<span>${esc(String(val))}</span>`;
-    }
+    if(key==='etapa_venda'){const s=ETAPA_STYLES[val]||{bg:'rgba(79,124,255,.12)',color:'var(--accent)'};rendered=`<span class="etapa-pill" style="background:${s.bg};color:${s.color};">${val}</span>`;}
+    else if(Array.isArray(val)){rendered=`<div class="tag-list">${val.map(v=>`<span class="tag">${esc(v)}</span>`).join('')}</div>`;}
+    else{rendered=`<span>${esc(String(val))}</span>`;}
     return `<div class="crm-row"><span class="crm-label">${label}</span><span class="crm-value">${rendered}</span></div>`;
   }).join('');
 }
 
 function renderCrmEdit(profile) {
-  const content = document.getElementById('crmContent');
-  content.innerHTML = Object.entries(CRM_LABELS).map(([key, label]) => {
-    const val = profile[key];
-    const displayVal = Array.isArray(val) ? val.join(', ') : (val || '');
-    return `<div class="crm-edit-row">
-      <span class="crm-edit-label">${label}</span>
-      <input class="crm-edit-input" data-key="${key}" value="${esc(String(displayVal))}" placeholder="—">
-    </div>`;
+  document.getElementById('crmContent').innerHTML = Object.entries(CRM_LABELS).map(([key,label])=>{
+    const val=profile[key]; const displayVal=Array.isArray(val)?val.join(', '):(val||'');
+    return `<div class="crm-edit-row"><span class="crm-edit-label">${label}</span><input class="crm-edit-input" data-key="${key}" value="${esc(String(displayVal))}" placeholder="—"></div>`;
   }).join('');
 }
 
 function toggleCrmEditMode() {
   crmEditMode = !crmEditMode;
-  document.getElementById('crmEditToggleBtn').textContent = crmEditMode ? 'Visualizar' : 'Editar';
-  document.getElementById('crmEditActions').classList.toggle('hidden', !crmEditMode);
-
-  if (crmEditMode) renderCrmEdit(crmCurrentProfile);
-  else renderCrmView(crmCurrentProfile);
+  document.getElementById('crmEditToggleBtn').textContent = crmEditMode?'Visualizar':'Editar';
+  document.getElementById('crmEditActions').classList.toggle('hidden',!crmEditMode);
+  if(crmEditMode) renderCrmEdit(crmCurrentProfile); else renderCrmView(crmCurrentProfile);
 }
 
 async function saveCrmEdit() {
   const inputs = document.querySelectorAll('.crm-edit-input');
-  const updated = {};
-  const listKeys = ['necessidades', 'objecoes'];
-
-  inputs.forEach(input => {
-    const key = input.dataset.key;
-    const val = input.value.trim();
-    if (!val) return;
-    if (listKeys.includes(key)) {
-      updated[key] = val.split(',').map(v => v.trim()).filter(Boolean);
-    } else {
-      updated[key] = val;
-    }
-  });
-
+  const updated = {}; const listKeys=['necessidades','objecoes'];
+  inputs.forEach(input=>{ const key=input.dataset.key; const val=input.value.trim(); if(!val) return; updated[key]=listKeys.includes(key)?val.split(',').map(v=>v.trim()).filter(Boolean):val; });
   try {
-    const res = await api(`/admin/contacts/${crmCurrentContactId}/profile`, 'PATCH', { profile: updated });
-    crmCurrentProfile = res.profile;
-    crmEditMode = false;
-    document.getElementById('crmEditToggleBtn').textContent = 'Editar';
+    const res = await api(`/admin/contacts/${crmCurrentContactId}/profile`,'PATCH',{profile:updated});
+    crmCurrentProfile=res.profile; crmEditMode=false;
+    document.getElementById('crmEditToggleBtn').textContent='Editar';
     document.getElementById('crmEditActions').classList.add('hidden');
-    renderCrmView(crmCurrentProfile);
-    loadContacts();
-  } catch (e) { alert('Erro ao salvar: ' + e.message); }
+    renderCrmView(crmCurrentProfile); loadContacts();
+  } catch(e) { alert('Erro ao salvar: '+e.message); }
 }
 
 async function clearCrm() {
-  openConfirm(
-    'Limpar perfil CRM',
-    'Todos os dados de perfil deste contato serao removidos. O historico de conversas nao e afetado.',
-    'Limpar CRM',
-    async () => {
-      try {
-        await api(`/admin/contacts/${crmCurrentContactId}/profile`, 'DELETE');
-        crmCurrentProfile = {};
-        renderCrmView({});
-        loadContacts();
-      } catch (e) { alert('Erro: ' + e.message); }
-    }
-  );
+  openConfirm('Limpar perfil CRM','Todos os dados de perfil deste contato serao removidos.','Limpar CRM',async()=>{
+    try { await api(`/admin/contacts/${crmCurrentContactId}/profile`,'DELETE'); crmCurrentProfile={}; renderCrmView({}); loadContacts(); }
+    catch(e) { alert('Erro: '+e.message); }
+  });
 }
 
-function closeCrmModal() {
-  document.getElementById('crmModal').classList.add('hidden');
-  crmEditMode = false;
-}
+function closeCrmModal() { document.getElementById('crmModal').classList.add('hidden'); crmEditMode=false; }
+document.getElementById('crmModal').addEventListener('click',function(e){if(e.target===this)closeCrmModal();});
 
-document.getElementById('crmModal').addEventListener('click', function(e) {
-  if (e.target === this) closeCrmModal();
-});
+// ── CONFIRM ──
 
-// ═══════════════════════════════
-// CONFIRM MODAL
-// ═══════════════════════════════
-
-let cancelAction = null;
-
-function openConfirm(title, desc, okLabel, onOk, onCancel = null) {
-  document.getElementById('confirmTitle').textContent   = title;
-  document.getElementById('confirmDesc').textContent    = desc;
-  document.getElementById('confirmOkBtn').textContent   = okLabel;
-  confirmAction = onOk;
-  cancelAction  = onCancel;
+function openConfirm(title, desc, okLabel, onOk, onCancel=null) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmDesc').textContent  = desc;
+  document.getElementById('confirmOkBtn').textContent = okLabel;
+  confirmAction = onOk; cancelAction = onCancel;
   document.getElementById('confirmModal').classList.remove('hidden');
 }
 
 function closeConfirmModal() {
   document.getElementById('confirmModal').classList.add('hidden');
-  if (cancelAction) { cancelAction(); cancelAction = null; }
-  confirmAction = null;
+  if(cancelAction){cancelAction();cancelAction=null;}
+  confirmAction=null;
 }
 
 async function runConfirmAction() {
   document.getElementById('confirmModal').classList.add('hidden');
-  cancelAction = null;
-  if (confirmAction) { await confirmAction(); confirmAction = null; }
+  cancelAction=null;
+  if(confirmAction){await confirmAction();confirmAction=null;}
 }
 
-document.getElementById('confirmModal').addEventListener('click', function(e) {
-  if (e.target === this) closeConfirmModal();
-});
+document.getElementById('confirmModal').addEventListener('click',function(e){if(e.target===this)closeConfirmModal();});
 
-// ═══════════════════════════════
-// NOTIFICATIONS
-// ═══════════════════════════════
+// ── NOTIFICATIONS ──
 
 function startAlertPolling() {
-  if (alertIntervalId) return;
+  if(alertIntervalId) return;
   checkHandoffAlerts();
-  alertIntervalId = setInterval(checkHandoffAlerts, 20000);
+  alertIntervalId = setInterval(checkHandoffAlerts,20000);
 }
 
 function stopAlertPolling() {
-  if (alertIntervalId) { clearInterval(alertIntervalId); alertIntervalId = null; }
+  if(alertIntervalId){clearInterval(alertIntervalId);alertIntervalId=null;}
 }
 
 function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
+  if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
 }
 
 function playBeep() {
   try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.frequency.value = 880; gain.gain.value = 0.1;
-    osc.start(); setTimeout(() => osc.stop(), 180);
-  } catch (_) {}
+    if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+    osc.connect(gain);gain.connect(audioCtx.destination);
+    osc.frequency.value=880;gain.gain.value=0.1;
+    osc.start();setTimeout(()=>osc.stop(),180);
+  } catch(_) {}
 }
 
 function setTitleBlink(count) {
-  clearTitleBlink();
-  if (count === 0) { document.title = 'Vorasync'; return; }
-  let show = true;
-  titleBlinkId = setInterval(() => {
-    document.title = show ? `(${count}) Atendimento — Vorasync` : 'Vorasync';
-    show = !show;
-  }, 1800);
+  clearTitleBlink(); if(count===0){document.title='Vorasync';return;}
+  let show=true;
+  titleBlinkId=setInterval(()=>{document.title=show?`(${count}) Atendimento — Vorasync`:'Vorasync';show=!show;},1800);
 }
 
 function clearTitleBlink() {
-  if (titleBlinkId) { clearInterval(titleBlinkId); titleBlinkId = null; }
-  document.title = 'Vorasync';
+  if(titleBlinkId){clearInterval(titleBlinkId);titleBlinkId=null;}
+  document.title='Vorasync';
 }
 
 async function checkHandoffAlerts() {
   try {
-    const list    = await api('/admin/conversations');
-    const pending = list.filter(c => c.state === 'human_active');
-    const count   = pending.length;
-
-    const banner = document.getElementById('alertBanner');
-    document.getElementById('alertCount').textContent = count === 1 ? '1 conversa' : `${count} conversas`;
-
-    const navBadge    = document.getElementById('navBadge');
-    const mobileBadge = document.getElementById('mobileBadge');
-
-    if (count > 0) {
-      banner.classList.remove('hidden');
-      navBadge.classList.remove('hidden');    navBadge.textContent    = count;
-      mobileBadge.classList.remove('hidden'); mobileBadge.textContent = count;
-      setTitleBlink(count);
-    } else {
-      banner.classList.add('hidden');
-      navBadge.classList.add('hidden');
-      mobileBadge.classList.add('hidden');
-      clearTitleBlink();
-    }
-
-    const newOnes = pending.filter(c => !notifiedIds.has(c.id));
-    if (newOnes.length > 0) {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Vorasync — Atendimento solicitado', {
-          body: `${count} conversa${count > 1 ? 's' : ''} aguardando atendimento humano`,
-          tag:  'handoff',   // substitui notificacao anterior em vez de empilhar
-        });
-      }
+    const list=await api('/admin/conversations');
+    const pending=list.filter(c=>c.state==='human_active');
+    const count=pending.length;
+    const banner=document.getElementById('alertBanner');
+    document.getElementById('alertCount').textContent=count===1?'1 conversa':`${count} conversas`;
+    const navBadge=document.getElementById('navBadge'),mobileBadge=document.getElementById('mobileBadge');
+    if(count>0){banner.classList.remove('hidden');navBadge.classList.remove('hidden');navBadge.textContent=count;mobileBadge.classList.remove('hidden');mobileBadge.textContent=count;setTitleBlink(count);}
+    else{banner.classList.add('hidden');navBadge.classList.add('hidden');mobileBadge.classList.add('hidden');clearTitleBlink();}
+    const newOnes=pending.filter(c=>!notifiedIds.has(c.id));
+    if(newOnes.length>0){
+      if('Notification' in window && Notification.permission==='granted') new Notification('Vorasync — Atendimento solicitado',{body:`${count} conversa${count>1?'s':''} aguardando atendimento humano`,tag:'handoff'});
       playBeep();
-      newOnes.forEach(c => notifiedIds.add(c.id));
+      newOnes.forEach(c=>notifiedIds.add(c.id));
     }
-
-    const pendingIds = new Set(pending.map(c => c.id));
-    notifiedIds.forEach(id => { if (!pendingIds.has(id)) notifiedIds.delete(id); });
-
-  } catch (_) {}
-}
-
-// ═══════════════════════════════
-// UTIL
-// ═══════════════════════════════
-
-function esc(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ═══════════════════════════════
-// INIT
-// ═══════════════════════════════
-
-async function deleteBlock(id) {
-  try { await api(`/scheduling/blocks/${id}`, 'DELETE'); loadBlocks(); }
-  catch(e) { alert('Erro: ' + e.message); }
-}
-
-// ── SCHEDULING INIT ──
-// Adiciona a aba na sidebar se habilitado
-async function checkSchedulingEnabled() {
-  try {
-    const s = await api('/admin/stats');
-    schedulingEnabled = s.scheduling_enabled === true;
-
-    const navEl   = document.getElementById('nav-scheduling');
-    const mnavEl  = document.getElementById('mnav-scheduling');
-
-    if (schedulingEnabled) {
-      navEl?.classList.remove('hidden');
-      mnavEl?.classList.remove('hidden');
-      // Carrega serviços em cache para o modal de agendamento
-      servicesCache = await api('/scheduling/services');
-    } else {
-      navEl?.classList.add('hidden');
-      mnavEl?.classList.add('hidden');
-    }
+    const pendingIds=new Set(pending.map(c=>c.id));
+    notifiedIds.forEach(id=>{if(!pendingIds.has(id))notifiedIds.delete(id);});
   } catch(_) {}
 }
 
-// ═══════════════════════════════
-// INIT
-// ═══════════════════════════════
+// ── UTIL ──
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ──
 
 if (getKey()) {
   document.getElementById('loginPage').style.display = 'none';
