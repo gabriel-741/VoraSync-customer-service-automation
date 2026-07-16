@@ -1094,6 +1094,65 @@ table{
         </div>
       </div>
 
+<!-- SCHEDULING -->
+      <div class="page" id="page-scheduling">
+        <div class="tabs" id="schedulingTabs">
+          <button class="tab-btn active" onclick="switchTab('appts')">Agendamentos</button>
+          <button class="tab-btn" onclick="switchTab('services')">Servicos</button>
+          <button class="tab-btn" onclick="switchTab('rules')">Horarios</button>
+          <button class="tab-btn" onclick="switchTab('blocks')">Bloqueios</button>
+        </div>
+        <div class="tab-panel active card" id="tab-appts" style="border-radius:0 0 var(--rl) var(--rl);">
+          <div class="card-header">
+            <div><div class="card-title">Agendamentos</div><div class="card-desc">Todos os agendamentos</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="openCreateApptModal()">+ Novo</button>
+          </div>
+          <div class="search-row" style="display:flex;gap:8px;align-items:center;">
+            <select id="apptStatusFilter" onchange="loadAppointments()" style="width:160px;flex-shrink:0;">
+              <option value="">Todos os status</option>
+              <option value="pending">Pendente</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="completed">Realizado</option>
+              <option value="cancelled">Cancelado</option>
+              <option value="no_show">Nao compareceu</option>
+            </select>
+            <input type="date" id="apptDateFrom" onchange="loadAppointments()" style="width:150px;flex-shrink:0;">
+          </div>
+          <table>
+            <thead><tr><th>Cliente</th><th>Servico</th><th>Data/Hora</th><th>Status</th><th>Origem</th><th>Acoes</th></tr></thead>
+            <tbody id="apptsBody"></tbody>
+          </table>
+          <div id="apptsPagination"></div>
+        </div>
+        <div class="tab-panel card" id="tab-services" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+          <div class="card-header">
+            <div><div class="card-title">Servicos</div><div class="card-desc">Servicos que podem ser agendados</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="openCreateServiceModal()">+ Novo</button>
+          </div>
+          <table>
+            <thead><tr><th>Nome</th><th>Duracao</th><th>Buffer</th><th>Preco</th><th>Ativo</th><th>Acoes</th></tr></thead>
+            <tbody id="servicesBody"></tbody>
+          </table>
+        </div>
+        <div class="tab-panel card" id="tab-rules" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+          <div class="card-header">
+            <div><div class="card-title">Horarios de funcionamento</div><div class="card-desc">Agendas semanais com versionamento</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="openCreateRuleModal()">+ Nova Agenda</button>
+          </div>
+          <div id="rulesList" style="padding:8px 0;"></div>
+        </div>
+        <div class="tab-panel card" id="tab-blocks" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+          <div class="card-header">
+            <div><div class="card-title">Bloqueios</div><div class="card-desc">Feriados, ferias e dias fechados</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="openCreateBlockModal()">+ Bloquear data</button>
+          </div>
+          <table>
+            <thead><tr><th>Data</th><th>Horario</th><th>Motivo</th><th>Acoes</th></tr></thead>
+            <tbody id="blocksBody"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- SETTINGS -->
       <div class="page" id="page-settings">
         <div class="card">
@@ -1178,16 +1237,6 @@ Se o cliente pedir qualquer uma dessas coisas, encaminhe para um atendente."></t
   </nav>
 
 </div>
-
-
-<!-- SCHEDULING -->
-<div class="page" id="page-scheduling">
-  <div class="tabs" id="schedulingTabs">
-    <button class="tab-btn active" onclick="switchTab('appts')">Agendamentos</button>
-    <button class="tab-btn" onclick="switchTab('services')">Servicos</button>
-    <button class="tab-btn" onclick="switchTab('rules')">Horarios</button>
-    <button class="tab-btn" onclick="switchTab('blocks')">Bloqueios</button>
-  </div>
 
   <!-- APPOINTMENTS -->
   <div class="tab-panel active card" id="tab-appts" style="border-radius:0 0 var(--rl) var(--rl);">
