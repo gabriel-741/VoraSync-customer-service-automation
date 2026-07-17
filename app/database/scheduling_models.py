@@ -1,11 +1,10 @@
-# app/database/scheduling_models.py
-
 from sqlalchemy import (
     Column, Integer, String, DateTime, Date,
-    ForeignKey, Enum, func, Boolean, Numeric, Text
+    ForeignKey, Enum, func, Boolean, Numeric, Text, Float
 )
 from sqlalchemy.orm import relationship
-from app.database.connection import Base   
+from sqlalchemy.dialects.postgresql import JSONB
+from app.database.connection import Base
 import enum
 
 
@@ -32,7 +31,6 @@ class ScheduleRule(Base):
     valid_from   = Column(Date, nullable=False)
     valid_until  = Column(Date, nullable=True)
     timezone     = Column(String, default="America/Sao_Paulo")
-    auto_confirm = Column(Boolean, default=True)
     created_at   = Column(DateTime, server_default=func.now())
 
     days = relationship("ScheduleDay", back_populates="rule", cascade="all, delete-orphan")
@@ -45,8 +43,8 @@ class ScheduleDay(Base):
     rule_id    = Column(Integer, ForeignKey("schedule_rules.id", ondelete="CASCADE"))
     weekday    = Column(Integer, nullable=False)  # 0=Segunda … 6=Domingo
     is_open    = Column(Boolean, default=True)
-    start_time = Column(String, nullable=True)   # "08:00"
-    end_time   = Column(String, nullable=True)   # "18:00"
+    start_time = Column(String, nullable=True)
+    end_time   = Column(String, nullable=True)
 
     rule   = relationship("ScheduleRule", back_populates="days")
     breaks = relationship("ScheduleBreak", back_populates="day", cascade="all, delete-orphan")
@@ -87,6 +85,23 @@ class Service(Base):
     buffer_after_minutes = Column(Integer, default=0)
     price                = Column(Numeric(10, 2), nullable=True)
     is_active            = Column(Boolean, default=True)
+
+    # Confirmação — por serviço
+    auto_confirm         = Column(Boolean, default=True)
+
+    # Campos obrigatórios extras que o bot deve coletar
+    required_fields      = Column(JSONB, default=list)
+
+    # Dias da semana disponíveis para este serviço (subset dos dias de funcionamento)
+    available_weekdays   = Column(JSONB, default=lambda: [0, 1, 2, 3, 4, 5, 6])
+
+    # Raio de atendimento (opcional)
+    location_enabled     = Column(Boolean, default=False)
+    location_cep         = Column(String, nullable=True)
+    location_radius_km   = Column(Integer, default=20)
+    location_lat         = Column(Float, nullable=True)
+    location_lng         = Column(Float, nullable=True)
+
     created_at           = Column(DateTime, server_default=func.now())
 
     appointments = relationship("Appointment", back_populates="service")
@@ -108,6 +123,7 @@ class Appointment(Base):
     customer_phone   = Column(String, nullable=True)
     assigned_to      = Column(String, nullable=True)
     notes            = Column(Text, nullable=True)
+    extra_fields     = Column(JSONB, default=dict)
     created_at       = Column(DateTime, server_default=func.now())
     updated_at       = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

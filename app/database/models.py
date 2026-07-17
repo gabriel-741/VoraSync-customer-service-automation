@@ -1,92 +1,136 @@
+# app/database/models.py
+
 from sqlalchemy import (
-    Column, Integer, String, DateTime, Date,
-    ForeignKey, Enum, func, Boolean, Numeric, Text, Float
+    Column, Integer, String, DateTime,
+    ForeignKey, Enum, func, Boolean
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.postgresql import JSONB
-from app.database.connection import Base
 import enum
+from app.database.connection import Base  
 
 
-class AppointmentStatusEnum(str, enum.Enum):
-    pending   = "pending"
-    confirmed = "confirmed"
-    completed = "completed"
-    cancelled = "cancelled"
-    no_show   = "no_show"
+
+class PlanEnum(str, enum.Enum):
+    basic      = "basic"
+    pro        = "pro"
+    enterprise = "enterprise"
+
+class StatusTenantEnum(str, enum.Enum):
+    active     = "active"
+    suspended  = "suspended"
+    cancelled  = "cancelled"
+
+class ConversationStatusEnum(str, enum.Enum):
+    open          = "open"
+    waiting_human = "waiting_human"
+    closed        = "closed"
+
+class DirectionEnum(str, enum.Enum):
+    inbound  = "inbound"
+    outbound = "outbound"
+
+class ConversationStateEnum(str, enum.Enum):
+    ai_active                     = "ai_active"
+    awaiting_handoff_confirmation = "awaiting_handoff_confirmation"
+    human_active                  = "human_active"
+    cooldown                      = "cooldown"
 
 
-class AppointmentSourceEnum(str, enum.Enum):
-    ai       = "ai"
-    operator = "operator"
-    manual   = "manual"
+class Tenant(Base):
+    __tablename__ = "tenants"
+
+    id                  = Column(Integer, primary_key=True, index=True)
+    name                = Column(String, nullable=False)
+    email               = Column(String, unique=True, nullable=False)
+    phone               = Column(String)
+    plan                = Column(Enum(PlanEnum), default=PlanEnum.basic)
+    status              = Column(Enum(StatusTenantEnum), default=StatusTenantEnum.active)
+    whatsapp_instance   = Column(String, unique=True, nullable=False)
+    whatsapp_number     = Column(String)
+    api_key             = Column(String, nullable=False)
+    dashboard_key       = Column(String, unique=True, nullable=True)
+    webhook_secret      = Column(String, unique=True, nullable=True)
+    max_messages_month  = Column(Integer, default=1000)
+    created_at          = Column(DateTime, server_default=func.now())
+    updated_at          = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    bot_name            = Column(String, default="Assistente")
+    system_prompt       = Column(String, nullable=True)
+    ai_model            = Column(String, default="gpt-4o-mini")
+    bot_active          = Column(Boolean, default=True)       
+    scheduling_enabled  = Column(Boolean, default=False)      
+    bot_active          = Column(Boolean, default=True) 
+
+    contacts      = relationship("Contact",      back_populates="tenant")
+    conversations = relationship("Conversation", back_populates="tenant")
+    messages      = relationship("Message",      back_populates="tenant")
 
 
-class Service(Base):
-    __tablename__ = "services"
+class Contact(Base):
+    __tablename__ = "contacts"
 
-    id                   = Column(Integer, primary_key=True)
+    id            = Column(Integer, primary_key=True, index=True)
+    tenant_id     = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    phone         = Column(String, nullable=False)
+    name          = Column(String)
+    first_seen_at = Column(DateTime, server_default=func.now())
+    last_seen_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    ai_blocked    = Column(Boolean, default=False)
+    profile       = Column(JSONB, default=dict)
+
+    tenant        = relationship("Tenant",       back_populates="contacts")
+    conversations = relationship("Conversation", back_populates="contact")
+    messages      = relationship("Message",      back_populates="contact")
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    tenant_id  = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
+
+    status = Column(Enum(ConversationStatusEnum), default=ConversationStatusEnum.open)
+    state  = Column(Enum(ConversationStateEnum), default=ConversationStateEnum.ai_active, nullable=False)
+    human_mode = Column(Boolean, default=False)
+
+    explicit_score       = Column(Integer, default=0)
+    soft_score           = Column(Integer, default=0)
+    consecutive_friction = Column(Integer, default=0)
+
+    handoff_offered     = Column(Boolean, default=False)
+    handoff_offer_count  = Column(Integer, default=0)
+    handoff_reason       = Column(String, nullable=True)
+    handoff_summary      = Column(String, nullable=True)
+
+    cooldown_until   = Column(DateTime, nullable=True)
+    last_activity_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    created_at = Column(DateTime, server_default=func.now())
+    closed_at  = Column(DateTime, nullable=True)
+
+    tenant   = relationship("Tenant",   back_populates="conversations")
+    contact  = relationship("Contact",  back_populates="conversations")
+    messages = relationship("Message",  back_populates="conversation")
+
+    @hybrid_property
+    def handoff_score(self):
+        return (self.explicit_score or 0) + (self.soft_score or 0)
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id                   = Column(Integer, primary_key=True, index=True)
     tenant_id            = Column(Integer, ForeignKey("tenants.id"), nullable=False)
-    name                 = Column(String, nullable=False)
-    description          = Column(Text, nullable=True)
-    duration_minutes     = Column(Integer, nullable=False)
-    buffer_after_minutes = Column(Integer, default=0)
-    price                = Column(Numeric(10, 2), nullable=True)
-    is_active            = Column(Boolean, default=True)
-
-    # Confirmação — por serviço
-    auto_confirm         = Column(Boolean, default=True)
-
-    # Campos obrigatórios extras que o bot deve coletar
-    required_fields      = Column(JSONB, default=list)
-
-    # Dias da semana disponíveis para este serviço (subset dos dias de funcionamento)
-    available_weekdays   = Column(JSONB, default=lambda: [0, 1, 2, 3, 4, 5, 6])
-
-    # Raio de atendimento (opcional)
-    location_enabled     = Column(Boolean, default=False)
-    location_cep         = Column(String, nullable=True)
-    location_radius_km   = Column(Integer, default=20)
-    location_lat         = Column(Float, nullable=True)
-    location_lng         = Column(Float, nullable=True)
-
+    conversation_id      = Column(Integer, ForeignKey("conversations.id"), nullable=False)
+    contact_id           = Column(Integer, ForeignKey("contacts.id"), nullable=False)
+    direction            = Column(Enum(DirectionEnum), nullable=False)
+    content              = Column(String, nullable=False)
+    whatsapp_message_id  = Column(String, unique=True, nullable=True)
     created_at           = Column(DateTime, server_default=func.now())
 
-    appointments = relationship("Appointment", back_populates="service")
-
-
-class Appointment(Base):
-    __tablename__ = "appointments"
-
-    id               = Column(Integer, primary_key=True, index=True)
-    tenant_id        = Column(Integer, ForeignKey("tenants.id"), nullable=False)
-    contact_id       = Column(Integer, ForeignKey("contacts.id"), nullable=True)
-    service_id       = Column(Integer, ForeignKey("services.id"), nullable=False)
-    scheduled_at     = Column(DateTime, nullable=False)
-    duration_minutes = Column(Integer, nullable=False)
-    buffer_minutes   = Column(Integer, default=0)
-    status           = Column(Enum(AppointmentStatusEnum), default=AppointmentStatusEnum.pending)
-    source           = Column(Enum(AppointmentSourceEnum), default=AppointmentSourceEnum.ai)
-    customer_name    = Column(String, nullable=True)
-    customer_phone   = Column(String, nullable=True)
-    assigned_to      = Column(String, nullable=True)
-    notes            = Column(Text, nullable=True)
-    extra_fields     = Column(JSONB, default=dict)
-    created_at       = Column(DateTime, server_default=func.now())
-    updated_at       = Column(DateTime, server_default=func.now(), onupdate=func.now())
-
-    service = relationship("Service", back_populates="appointments")
-    history = relationship("AppointmentHistory", back_populates="appointment", cascade="all, delete-orphan")
-
-
-class AppointmentHistory(Base):
-    __tablename__ = "appointment_history"
-
-    id             = Column(Integer, primary_key=True)
-    appointment_id = Column(Integer, ForeignKey("appointments.id", ondelete="CASCADE"))
-    changed_by     = Column(String, nullable=False)
-    changed_at     = Column(DateTime, server_default=func.now())
-    action         = Column(String, nullable=False)
-    notes          = Column(Text, nullable=True)
-
-    appointment = relationship("Appointment", back_populates="history")
+    tenant       = relationship("Tenant",       back_populates="messages")
+    conversation = relationship("Conversation", back_populates="messages")
+    contact      = relationship("Contact",      back_populates="messages")
