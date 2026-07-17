@@ -22,44 +22,6 @@ class AppointmentSourceEnum(str, enum.Enum):
     manual   = "manual"
 
 
-class ScheduleDay(Base):
-    __tablename__ = "schedule_days"
-
-    id         = Column(Integer, primary_key=True)
-    rule_id    = Column(Integer, ForeignKey("schedule_rules.id", ondelete="CASCADE"))
-    weekday    = Column(Integer, nullable=False)  # 0=Segunda … 6=Domingo
-    is_open    = Column(Boolean, default=True)
-    start_time = Column(String, nullable=True)
-    end_time   = Column(String, nullable=True)
-
-    rule   = relationship("ScheduleRule", back_populates="days")
-    breaks = relationship("ScheduleBreak", back_populates="day", cascade="all, delete-orphan")
-
-
-class ScheduleBreak(Base):
-    __tablename__ = "schedule_breaks"
-
-    id         = Column(Integer, primary_key=True)
-    day_id     = Column(Integer, ForeignKey("schedule_days.id", ondelete="CASCADE"))
-    start_time = Column(String, nullable=False)
-    end_time   = Column(String, nullable=False)
-    label      = Column(String, nullable=True)
-
-    day = relationship("ScheduleDay", back_populates="breaks")
-
-
-class ScheduleBlock(Base):
-    __tablename__ = "schedule_blocks"
-
-    id         = Column(Integer, primary_key=True)
-    tenant_id  = Column(Integer, ForeignKey("tenants.id"), nullable=False)
-    block_date = Column(Date, nullable=False)
-    start_time = Column(String, nullable=True)
-    end_time   = Column(String, nullable=True)
-    reason     = Column(String, nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
-
-
 class Service(Base):
     __tablename__ = "services"
 
