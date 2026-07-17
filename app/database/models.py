@@ -22,20 +22,6 @@ class AppointmentSourceEnum(str, enum.Enum):
     manual   = "manual"
 
 
-class ScheduleRule(Base):
-    __tablename__ = "schedule_rules"
-
-    id           = Column(Integer, primary_key=True, index=True)
-    tenant_id    = Column(Integer, ForeignKey("tenants.id"), nullable=False)
-    name         = Column(String, nullable=False, default="Agenda padrão")
-    valid_from   = Column(Date, nullable=False)
-    valid_until  = Column(Date, nullable=True)
-    timezone     = Column(String, default="America/Sao_Paulo")
-    created_at   = Column(DateTime, server_default=func.now())
-
-    days = relationship("ScheduleDay", back_populates="rule", cascade="all, delete-orphan")
-
-
 class ScheduleDay(Base):
     __tablename__ = "schedule_days"
 
