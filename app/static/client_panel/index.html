@@ -367,65 +367,82 @@ textarea{resize:vertical;line-height:1.6}
         </div>
       </div>
 
-      <!-- SCHEDULING — dentro do page-content, ID unico -->
-      <div class="page" id="page-scheduling">
-        <div class="tabs">
-          <button class="tab-btn active" onclick="switchTab('appts')">Agendamentos</button>
-          <button class="tab-btn" onclick="switchTab('services')">Servicos</button>
-          <button class="tab-btn" onclick="switchTab('rules')">Horarios</button>
-          <button class="tab-btn" onclick="switchTab('blocks')">Bloqueios</button>
-        </div>
-        <div class="tab-panel active card" id="tab-appts" style="border-radius:0 0 var(--rl) var(--rl);">
-          <div class="card-header">
-            <div><div class="card-title">Agendamentos</div><div class="card-desc">Todos os agendamentos</div></div>
-            <button class="btn btn-ghost btn-sm" onclick="openCreateApptModal()">+ Novo</button>
-          </div>
-          <div class="search-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <select id="apptStatusFilter" onchange="loadAppointments()" style="width:160px;flex-shrink:0;">
-              <option value="">Todos os status</option>
-              <option value="pending">Pendente</option>
-              <option value="confirmed">Confirmado</option>
-              <option value="completed">Realizado</option>
-              <option value="cancelled">Cancelado</option>
-              <option value="no_show">Nao compareceu</option>
-            </select>
-            <input type="date" id="apptDateFrom" onchange="loadAppointments()" style="width:150px;flex-shrink:0;">
-          </div>
-          <table>
-            <thead><tr><th>Cliente</th><th>Servico</th><th>Data/Hora</th><th>Status</th><th>Origem</th><th>Acoes</th></tr></thead>
-            <tbody id="apptsBody"></tbody>
-          </table>
-          <div id="apptsPagination"></div>
-        </div>
-        <div class="tab-panel card" id="tab-services" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
-          <div class="card-header">
-            <div><div class="card-title">Servicos</div><div class="card-desc">Servicos que podem ser agendados</div></div>
-            <button class="btn btn-ghost btn-sm" onclick="openCreateServiceModal()">+ Novo</button>
-          </div>
-          <table>
-            <thead><tr><th>Nome</th><th>Duracao</th><th>Buffer</th><th>Preco</th><th>Ativo</th><th>Acoes</th></tr></thead>
-            <tbody id="servicesBody"></tbody>
-          </table>
-        </div>
-        <div class="tab-panel card" id="tab-rules" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
-          <div class="card-header">
-            <div><div class="card-title">Horarios de funcionamento</div><div class="card-desc">Agendas semanais com versionamento</div></div>
-            <button class="btn btn-ghost btn-sm" onclick="openCreateRuleModal()">+ Nova Agenda</button>
-          </div>
-          <div id="rulesList" style="padding:8px 0;"></div>
-        </div>
-        <div class="tab-panel card" id="tab-blocks" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
-          <div class="card-header">
-            <div><div class="card-title">Bloqueios</div><div class="card-desc">Feriados, ferias e dias fechados</div></div>
-            <button class="btn btn-ghost btn-sm" onclick="openCreateBlockModal()">+ Bloquear data</button>
-          </div>
-          <table>
-            <thead><tr><th>Data</th><th>Horario</th><th>Motivo</th><th>Acoes</th></tr></thead>
-            <tbody id="blocksBody"></tbody>
-          </table>
-        </div>
-      </div>
+<!-- SCHEDULING -->
+<div class="page" id="page-scheduling">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('appts')">Agendamentos</button>
+    <button class="tab-btn" onclick="switchTab('services')">Servicos</button>
+    <button class="tab-btn" onclick="switchTab('rules')">Horario de Funcionamento</button>
+    <button class="tab-btn" onclick="switchTab('blocks')">Bloqueios</button>
+  </div>
 
+  <!-- AGENDAMENTOS -->
+  <div class="tab-panel active card" id="tab-appts" style="border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div><div class="card-title">Agendamentos</div><div class="card-desc">Todos os agendamentos do sistema</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateApptModal()">+ Novo</button>
+    </div>
+    <div class="search-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="apptStatusFilter" onchange="loadAppointments()" style="width:160px;flex-shrink:0;">
+        <option value="">Todos os status</option>
+        <option value="pending">Pendente</option>
+        <option value="confirmed">Confirmado</option>
+        <option value="completed">Realizado</option>
+        <option value="cancelled">Cancelado</option>
+        <option value="no_show">Nao compareceu</option>
+      </select>
+      <input type="date" id="apptDateFrom" onchange="loadAppointments()" style="width:150px;flex-shrink:0;">
+    </div>
+    <table>
+      <thead><tr><th>Cliente</th><th>Servico</th><th>Data/Hora</th><th>Status</th><th>Origem</th><th>Acoes</th></tr></thead>
+      <tbody id="apptsBody"></tbody>
+    </table>
+    <div id="apptsPagination"></div>
+  </div>
+
+  <!-- SERVICOS -->
+  <div class="tab-panel card" id="tab-services" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Servicos</div>
+        <div class="card-desc">Configure cada servico com seus horarios, campos e raio de atendimento</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateServiceModal()">+ Novo servico</button>
+    </div>
+    <table>
+      <thead><tr><th>Nome</th><th>Duracao</th><th>Confirmacao</th><th>Dias</th><th>Local</th><th>Ativo</th><th>Acoes</th></tr></thead>
+      <tbody id="servicesBody"></tbody>
+    </table>
+  </div>
+
+  <!-- HORARIOS DE FUNCIONAMENTO -->
+  <div class="tab-panel card" id="tab-rules" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Horario de Funcionamento</div>
+        <div class="card-desc">Define quando o estabelecimento esta aberto. Cada configuracao tem uma data de vigencia e define o padrao semanal de horarios.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateRuleModal()">+ Nova configuracao</button>
+    </div>
+    <div style="background:rgba(79,124,255,.06);border-left:3px solid var(--accent);padding:10px 16px;font-size:12px;color:var(--text-2);margin:0 0 0 0;">
+      <strong style="color:var(--text);">Como funciona:</strong> Cada configuracao define os dias e horarios de uma semana padrao. 
+      A "data de inicio" indica quando essa configuracao passa a valer. Voce pode criar uma nova configuracao com data futura para mudar o horario sem afetar agendamentos ja feitos.
+    </div>
+    <div id="rulesList" style="padding:8px 0;"></div>
+  </div>
+
+  <!-- BLOQUEIOS -->
+  <div class="tab-panel card" id="tab-blocks" style="display:none;border-radius:0 0 var(--rl) var(--rl);">
+    <div class="card-header">
+      <div><div class="card-title">Bloqueios</div><div class="card-desc">Datas especificas sem atendimento (feriados, ferias, etc)</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="openCreateBlockModal()">+ Bloquear data</button>
+    </div>
+    <table>
+      <thead><tr><th>Data</th><th>Horario</th><th>Motivo</th><th>Acoes</th></tr></thead>
+      <tbody id="blocksBody"></tbody>
+    </table>
+  </div>
+</div>
       <!-- SETTINGS -->
       <div class="page" id="page-settings">
         <div class="card">
@@ -535,16 +552,28 @@ textarea{resize:vertical;line-height:1.6}
 </div>
 
 <div id="apptModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal" style="max-width:520px;">
     <div class="modal-header">
       <div class="modal-title">Novo Agendamento</div>
-      <button class="btn-icon" onclick="document.getElementById('apptModal').classList.add('hidden')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button class="btn-icon" onclick="document.getElementById('apptModal').classList.add('hidden')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
     </div>
     <div class="modal-body" style="padding:20px;">
-      <div class="form-group"><label>Servico</label><select id="appt_service"><option value="">Selecione...</option></select></div>
-      <div class="form-group"><label>Nome do cliente</label><input id="appt_name" placeholder="Nome completo"></div>
-      <div class="form-group"><label>Telefone</label><input id="appt_phone" placeholder="556299999999"></div>
-      <div class="form-group"><label>Data e Horario</label><input type="datetime-local" id="appt_datetime"></div>
+      <div class="form-group">
+        <label>Servico</label>
+        <select id="appt_service" onchange="loadApptExtraFields()">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:140px;"><label>Nome do cliente</label><input id="appt_name" placeholder="Nome completo"></div>
+        <div class="form-group" style="flex:1;min-width:140px;"><label>Telefone</label><input id="appt_phone" placeholder="556299999999"></div>
+      </div>
+      <div class="form-group"><label>Data e Horario</label><input type="datetime-local" id="appt_datetime" onchange="checkApptSlot()"></div>
+      <div id="apptSlotStatus" style="font-size:12px;margin-bottom:8px;"></div>
+      <!-- Campos extras do serviço aparecem aqui -->
+      <div id="apptExtraFields"></div>
       <div class="form-group"><label>Observacoes</label><textarea id="appt_notes" rows="2"></textarea></div>
     </div>
     <div class="modal-footer">
@@ -555,22 +584,76 @@ textarea{resize:vertical;line-height:1.6}
 </div>
 
 <div id="serviceModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal" style="max-width:600px;">
     <div class="modal-header">
       <div class="modal-title" id="serviceModalTitle">Novo Servico</div>
-      <button class="btn-icon" onclick="document.getElementById('serviceModal').classList.add('hidden')"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button class="btn-icon" onclick="document.getElementById('serviceModal').classList.add('hidden')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
     </div>
+
+    <!-- ABAS DO MODAL -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 20px;background:var(--surface);">
+      <button class="tab-btn active" onclick="switchServiceTab('geral')" id="svc-tab-geral">Geral</button>
+      <button class="tab-btn" onclick="switchServiceTab('agenda')" id="svc-tab-agenda">Agenda</button>
+      <button class="tab-btn" onclick="switchServiceTab('campos')" id="svc-tab-campos">Campos</button>
+      <button class="tab-btn" onclick="switchServiceTab('local')" id="svc-tab-local">Localizacao</button>
+    </div>
+
     <div class="modal-body" style="padding:20px;">
       <input type="hidden" id="svc_id">
-      <div class="form-group"><label>Nome do servico</label><input id="svc_name" placeholder="Ex: Consulta"></div>
-      <div class="form-group"><label>Descricao (opcional)</label><input id="svc_desc"></div>
-      <div class="form-group"><label>Duracao (minutos)</label><input id="svc_duration" type="number" placeholder="30"></div>
-      <div class="form-group"><label>Buffer apos atendimento (min)</label><input id="svc_buffer" type="number" placeholder="0"><div class="form-hint">Tempo de preparo entre atendimentos</div></div>
-      <div class="form-group"><label>Preco (opcional)</label><input id="svc_price" type="number" step="0.01" placeholder="0.00"></div>
+
+      <!-- ABA GERAL -->
+      <div id="svc-panel-geral">
+        <div class="form-group"><label>Nome do servico</label><input id="svc_name" placeholder="Ex: Consulta, Corte de cabelo"></div>
+        <div class="form-group"><label>Descricao (opcional)</label><input id="svc_desc"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;min-width:120px;"><label>Duracao (min)</label><input id="svc_duration" type="number" placeholder="30"></div>
+          <div class="form-group" style="flex:1;min-width:120px;"><label>Buffer apos (min)</label><input id="svc_buffer" type="number" placeholder="0"><div class="form-hint">Preparo entre atendimentos</div></div>
+          <div class="form-group" style="flex:1;min-width:120px;"><label>Preco (R$)</label><input id="svc_price" type="number" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="toggle-row" style="padding:12px 0;border-bottom:none;">
+          <div><div class="toggle-label">Confirmacao automatica</div><div class="toggle-desc">Se ativo, a IA confirma o agendamento sem precisar de aprovacao do operador</div></div>
+          <label class="toggle"><input type="checkbox" id="svc_autoconfirm" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+      </div>
+
+      <!-- ABA AGENDA -->
+      <div id="svc-panel-agenda" style="display:none;">
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;">
+          Selecione em quais dias da semana este servico esta disponivel. O horario segue a configuracao de funcionamento definida na aba Horario de Funcionamento.
+        </div>
+        <div id="svc_weekdays_config"></div>
+      </div>
+
+      <!-- ABA CAMPOS EXTRAS -->
+      <div id="svc-panel-campos" style="display:none;">
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;">
+          Defina quais informacoes o bot deve coletar do cliente antes de confirmar o agendamento.
+        </div>
+        <div id="svc_fields_list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addRequiredField()" style="margin-top:10px;">+ Adicionar campo</button>
+      </div>
+
+      <!-- ABA LOCALIZACAO -->
+      <div id="svc-panel-local" style="display:none;">
+        <div class="toggle-row" style="padding:12px 0;">
+          <div><div class="toggle-label">Raio de atendimento</div><div class="toggle-desc">Restricao por CEP — o bot verifica se o cliente esta dentro do raio antes de agendar</div></div>
+          <label class="toggle"><input type="checkbox" id="svc_location_enabled" onchange="toggleLocationFields(this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div id="svc_location_fields" style="display:none;">
+          <div class="form-group"><label>CEP base do atendimento</label><input id="svc_location_cep" placeholder="00000-000" oninput="this.value=this.value.replace(/\D/g,'').replace(/^(\d{5})(\d)/,'$1-$2').slice(0,9)"></div>
+          <div class="form-group"><label>Raio maximo de atendimento (km)</label><input id="svc_location_radius" type="number" placeholder="20" min="1" max="500"></div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:4px;">Clientes fora deste raio receberao uma mensagem informando que o servico nao esta disponivel na regiao deles.</div>
+          <button class="btn btn-ghost btn-sm" onclick="testLocationCep()" style="margin-top:12px;">Testar um CEP</button>
+          <div id="locationTestResult" style="margin-top:8px;font-size:13px;"></div>
+        </div>
+      </div>
     </div>
+
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('serviceModal').classList.add('hidden')">Cancelar</button>
-      <button class="btn btn-primary btn-sm" onclick="saveService()">Salvar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveService()">Salvar servico</button>
     </div>
   </div>
 </div>
@@ -635,11 +718,17 @@ let crmCurrentProfile = {};
 let confirmAction = null;
 let cancelAction = null;
 let titleBlinkId = null;
+let contactSearchDebounce = null;
 let schedulingEnabled = false;
 let servicesCache = [];
 let apptPage = 1;
-let contactSearchDebounce = null;
+let currentServiceTab = 'geral';
+let svcRequiredFields = [];
+let svcAvailableWeekdays = [0,1,2,3,4,5,6];
+
 const WEEKDAY_NAMES = ['Segunda','Terca','Quarta','Quinta','Sexta','Sabado','Domingo'];
+const STATUS_LABELS = {pending:'Pendente',confirmed:'Confirmado',completed:'Realizado',cancelled:'Cancelado',no_show:'Nao compareceu'};
+
 
 // ── NAV ──
 
@@ -938,7 +1027,9 @@ async function saveSettings() {
   } catch(e) { btn.disabled=false; btn.textContent='Salvar alteracoes'; alert('Erro: '+e.message); }
 }
 
-// ── SCHEDULING ──
+SCHEDULING// ──  ──
+
+
 
 function switchTab(tab) {
   const tabs = ['appts','services','rules','blocks'];
@@ -952,6 +1043,15 @@ function switchTab(tab) {
   if (tab==='blocks')   loadBlocks();
 }
 
+function switchServiceTab(tab) {
+  currentServiceTab = tab;
+  ['geral','agenda','campos','local'].forEach(t => {
+    document.getElementById('svc-panel-' + t).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('svc-tab-' + t)?.classList.toggle('active', t===tab);
+  });
+}
+
+// APPOINTMENTS
 async function loadAppointments() {
   try {
     const status = document.getElementById('apptStatusFilter').value;
@@ -959,24 +1059,31 @@ async function loadAppointments() {
     const params = new URLSearchParams({page:apptPage,limit:20});
     if (status) params.set('status',status);
     if (from)   params.set('from_date',from+'T00:00:00');
+
     const result = await api(`/scheduling/appointments?${params}`);
     const tbody  = document.getElementById('apptsBody');
+
     if (!result.data.length) {
-      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum agendamento</div><div class="empty-desc">Agendamentos aparecem aqui quando criados.</div></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum agendamento</div><div class="empty-desc">Agendamentos aparecem aqui quando criados pelo bot ou manualmente.</div></div></td></tr>`;
     } else {
-      tbody.innerHTML = result.data.map(a=>`<tr>
-        <td><div class="cell-primary">${esc(a.customer_name||'(sem nome)')}</div><div class="cell-secondary">${esc(a.customer_phone||'')}</div></td>
+      tbody.innerHTML = result.data.map(a => `<tr>
+        <td>
+          <div class="cell-primary">${esc(a.customer_name||'(sem nome)')}</div>
+          <div class="cell-secondary">${esc(a.customer_phone||'')}</div>
+        </td>
         <td>${esc(a.service_name||'—')}</td>
         <td><div class="cell-primary">${new Date(a.scheduled_at).toLocaleString('pt-BR')}</div></td>
-        <td><span class="badge appt-status-${a.status}">${esc(a.status)}</span></td>
-        <td><span class="text-muted text-sm">${a.source==='ai'?'IA':a.source==='operator'?'Operador':'Manual'}</span></td>
+        <td><span class="badge appt-status-${a.status}">${STATUS_LABELS[a.status]||a.status}</span></td>
+        <td><span class="text-muted text-sm">${a.source==='ai'?'Bot':a.source==='operator'?'Operador':'Manual'}</span></td>
         <td class="actions-row">
           ${a.status==='pending'?`<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'confirmed')">Confirmar</button>`:''}
-          ${a.status!=='cancelled'&&a.status!=='completed'?`<button class="btn btn-danger btn-xs" onclick="updateApptStatus(${a.id},'cancelled')">Cancelar</button>`:''}
           ${a.status==='confirmed'?`<button class="btn btn-ghost btn-xs" onclick="updateApptStatus(${a.id},'completed')">Concluir</button>`:''}
+          ${a.status!=='cancelled'&&a.status!=='completed'?`<button class="btn btn-danger btn-xs" onclick="updateApptStatus(${a.id},'cancelled')">Cancelar</button>`:''}
+          <button class="btn btn-danger btn-xs" onclick="deleteAppt(${a.id})" title="Excluir permanentemente">Excluir</button>
         </td>
       </tr>`).join('');
     }
+
     const el = document.getElementById('apptsPagination');
     const totalPages = Math.ceil(result.total/result.limit);
     el.innerHTML = totalPages<=1?'':`<div class="pagination"><span class="pagination-info">${result.total} agendamentos</span><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage-1};loadAppointments()" ${apptPage<=1?'disabled':''}>Anterior</button><button class="btn btn-ghost btn-sm" onclick="apptPage=${apptPage+1};loadAppointments()" ${apptPage>=totalPages?'disabled':''}>Proxima</button></div></div>`;
@@ -988,37 +1095,145 @@ async function updateApptStatus(id, status) {
   catch(e) { alert('Erro: '+e.message); }
 }
 
+async function deleteAppt(id) {
+  openConfirm('Excluir agendamento','Esta acao e permanente e nao pode ser desfeita.','Excluir',async()=>{
+    try { await api(`/scheduling/appointments/${id}`,'DELETE'); loadAppointments(); }
+    catch(e) { alert('Erro: '+e.message); }
+  });
+}
+
 function openCreateApptModal() {
-  document.getElementById('appt_service').innerHTML = servicesCache.filter(s=>s.is_active).map(s=>`<option value="${s.id}">${esc(s.name)} (${s.duration_minutes}min)</option>`).join('')||'<option>Nenhum servico cadastrado</option>';
+  document.getElementById('appt_service').innerHTML = servicesCache.filter(s=>s.is_active).map(s=>`<option value="${s.id}">${esc(s.name)} (${s.duration_minutes}min)</option>`).join('')||'<option value="">Nenhum servico ativo</option>';
   ['appt_name','appt_phone','appt_notes','appt_datetime'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('apptExtraFields').innerHTML='';
+  document.getElementById('apptSlotStatus').textContent='';
   document.getElementById('apptModal').classList.remove('hidden');
 }
 
-async function createAppointment() {
-  const payload = {service_id:parseInt(document.getElementById('appt_service').value),customer_name:document.getElementById('appt_name').value,customer_phone:document.getElementById('appt_phone').value,scheduled_at:document.getElementById('appt_datetime').value,notes:document.getElementById('appt_notes').value,source:'operator',status:'confirmed',check_availability:true};
-  if (!payload.service_id||!payload.scheduled_at) return alert('Servico e data/hora sao obrigatorios');
-  try { await api('/scheduling/appointments','POST',payload); document.getElementById('apptModal').classList.add('hidden'); loadAppointments(); }
-  catch(e) { alert('Erro: '+e.message); }
+function loadApptExtraFields() {
+  const svcId = parseInt(document.getElementById('appt_service').value);
+  const svc = servicesCache.find(s=>s.id===svcId);
+  const container = document.getElementById('apptExtraFields');
+  if (!svc || !svc.required_fields || !svc.required_fields.length) {
+    container.innerHTML=''; return;
+  }
+  container.innerHTML = svc.required_fields.map(f=>`
+    <div class="form-group">
+      <label>${esc(f.label)}${f.required?'*':''}</label>
+      <input id="appt_extra_${f.key}" placeholder="${esc(f.placeholder||f.label)}" ${f.required?'required':''}>
+    </div>
+  `).join('');
 }
 
+async function checkApptSlot() {
+  const svcId = parseInt(document.getElementById('appt_service').value);
+  const dt    = document.getElementById('appt_datetime').value;
+  const el    = document.getElementById('apptSlotStatus');
+  if (!svcId || !dt) { el.textContent=''; return; }
+  try {
+    const d = dt.split('T')[0];
+    const t = dt.split('T')[1]?.slice(0,5);
+    const result = await api(`/scheduling/availability?service_id=${svcId}&target_date=${d}`);
+    if (result.available_slots.includes(t)) {
+      el.textContent = '✓ Horario disponivel';
+      el.style.color = 'var(--green)';
+    } else {
+      el.innerHTML = `<span style="color:var(--orange);">Horario ocupado.</span> Disponiveis: ${result.available_slots.slice(0,10).join(', ')||'Nenhum neste dia'}`;
+    }
+  } catch(_) { el.textContent=''; }
+}
+
+async function createAppointment() {
+  const svcId = parseInt(document.getElementById('appt_service').value);
+  const svc = servicesCache.find(s=>s.id===svcId);
+
+  // Coleta campos extras
+  const extraFields = {};
+  if (svc && svc.required_fields) {
+    for (const f of svc.required_fields) {
+      const val = document.getElementById(`appt_extra_${f.key}`)?.value?.trim();
+      if (f.required && !val) { alert(`Campo obrigatorio: ${f.label}`); return; }
+      if (val) extraFields[f.key] = val;
+    }
+  }
+
+  const payload = {
+    service_id:    svcId,
+    customer_name: document.getElementById('appt_name').value,
+    customer_phone:document.getElementById('appt_phone').value,
+    scheduled_at:  document.getElementById('appt_datetime').value,
+    notes:         document.getElementById('appt_notes').value,
+    source:        'operator',
+    status:        'confirmed',
+    check_availability: true,
+    extra_fields:  extraFields
+  };
+  if (!payload.service_id||!payload.scheduled_at) return alert('Servico e data/hora sao obrigatorios');
+  try {
+    await api('/scheduling/appointments','POST',payload);
+    document.getElementById('apptModal').classList.add('hidden');
+    loadAppointments();
+  } catch(e) { alert('Erro: '+e.message); }
+}
+
+// SERVICES
 async function loadServices() {
   try {
     servicesCache = await api('/scheduling/services');
-    document.getElementById('servicesBody').innerHTML = servicesCache.map(s=>`<tr>
-      <td><div class="cell-primary">${esc(s.name)}</div>${s.description?`<div class="cell-secondary">${esc(s.description)}</div>`:''}</td>
-      <td>${s.duration_minutes}min</td><td>${s.buffer_after_minutes}min</td>
-      <td>${s.price?'R$ '+parseFloat(s.price).toFixed(2):'—'}</td>
-      <td><span class="badge ${s.is_active?'badge-ai':''}">${s.is_active?'Ativo':'Inativo'}</span></td>
-      <td class="actions-row"><button class="btn btn-ghost btn-xs" onclick="openEditServiceModal(${s.id})">Editar</button><button class="btn btn-danger btn-xs" onclick="deleteService(${s.id})">Remover</button></td>
-    </tr>`).join('')||`<tr><td colspan="6"><div class="empty-state"><div class="empty-title">Nenhum servico</div><div class="empty-desc">Adicione os servicos que sua empresa oferece.</div></div></td></tr>`;
+    const tbody = document.getElementById('servicesBody');
+    if (!servicesCache.length) {
+      tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="empty-title">Nenhum servico</div><div class="empty-desc">Crie um servico para comecar a receber agendamentos.</div></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = servicesCache.map(s=>`<tr>
+      <td>
+        <div class="cell-primary">${esc(s.name)}</div>
+        ${s.description?`<div class="cell-secondary">${esc(s.description)}</div>`:''}
+        <div class="cell-secondary">${s.duration_minutes}min${s.buffer_after_minutes?` + ${s.buffer_after_minutes}min buffer`:''}${s.price?` · R$ ${parseFloat(s.price).toFixed(2)}`:''}</div>
+      </td>
+      <td>${s.duration_minutes}min</td>
+      <td><span class="badge ${s.auto_confirm?'badge-ai':'badge-cool'}">${s.auto_confirm?'Automatica':'Manual'}</span></td>
+      <td style="font-size:12px;color:var(--text-2);">${renderWeekdayBadges(s.available_weekdays)}</td>
+      <td>${s.location_enabled?`<span class="badge badge-waiting">${s.location_radius_km}km</span>`:'<span class="text-muted text-sm">—</span>'}</td>
+      <td><span class="badge ${s.is_active?'badge-ai':'badge-cool'}">${s.is_active?'Ativo':'Inativo'}</span></td>
+      <td class="actions-row">
+        <button class="btn btn-ghost btn-xs" onclick="openEditServiceModal(${s.id})">Editar</button>
+        <button class="btn btn-danger btn-xs" onclick="toggleServiceActive(${s.id},${!s.is_active})">${s.is_active?'Desativar':'Ativar'}</button>
+      </td>
+    </tr>`).join('');
   } catch(e) { alert('Erro: '+e.message); }
+}
+
+function renderWeekdayBadges(weekdays) {
+  const all = [0,1,2,3,4,5,6];
+  const names = ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'];
+  if (!weekdays || weekdays.length === 7) return '<span style="color:var(--text-2);">Todos os dias</span>';
+  return weekdays.map(w=>`<span style="font-size:10px;background:var(--surface-2);padding:1px 5px;border-radius:4px;margin-right:2px;">${names[w]}</span>`).join('');
+}
+
+async function toggleServiceActive(id, newState) {
+  try { await api(`/scheduling/services/${id}`,'PATCH',{is_active:newState}); loadServices(); }
+  catch(e) { alert('Erro: '+e.message); }
 }
 
 function openCreateServiceModal() {
   document.getElementById('svc_id').value='';
-  ['svc_name','svc_desc','svc_duration','svc_price'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('svc_name').value='';
+  document.getElementById('svc_desc').value='';
+  document.getElementById('svc_duration').value='';
   document.getElementById('svc_buffer').value='0';
+  document.getElementById('svc_price').value='';
+  document.getElementById('svc_autoconfirm').checked=true;
   document.getElementById('serviceModalTitle').textContent='Novo Servico';
+  svcRequiredFields = [];
+  svcAvailableWeekdays = [0,1,2,3,4,5,6];
+  document.getElementById('svc_location_enabled').checked=false;
+  document.getElementById('svc_location_cep').value='';
+  document.getElementById('svc_location_radius').value='20';
+  document.getElementById('svc_location_fields').style.display='none';
+  renderWeekdayConfig();
+  renderRequiredFields();
+  switchServiceTab('geral');
   document.getElementById('serviceModal').classList.remove('hidden');
 }
 
@@ -1030,77 +1245,219 @@ function openEditServiceModal(id) {
   document.getElementById('svc_duration').value=s.duration_minutes||'';
   document.getElementById('svc_buffer').value=s.buffer_after_minutes||0;
   document.getElementById('svc_price').value=s.price||'';
+  document.getElementById('svc_autoconfirm').checked=s.auto_confirm!==false;
   document.getElementById('serviceModalTitle').textContent='Editar Servico';
+  svcRequiredFields = JSON.parse(JSON.stringify(s.required_fields||[]));
+  svcAvailableWeekdays = [...(s.available_weekdays||[0,1,2,3,4,5,6])];
+  document.getElementById('svc_location_enabled').checked=!!s.location_enabled;
+  document.getElementById('svc_location_cep').value=s.location_cep||'';
+  document.getElementById('svc_location_radius').value=s.location_radius_km||20;
+  document.getElementById('svc_location_fields').style.display=s.location_enabled?'block':'none';
+  renderWeekdayConfig();
+  renderRequiredFields();
+  switchServiceTab('geral');
   document.getElementById('serviceModal').classList.remove('hidden');
+}
+
+function renderWeekdayConfig() {
+  const container = document.getElementById('svc_weekdays_config');
+  container.innerHTML = WEEKDAY_NAMES.map((name,i)=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <label class="toggle" style="flex-shrink:0;">
+        <input type="checkbox" id="svc_wd_${i}" ${svcAvailableWeekdays.includes(i)?'checked':''} onchange="toggleWeekday(${i},this.checked)">
+        <div class="toggle-track"></div><div class="toggle-thumb"></div>
+      </label>
+      <span style="font-size:13px;font-weight:500;width:80px;">${name}</span>
+      <span style="font-size:12px;color:var(--text-3);">${svcAvailableWeekdays.includes(i)?'Disponivel':'Indisponivel para este servico'}</span>
+    </div>
+  `).join('');
+}
+
+function toggleWeekday(day, checked) {
+  if (checked && !svcAvailableWeekdays.includes(day)) svcAvailableWeekdays.push(day);
+  if (!checked) svcAvailableWeekdays = svcAvailableWeekdays.filter(d=>d!==day);
+  svcAvailableWeekdays.sort();
+  renderWeekdayConfig();
+}
+
+function renderRequiredFields() {
+  const container = document.getElementById('svc_fields_list');
+  if (!svcRequiredFields.length) {
+    container.innerHTML=`<div style="font-size:13px;color:var(--text-3);padding:12px 0;">Nenhum campo extra. O bot coleta automaticamente nome e telefone.</div>`;
+    return;
+  }
+  container.innerHTML = svcRequiredFields.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;">${esc(f.label)}</div>
+        <div style="font-size:11px;color:var(--text-3);">Chave: ${esc(f.key)} · ${f.required?'Obrigatorio':'Opcional'}</div>
+      </div>
+      <button class="btn btn-danger btn-xs" onclick="removeRequiredField(${i})">Remover</button>
+    </div>
+  `).join('');
+}
+
+function addRequiredField() {
+  const key   = prompt('Chave do campo (sem espacos, ex: cpf, endereco):')?.trim().toLowerCase().replace(/\s+/g,'_');
+  if (!key) return;
+  const label = prompt('Nome do campo para exibicao (ex: CPF, Endereco completo):')?.trim();
+  if (!label) return;
+  const required = confirm('Este campo e obrigatorio?');
+  svcRequiredFields.push({key, label, required, placeholder: label});
+  renderRequiredFields();
+}
+
+function removeRequiredField(index) {
+  svcRequiredFields.splice(index, 1);
+  renderRequiredFields();
+}
+
+function toggleLocationFields(checked) {
+  document.getElementById('svc_location_fields').style.display = checked ? 'block' : 'none';
+}
+
+async function testLocationCep() {
+  const svcId = parseInt(document.getElementById('svc_id').value);
+  if (!svcId) { alert('Salve o servico primeiro para testar a localizacao.'); return; }
+  const cep = prompt('Digite o CEP do cliente para testar (somente numeros):');
+  if (!cep) return;
+  const el = document.getElementById('locationTestResult');
+  el.textContent = 'Verificando...';
+  try {
+    const r = await api('/scheduling/check-location','POST',{service_id:svcId,cep});
+    if (r.within_range === true) el.innerHTML = `<span style="color:var(--green);">✓ Dentro do raio. ${r.message}</span>`;
+    else if (r.within_range === false) el.innerHTML = `<span style="color:var(--red);">✗ Fora do raio. ${r.message}</span>`;
+    else el.innerHTML = `<span style="color:var(--orange);">${r.message}</span>`;
+  } catch(e) { el.textContent='Erro: '+e.message; }
 }
 
 async function saveService() {
   const id = document.getElementById('svc_id').value;
-  const payload = {name:document.getElementById('svc_name').value,description:document.getElementById('svc_desc').value||null,duration_minutes:parseInt(document.getElementById('svc_duration').value),buffer_after_minutes:parseInt(document.getElementById('svc_buffer').value)||0,price:parseFloat(document.getElementById('svc_price').value)||null};
+  const cep = document.getElementById('svc_location_cep').value.replace(/\D/g,'');
+  const payload = {
+    name:                 document.getElementById('svc_name').value,
+    description:          document.getElementById('svc_desc').value||null,
+    duration_minutes:     parseInt(document.getElementById('svc_duration').value),
+    buffer_after_minutes: parseInt(document.getElementById('svc_buffer').value)||0,
+    price:                parseFloat(document.getElementById('svc_price').value)||null,
+    auto_confirm:         document.getElementById('svc_autoconfirm').checked,
+    required_fields:      svcRequiredFields,
+    available_weekdays:   svcAvailableWeekdays,
+    location_enabled:     document.getElementById('svc_location_enabled').checked,
+    location_cep:         cep||null,
+    location_radius_km:   parseInt(document.getElementById('svc_location_radius').value)||20,
+  };
   if (!payload.name||!payload.duration_minutes) return alert('Nome e duracao sao obrigatorios');
   try {
     if(id) await api(`/scheduling/services/${id}`,'PATCH',payload);
     else   await api('/scheduling/services','POST',payload);
-    document.getElementById('serviceModal').classList.add('hidden'); loadServices();
+    document.getElementById('serviceModal').classList.add('hidden');
+    loadServices();
   } catch(e) { alert('Erro: '+e.message); }
 }
 
-async function deleteService(id) {
-  if(!confirm('Desativar este servico?')) return;
-  try { await api(`/scheduling/services/${id}`,'DELETE'); loadServices(); }
-  catch(e) { alert('Erro: '+e.message); }
-}
-
+// RULES
 async function loadRules() {
   try {
     const rules = await api('/scheduling/rules');
     const el = document.getElementById('rulesList');
-    if (!rules.length) { el.innerHTML=`<div class="empty-state"><div class="empty-title">Nenhuma agenda configurada</div><div class="empty-desc">Crie uma agenda semanal para liberar agendamentos.</div></div>`; return; }
-    el.innerHTML = rules.map(r=>`<div style="padding:14px 20px;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div><div style="font-weight:500;">${esc(r.name)}</div><div style="font-size:12px;color:var(--text-2);margin-top:2px;">Vigencia: ${r.valid_from} ate ${r.valid_until||'sem fim'} · ${r.auto_confirm?'Confirma automaticamente':'Requer aprovacao manual'}</div></div>
-        <button class="btn btn-danger btn-xs" onclick="deleteRule(${r.id})">Remover</button>
+    if (!rules.length) {
+      el.innerHTML=`<div class="empty-state">
+        <div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 2V5M13 2V5M3 8H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="empty-title">Nenhuma configuracao de horario</div>
+        <div class="empty-desc">Crie uma configuracao para definir quando voce atende.</div>
+      </div>`;
+      return;
+    }
+    el.innerHTML = rules.map(r=>`
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <div style="font-weight:600;font-size:14px;">${esc(r.name)}</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:3px;">
+              Em vigor a partir de <strong>${r.valid_from}</strong>
+              ${r.valid_until?` ate <strong>${r.valid_until}</strong>`:'<span style="color:var(--text-3);"> · sem data de encerramento</span>'}
+            </div>
+          </div>
+          <button class="btn btn-danger btn-xs" onclick="deleteRule(${r.id})">Remover</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;">
+          ${r.days.map(d=>`
+            <div style="background:${d.is_open?'var(--surface-2)':'rgba(239,68,68,.05)'};border:1px solid ${d.is_open?'var(--border)':'rgba(239,68,68,.2)'};border-radius:var(--r);padding:8px 12px;font-size:12px;">
+              <div style="font-weight:600;margin-bottom:3px;color:${d.is_open?'var(--text)':'var(--text-3)'};">${WEEKDAY_NAMES[d.weekday]}</div>
+              ${d.is_open&&d.start_time?`<div style="color:var(--text-2);">${d.start_time} – ${d.end_time}</div>`:`<div style="color:var(--red);font-size:11px;">Fechado</div>`}
+              ${d.breaks&&d.breaks.length?`<div style="color:var(--text-3);font-size:10px;margin-top:2px;">Intervalo: ${d.breaks.map(b=>`${b.start_time}–${b.end_time}`).join(', ')}</div>`:''}
+            </div>
+          `).join('')}
+        </div>
       </div>
-      <div style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;">
-        ${r.days.map(d=>`<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;font-size:12px;"><div style="font-weight:500;margin-bottom:2px;">${WEEKDAY_NAMES[d.weekday]}</div>${d.is_open&&d.start_time?`<div style="color:var(--text-2);">${d.start_time} - ${d.end_time}</div>`:'<div style="color:var(--text-3);">Fechado</div>'}</div>`).join('')}
-      </div>
-    </div>`).join('');
+    `).join('');
   } catch(e) { alert('Erro: '+e.message); }
 }
 
 function openCreateRuleModal() {
   const container = document.getElementById('ruleDaysConfig');
-  container.innerHTML = WEEKDAY_NAMES.map((name,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
-    <div style="width:70px;font-size:13px;font-weight:500;color:var(--text-2);">${name}</div>
-    <label class="toggle"><input type="checkbox" id="rd_open_${i}" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-    <input type="time" id="rd_start_${i}" value="08:00" style="width:90px;flex-shrink:0;">
-    <span style="color:var(--text-3);font-size:12px;">ate</span>
-    <input type="time" id="rd_end_${i}" value="18:00" style="width:90px;flex-shrink:0;">
-  </div>`).join('');
-  document.getElementById('rd_open_6').checked = false;
-  document.getElementById('rule_from').value = new Date().toISOString().split('T')[0];
+  container.innerHTML = WEEKDAY_NAMES.map((name,i)=>`
+    <div style="display:grid;grid-template-columns:90px 44px 1fr auto 1fr;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;font-weight:500;color:var(--text-2);">${name}</span>
+      <label class="toggle" style="flex-shrink:0;"><input type="checkbox" id="rd_open_${i}" ${i<6?'checked':''} onchange="toggleRuleDay(${i},this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      <input type="time" id="rd_start_${i}" value="08:00" style="width:100%;flex-shrink:0;" ${i===6?'disabled':''}>
+      <span style="color:var(--text-3);font-size:12px;">ate</span>
+      <input type="time" id="rd_end_${i}" value="18:00" style="width:100%;flex-shrink:0;" ${i===6?'disabled':''}>
+    </div>
+  `).join('');
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('rule_from').value = today;
   document.getElementById('rule_until').value = '';
+  document.getElementById('rule_name').value = 'Horario padrao';
   document.getElementById('ruleModal').classList.remove('hidden');
 }
 
+function toggleRuleDay(i, checked) {
+  const start = document.getElementById(`rd_start_${i}`);
+  const end   = document.getElementById(`rd_end_${i}`);
+  if (start) start.disabled = !checked;
+  if (end)   end.disabled   = !checked;
+}
+
 async function createRule() {
-  const days = WEEKDAY_NAMES.map((_,i)=>({weekday:i,is_open:document.getElementById(`rd_open_${i}`).checked,start_time:document.getElementById(`rd_start_${i}`).value,end_time:document.getElementById(`rd_end_${i}`).value,breaks:[]}));
-  const payload = {name:document.getElementById('rule_name').value,valid_from:document.getElementById('rule_from').value,valid_until:document.getElementById('rule_until').value||null,auto_confirm:document.getElementById('rule_autoconfirm').checked,timezone:'America/Sao_Paulo',days};
+  const days = WEEKDAY_NAMES.map((_,i)=>({
+    weekday: i,
+    is_open: document.getElementById(`rd_open_${i}`).checked,
+    start_time: document.getElementById(`rd_start_${i}`).value,
+    end_time: document.getElementById(`rd_end_${i}`).value,
+    breaks: []
+  }));
+
+  const payload = {
+    name:       document.getElementById('rule_name').value||'Horario padrao',
+    valid_from: document.getElementById('rule_from').value,
+    valid_until:document.getElementById('rule_until').value||null,
+    timezone:   'America/Sao_Paulo',
+    days
+  };
   if(!payload.valid_from) return alert('Data de inicio e obrigatoria');
-  try { await api('/scheduling/rules','POST',payload); document.getElementById('ruleModal').classList.add('hidden'); loadRules(); }
-  catch(e) { alert('Erro: '+e.message); }
+  try {
+    await api('/scheduling/rules','POST',payload);
+    document.getElementById('ruleModal').classList.add('hidden');
+    loadRules();
+  } catch(e) { alert('Erro: '+e.message); }
 }
 
 async function deleteRule(id) {
-  if(!confirm('Remover esta agenda?')) return;
-  try { await api(`/scheduling/rules/${id}`,'DELETE'); loadRules(); }
-  catch(e) { alert('Erro: '+e.message); }
+  openConfirm('Remover configuracao de horario','Agendamentos ja confirmados nao serao afetados.','Remover',async()=>{
+    try { await api(`/scheduling/rules/${id}`,'DELETE'); loadRules(); }
+    catch(e) { alert('Erro: '+e.message); }
+  });
 }
 
+// BLOCKS
 async function loadBlocks() {
   try {
     const blocks = await api('/scheduling/blocks');
-    document.getElementById('blocksBody').innerHTML = blocks.map(b=>`<tr>
+    const tbody = document.getElementById('blocksBody');
+    tbody.innerHTML = blocks.map(b=>`<tr>
       <td>${new Date(b.block_date+'T12:00:00').toLocaleDateString('pt-BR')}</td>
       <td>${b.start_time?`${b.start_time} - ${b.end_time}`:'Dia inteiro'}</td>
       <td>${esc(b.reason||'—')}</td>
@@ -1130,8 +1487,8 @@ async function checkSchedulingEnabled() {
   try {
     const s = await api('/admin/stats');
     schedulingEnabled = s.scheduling_enabled === true;
-    document.getElementById('nav-scheduling')?.classList.toggle('hidden', !schedulingEnabled);
-    document.getElementById('mnav-scheduling')?.classList.toggle('hidden', !schedulingEnabled);
+    document.getElementById('nav-scheduling')?.classList.toggle('hidden',!schedulingEnabled);
+    document.getElementById('mnav-scheduling')?.classList.toggle('hidden',!schedulingEnabled);
     if (schedulingEnabled) servicesCache = await api('/scheduling/services');
   } catch(_) {}
 }

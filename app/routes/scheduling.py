@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 from typing import Optional
+import httpx
+import math
 
 from app.core.admin_auth import get_current_tenant
 from app.database.connection import get_db
@@ -30,16 +32,25 @@ def _require_scheduling(tenant):
 async def list_services(tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
     _require_scheduling(tenant)
     services = db.query(Service).filter(Service.tenant_id == tenant.id).order_by(Service.name).all()
-    return [
-        {
-            "id": s.id, "name": s.name, "description": s.description,
-            "duration_minutes": s.duration_minutes,
-            "buffer_after_minutes": s.buffer_after_minutes,
-            "price": float(s.price) if s.price else None,
-            "is_active": s.is_active
-        }
-        for s in services
-    ]
+    return [_service_to_dict(s) for s in services]
+
+
+def _service_to_dict(s):
+    return {
+        "id": s.id, "name": s.name, "description": s.description,
+        "duration_minutes": s.duration_minutes,
+        "buffer_after_minutes": s.buffer_after_minutes,
+        "price": float(s.price) if s.price else None,
+        "is_active": s.is_active,
+        "auto_confirm": s.auto_confirm,
+        "required_fields": s.required_fields or [],
+        "available_weekdays": s.available_weekdays if s.available_weekdays is not None else [0,1,2,3,4,5,6],
+        "location_enabled": s.location_enabled,
+        "location_cep": s.location_cep,
+        "location_radius_km": s.location_radius_km,
+        "location_lat": s.location_lat,
+        "location_lng": s.location_lng,
+    }
 
 
 @router.post("/services")
@@ -54,12 +65,27 @@ async def create_service(payload: dict, tenant=Depends(get_current_tenant), db: 
         description=payload.get("description"),
         duration_minutes=int(payload["duration_minutes"]),
         buffer_after_minutes=int(payload.get("buffer_after_minutes", 0)),
-        price=payload.get("price")
+        price=payload.get("price"),
+        auto_confirm=payload.get("auto_confirm", True),
+        required_fields=payload.get("required_fields", []),
+        available_weekdays=payload.get("available_weekdays", [0,1,2,3,4,5,6]),
+        location_enabled=payload.get("location_enabled", False),
+        location_cep=payload.get("location_cep"),
+        location_radius_km=payload.get("location_radius_km", 20),
     )
     db.add(svc)
     db.commit()
     db.refresh(svc)
-    return {"id": svc.id, "name": svc.name}
+
+    # Geocodifica o CEP se localização habilitada
+    if svc.location_enabled and svc.location_cep:
+        lat, lng = await _geocode_cep(svc.location_cep)
+        if lat and lng:
+            svc.location_lat = lat
+            svc.location_lng = lng
+            db.commit()
+
+    return _service_to_dict(svc)
 
 
 @router.patch("/services/{service_id}")
@@ -68,11 +94,24 @@ async def update_service(service_id: int, payload: dict, tenant=Depends(get_curr
     svc = db.query(Service).filter(Service.id == service_id, Service.tenant_id == tenant.id).first()
     if not svc:
         raise HTTPException(status_code=404, detail="Service not found")
-    for f in ["name", "description", "duration_minutes", "buffer_after_minutes", "price", "is_active"]:
+
+    for f in ["name", "description", "duration_minutes", "buffer_after_minutes",
+              "price", "is_active", "auto_confirm", "required_fields",
+              "available_weekdays", "location_enabled", "location_cep", "location_radius_km"]:
         if f in payload:
             setattr(svc, f, payload[f])
+
     db.commit()
-    return {"success": True}
+
+    # Re-geocodifica se CEP mudou
+    if ("location_cep" in payload or "location_enabled" in payload) and svc.location_enabled and svc.location_cep:
+        lat, lng = await _geocode_cep(svc.location_cep)
+        if lat and lng:
+            svc.location_lat = lat
+            svc.location_lng = lng
+            db.commit()
+
+    return _service_to_dict(svc)
 
 
 @router.delete("/services/{service_id}")
@@ -86,19 +125,104 @@ async def delete_service(service_id: int, tenant=Depends(get_current_tenant), db
     return {"success": True}
 
 
+# ── LOCATION ──
+
+async def _geocode_cep(cep: str) -> tuple:
+    """Retorna (lat, lng) a partir de um CEP brasileiro usando ViaCEP + Nominatim."""
+    cep_clean = cep.replace("-", "").strip()
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"https://viacep.com.br/ws/{cep_clean}/json/")
+            if r.status_code != 200:
+                return None, None
+            data = r.json()
+            if data.get("erro"):
+                return None, None
+
+            logradouro = data.get("logradouro", "")
+            bairro = data.get("bairro", "")
+            city = data.get("localidade", "")
+            state = data.get("uf", "")
+            query = f"{logradouro}, {bairro}, {city}, {state}, Brazil"
+
+            geo = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": query, "format": "json", "limit": 1, "countrycodes": "br"},
+                headers={"User-Agent": "Vorasync/1.0 (scheduling)"}
+            )
+            results = geo.json()
+            if results:
+                return float(results[0]["lat"]), float(results[0]["lon"])
+
+            # Fallback: busca só pela cidade
+            geo2 = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": f"{city}, {state}, Brazil", "format": "json", "limit": 1},
+                headers={"User-Agent": "Vorasync/1.0 (scheduling)"}
+            )
+            results2 = geo2.json()
+            if results2:
+                return float(results2[0]["lat"]), float(results2[0]["lon"])
+    except Exception as e:
+        log.error(f"[GEOCODE] Erro: {e}")
+    return None, None
+
+
+def _haversine_km(lat1, lng1, lat2, lng2) -> float:
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+@router.post("/check-location")
+async def check_location(payload: dict, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
+    """Verifica se um CEP de cliente está dentro do raio de um serviço."""
+    _require_scheduling(tenant)
+    service_id = payload.get("service_id")
+    client_cep = payload.get("cep", "").replace("-", "").strip()
+
+    if not service_id or not client_cep:
+        raise HTTPException(status_code=400, detail="service_id e cep são obrigatórios")
+
+    svc = db.query(Service).filter(Service.id == service_id, Service.tenant_id == tenant.id).first()
+    if not svc:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    if not svc.location_enabled:
+        return {"within_range": True, "message": "Sem restrição de localização"}
+
+    if not svc.location_lat or not svc.location_lng:
+        return {"within_range": None, "message": "Localização do serviço não configurada ainda"}
+
+    client_lat, client_lng = await _geocode_cep(client_cep)
+    if not client_lat:
+        return {"within_range": None, "message": "Não foi possível localizar o CEP informado"}
+
+    distance = _haversine_km(svc.location_lat, svc.location_lng, client_lat, client_lng)
+    within = distance <= svc.location_radius_km
+
+    return {
+        "within_range": within,
+        "distance_km": round(distance, 1),
+        "radius_km": svc.location_radius_km,
+        "message": f"Distância: {distance:.1f}km (limite: {svc.location_radius_km}km)"
+    }
+
+
 # ── SCHEDULE RULES ──
 
 @router.get("/rules")
 async def list_rules(tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
     _require_scheduling(tenant)
     rules = db.query(ScheduleRule).filter(ScheduleRule.tenant_id == tenant.id).order_by(ScheduleRule.valid_from.desc()).all()
-    result = []
-    for r in rules:
-        result.append({
+    return [
+        {
             "id": r.id, "name": r.name,
             "valid_from": r.valid_from.isoformat(),
             "valid_until": r.valid_until.isoformat() if r.valid_until else None,
-            "timezone": r.timezone, "auto_confirm": r.auto_confirm,
+            "timezone": r.timezone,
             "days": [
                 {
                     "id": d.id, "weekday": d.weekday, "is_open": d.is_open,
@@ -107,8 +231,9 @@ async def list_rules(tenant=Depends(get_current_tenant), db: Session = Depends(g
                 }
                 for d in sorted(r.days, key=lambda x: x.weekday)
             ]
-        })
-    return result
+        }
+        for r in rules
+    ]
 
 
 @router.post("/rules")
@@ -120,7 +245,6 @@ async def create_rule(payload: dict, tenant=Depends(get_current_tenant), db: Ses
         valid_from=date.fromisoformat(payload["valid_from"]),
         valid_until=date.fromisoformat(payload["valid_until"]) if payload.get("valid_until") else None,
         timezone=payload.get("timezone", "America/Sao_Paulo"),
-        auto_confirm=payload.get("auto_confirm", True)
     )
     db.add(rule)
     db.flush()
@@ -203,9 +327,8 @@ async def get_availability(
     try:
         d = date.fromisoformat(target_date)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Use formato YYYY-MM-DD")
-    slots = get_available_slots(tenant.id, service_id, d, db)
-    return {"date": target_date, "service_id": service_id, "available_slots": slots}
+        raise HTTPException(status_code=400, detail="Use YYYY-MM-DD")
+    return {"date": target_date, "service_id": service_id, "available_slots": get_available_slots(tenant.id, service_id, d, db)}
 
 
 # ── APPOINTMENTS ──
@@ -247,6 +370,7 @@ async def list_appointments(
                 "source": a.source.value,
                 "assigned_to": a.assigned_to,
                 "notes": a.notes,
+                "extra_fields": a.extra_fields or {},
                 "created_at": a.created_at.isoformat()
             }
             for a in appointments
@@ -262,10 +386,10 @@ async def create_appointment(payload: dict, tenant=Depends(get_current_tenant), 
         raise HTTPException(status_code=404, detail="Service not found")
 
     scheduled_at = datetime.fromisoformat(payload["scheduled_at"])
-    requested_time = scheduled_at.strftime("%H:%M")
 
     if payload.get("check_availability", True):
         slots = get_available_slots(tenant.id, payload["service_id"], scheduled_at.date(), db)
+        requested_time = scheduled_at.strftime("%H:%M")
         if requested_time not in slots:
             raise HTTPException(status_code=409, detail=f"Horário {requested_time} indisponível. Disponíveis: {', '.join(slots) or 'nenhum'}")
 
@@ -280,7 +404,8 @@ async def create_appointment(payload: dict, tenant=Depends(get_current_tenant), 
         customer_name=payload.get("customer_name"),
         customer_phone=payload.get("customer_phone"),
         assigned_to=payload.get("assigned_to"),
-        notes=payload.get("notes")
+        notes=payload.get("notes"),
+        extra_fields=payload.get("extra_fields", {})
     )
     db.add(appt)
     db.flush()
@@ -295,10 +420,10 @@ async def update_appointment(appointment_id: int, payload: dict, tenant=Depends(
     _require_scheduling(tenant)
     appt = db.query(Appointment).filter(Appointment.id == appointment_id, Appointment.tenant_id == tenant.id).first()
     if not appt:
-        raise HTTPException(status_code=404, detail="Appointment not found")
+        raise HTTPException(status_code=404, detail="Not found")
 
     old_status = appt.status.value
-    for f in ["notes", "assigned_to", "customer_name", "customer_phone"]:
+    for f in ["notes", "assigned_to", "customer_name", "customer_phone", "extra_fields"]:
         if f in payload:
             setattr(appt, f, payload[f])
 
@@ -311,6 +436,18 @@ async def update_appointment(appointment_id: int, payload: dict, tenant=Depends(
             notes=f"{old_status} → {payload['status']}"
         ))
 
+    db.commit()
+    return {"success": True}
+
+
+@router.delete("/appointments/{appointment_id}")
+async def delete_appointment(appointment_id: int, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
+    """Exclui permanentemente um agendamento."""
+    _require_scheduling(tenant)
+    appt = db.query(Appointment).filter(Appointment.id == appointment_id, Appointment.tenant_id == tenant.id).first()
+    if not appt:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(appt)
     db.commit()
     return {"success": True}
 

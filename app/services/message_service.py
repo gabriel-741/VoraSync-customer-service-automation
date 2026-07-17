@@ -76,7 +76,6 @@ def _aware(dt):
     return dt.replace(tzinfo=timezone.utc) if dt and dt.tzinfo is None else dt
 
 
-# ← NOVO — busca contexto de agendamento para injetar no prompt
 def _get_scheduling_context(tenant_id: int, db: Session) -> str:
     try:
         from app.database.scheduling_models import Service
@@ -90,7 +89,11 @@ def _get_scheduling_context(tenant_id: int, db: Session) -> str:
         if not services:
             return ""
 
-        return get_next_days_availability(tenant_id, services, date.today(), 3, db)
+        return get_next_days_availability(
+            tenant_id, services, date.today(),
+            14, #numero de dias que a agenda alcança 
+            db
+        )
     except Exception as e:
         log.error(f"[SCHEDULING] Erro ao buscar disponibilidade: {e}")
         return ""
@@ -209,9 +212,11 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
 
     # ← NOVO — injeta disponibilidade de agendamento se habilitado e detectado
     scheduling_context = ""
-    if tenant.scheduling_enabled and intent.get("wants_schedule"):
-        scheduling_context = _get_scheduling_context(tenant.id, db)
-        log.info(f"[SCHEDULING] Contexto injetado para tenant {tenant.id}")
+    scheduling_context = ""
+    if tenant.scheduling_enabled and (intent.get("wants_schedule") or scheduling_context == ""):
+        if intent.get("wants_schedule"):
+            scheduling_context = _get_scheduling_context(tenant.id, db)
+            log.info(f"[SCHEDULING] Contexto injetado para tenant {tenant.id}")
 
     response_data, classification = await handle_message(
         text,
