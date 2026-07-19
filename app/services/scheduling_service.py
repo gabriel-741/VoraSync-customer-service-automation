@@ -1,5 +1,3 @@
-# app/services/scheduling_service.py
-
 from datetime import date, datetime, timedelta, time
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -12,17 +10,13 @@ from app.database.scheduling_models import (
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
-
 SLOT_GRANULARITY_MINUTES = 30
 
 
 def get_active_rule(tenant_id: int, target_date: date, db: Session) -> Optional[ScheduleRule]:
     rules = (
         db.query(ScheduleRule)
-        .filter(
-            ScheduleRule.tenant_id == tenant_id,
-            ScheduleRule.valid_from <= target_date,
-        )
+        .filter(ScheduleRule.tenant_id == tenant_id, ScheduleRule.valid_from <= target_date)
         .order_by(ScheduleRule.valid_from.desc())
         .all()
     )
@@ -37,31 +31,19 @@ def _parse_time(time_str: str) -> time:
     return time(h, m)
 
 
-def get_available_slots(
-    tenant_id: int,
-    service_id: int,
-    target_date: date,
-    db: Session
-) -> list[str]:
-    """
-    Retorna lista de slots disponíveis no formato HH:MM.
-    """
+def get_available_slots(tenant_id: int, service_id: int, target_date: date, db: Session) -> list[str]:
     service = db.query(Service).filter(
-        Service.id == service_id,
-        Service.tenant_id == tenant_id,
-        Service.is_active == True
+        Service.id == service_id, Service.tenant_id == tenant_id, Service.is_active == True
     ).first()
     if not service:
         return []
 
-    # Verifica se este serviço está disponível neste dia da semana
     weekday = target_date.weekday()
     available_weekdays = service.available_weekdays or [0, 1, 2, 3, 4, 5, 6]
     if weekday not in available_weekdays:
         return []
 
     total_block = service.duration_minutes + service.buffer_after_minutes
-
     rule = get_active_rule(tenant_id, target_date, db)
     if not rule:
         return []
@@ -74,7 +56,6 @@ def get_available_slots(
     work_end   = datetime.combine(target_date, _parse_time(day_cfg.end_time))
 
     blocked: list[tuple[datetime, datetime]] = []
-
     for brk in day_cfg.breaks:
         blocked.append((
             datetime.combine(target_date, _parse_time(brk.start_time)),
@@ -82,8 +63,7 @@ def get_available_slots(
         ))
 
     for blk in db.query(ScheduleBlock).filter(
-        ScheduleBlock.tenant_id == tenant_id,
-        ScheduleBlock.block_date == target_date
+        ScheduleBlock.tenant_id == tenant_id, ScheduleBlock.block_date == target_date
     ).all():
         if blk.start_time is None:
             return []
@@ -101,11 +81,19 @@ def get_available_slots(
         appt_end = appt.scheduled_at + timedelta(minutes=appt.duration_minutes + appt.buffer_minutes)
         blocked.append((appt.scheduled_at, appt_end))
 
+    # ← Filtra horários já passados (com 10min de tolerância)
+    now_with_buffer = datetime.now() + timedelta(minutes=10)
+
     available = []
     current = work_start
-
     while current + timedelta(minutes=total_block) <= work_end:
         slot_end = current + timedelta(minutes=total_block)
+
+        # Pula slots no passado
+        if current < now_with_buffer:
+            current += timedelta(minutes=SLOT_GRANULARITY_MINUTES)
+            continue
+
         conflict = any(current < b_end and slot_end > b_start for b_start, b_end in blocked)
         if not conflict:
             available.append(current.strftime("%H:%M"))
@@ -114,30 +102,48 @@ def get_available_slots(
     return available
 
 
-def get_next_days_availability(
-    tenant_id: int,
-    services: list,
-    from_date: date,
-    days_ahead: int,
-    db: Session
-) -> str:
-    """
-    Contexto de disponibilidade para a IA — 14 dias à frente por padrão.
-    """
+def get_next_days_availability(tenant_id: int, services: list, from_date: date, days_ahead: int, db: Session) -> str:
     WEEKDAY_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+    now = datetime.now()
+
     lines = [
-        "[HORÁRIOS DISPONÍVEIS PARA AGENDAMENTO]",
-        "Use APENAS estes horários ao oferecer agendamentos. Não invente disponibilidade.\n"
+        f"[AGENDA — atualizada em {now.strftime('%d/%m/%Y às %H:%M')}]",
+        "",
+        "⚠️ REGRAS ABSOLUTAS — NUNCA VIOLE:",
+        "1. Use SOMENTE os horários listados abaixo — se não aparece, NÃO está disponível",
+        "2. Se um horário não consta na lista, diga claramente que não está disponível",
+        "3. Horários passados já foram filtrados — não aparecem mais",
+        "4. Bloqueios e intervalos já foram descontados dos slots abaixo",
+        "",
+        "SERVIÇOS DISPONÍVEIS (use o ID ao agendar):",
     ]
+
+    for svc in services:
+        required = ""
+        if svc.required_fields:
+            names = [f['label'] for f in (svc.required_fields or [])]
+            required = f" | Dados que o bot deve coletar antes de agendar: {', '.join(names)}"
+
+        location = ""
+        if svc.location_enabled and svc.location_radius_km:
+            location = f" | Exige CEP do cliente — raio máximo: {svc.location_radius_km}km"
+
+        confirm = "confirma automático" if svc.auto_confirm else "aguarda confirmação do operador"
+
+        lines.append(f"  • {svc.name} (ID:{svc.id}, {svc.duration_minutes}min, {confirm}){required}{location}")
+
+    lines.append("")
+    lines.append("HORÁRIOS DISPONÍVEIS (somente estes existem — não invente):")
+    lines.append("")
 
     found_any = False
     for i in range(days_ahead):
         d = from_date + timedelta(days=i)
         day_name = WEEKDAY_PT[d.weekday()]
         if i == 0:
-            label = f"Hoje ({d.strftime('%d/%m')})"
+            label = f"Hoje, {day_name} {d.strftime('%d/%m')}"
         elif i == 1:
-            label = f"Amanhã ({d.strftime('%d/%m')})"
+            label = f"Amanhã, {day_name} {d.strftime('%d/%m')}"
         else:
             label = f"{day_name} {d.strftime('%d/%m')}"
 
@@ -146,23 +152,31 @@ def get_next_days_availability(
             slots = get_available_slots(tenant_id, svc.id, d, db)
             if slots:
                 found_any = True
-                day_lines.append(f"  • {svc.name} (ID:{svc.id}, {svc.duration_minutes}min): {', '.join(slots)}")
+                day_lines.append(f"  [{svc.name} ID:{svc.id}]: {', '.join(slots)}")
 
         if day_lines:
-            lines.append(f"{label}:")
+            lines.append(f"📅 {label}:")
             lines.extend(day_lines)
             lines.append("")
 
     if not found_any:
-        lines.append("Sem horários disponíveis nos próximos dias.")
-        lines.append("Informe ao cliente e encaminhe para contato manual.")
+        lines.append("❌ Nenhum horário disponível nos próximos dias.")
+        lines.append("Informe ao cliente e peça para entrar em contato diretamente.")
     else:
-        lines.append("\nComo criar o agendamento:")
-        lines.append("Quando o cliente confirmar: serviço + data + horário + nome completo, responda com needs_human=true.")
-        lines.append("Formato OBRIGATÓRIO do handoff_reason (sem dois pontos na hora):")
-        lines.append('  scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_DO_CLIENTE')
-        lines.append('  Exemplo: scheduling:1:2026-07-21:0900:Gabriel da Silva')
-        lines.append('  IMPORTANTE: horário em HHMM (sem :), ex: 09:00 → 0900, 14:30 → 1430')
+        lines.append("")
+        lines.append("FLUXO OBRIGATÓRIO PARA AGENDAMENTO:")
+        lines.append("1. Pergunte qual SERVIÇO o cliente quer (se houver mais de 1)")
+        lines.append("2. Pergunte qual DIA prefere")
+        lines.append("3. Mostre APENAS os slots daquele dia para aquele serviço")
+        lines.append("4. Colete todos os dados obrigatórios do serviço (se houver)")
+        lines.append("5. Se o serviço exige CEP, pergunte o CEP e informe que verificará o raio")
+        lines.append("6. Só após ter TODOS os dados, confirme e use needs_human=true")
+        lines.append("")
+        lines.append("FORMATO DO handoff_reason (OBRIGATÓRIO — sem dois-pontos na hora):")
+        lines.append("  scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_COMPLETO")
+        lines.append("  Exemplo: scheduling:1:2026-07-21:0900:Gabriel da Silva")
+        lines.append("  ❌ ERRADO: scheduling:1:2026-07-21:09:00:Gabriel  ← dois-pontos na hora quebra tudo")
+        lines.append("  ✅ CERTO:  scheduling:1:2026-07-21:0900:Gabriel da Silva")
 
     return "\n".join(lines)
 
@@ -174,39 +188,29 @@ def create_appointment_from_ai(
     customer_phone: str,
     db: Session
 ) -> Optional["Appointment"]:
-    """
-    Formato esperado: scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME
-    Exemplo:          scheduling:1:2026-07-21:0900:Gabriel da Silva
-    """
     try:
         if not handoff_reason.startswith("scheduling:"):
             return None
 
-        # Divide em exatamente 5 partes (4 splits)
         parts = handoff_reason.split(":", 4)
         if len(parts) < 5:
             log.warning(f"[SCHEDULING] Formato inválido: {handoff_reason}")
             return None
 
         _, service_id_str, date_str, time_hhmm, customer_name = parts
-
         service_id = int(service_id_str)
-
-        # Converte HHMM → HH:MM
         time_hhmm = time_hhmm.strip()
+
         if len(time_hhmm) == 4 and time_hhmm.isdigit():
             time_str = f"{time_hhmm[:2]}:{time_hhmm[2:]}"
         elif ":" in time_hhmm:
-            # Tolerância: IA enviou HH:MM mesmo assim
             time_str = time_hhmm
         else:
-            log.warning(f"[SCHEDULING] Formato de hora inválido: {time_hhmm}")
+            log.warning(f"[SCHEDULING] Hora inválida: {time_hhmm}")
             return None
 
         service = db.query(Service).filter(
-            Service.id == service_id,
-            Service.tenant_id == tenant_id,
-            Service.is_active == True
+            Service.id == service_id, Service.tenant_id == tenant_id, Service.is_active == True
         ).first()
         if not service:
             log.warning(f"[SCHEDULING] Serviço {service_id} não encontrado")
@@ -214,13 +218,16 @@ def create_appointment_from_ai(
 
         scheduled_at = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
 
-        # Valida disponibilidade
-        slots = get_available_slots(tenant_id, service_id, scheduled_at.date(), db)
-        if time_str not in slots:
-            log.warning(f"[SCHEDULING] Slot {time_str} indisponível em {date_str}. Slots: {slots}")
+        # Não permite agendar no passado
+        if scheduled_at < datetime.now():
+            log.warning(f"[SCHEDULING] Tentativa de agendar no passado: {scheduled_at}")
             return None
 
-        # Usa auto_confirm do SERVIÇO
+        slots = get_available_slots(tenant_id, service_id, scheduled_at.date(), db)
+        if time_str not in slots:
+            log.warning(f"[SCHEDULING] Slot {time_str} indisponível em {date_str}. Disponíveis: {slots}")
+            return None
+
         status = (
             AppointmentStatusEnum.confirmed
             if service.auto_confirm
@@ -241,17 +248,15 @@ def create_appointment_from_ai(
         )
         db.add(appt)
         db.flush()
-
         db.add(AppointmentHistory(
             appointment_id=appt.id,
             changed_by="ia",
             action="created",
-            notes=f"Criado via WhatsApp. Status: {status.value}"
+            notes=f"Via WhatsApp. Status: {status.value}"
         ))
-
         db.commit()
         db.refresh(appt)
-        log.info(f"[SCHEDULING] Agendamento {appt.id} criado: {customer_name} — {service.name} {date_str} {time_str}")
+        log.info(f"[SCHEDULING] Agendamento #{appt.id} criado: {customer_name} — {service.name} {date_str} {time_str} ({status.value})")
         return appt
 
     except Exception as e:

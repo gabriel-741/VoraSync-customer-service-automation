@@ -939,6 +939,8 @@ async function loadContacts() {
             <button class="btn btn-ghost btn-xs${!hasProfile?'" style="opacity:.45':''}" onclick='openCrmModal(${c.id},${JSON.stringify(c.name||"")},${JSON.stringify(c.phone||"")},${JSON.stringify(c.profile||{})})'>CRM${hasProfile?'':' vazio'}</button>
             ${c.ai_blocked?`<button class="btn btn-ghost btn-xs" onclick="unblockContact(${c.id})">Desbloquear</button>`:`<button class="btn btn-danger btn-xs" onclick="blockContact(${c.id})">Bloquear bot</button>`}
             <button class="btn btn-ghost btn-xs" onclick="clearContactData(${c.id},'${esc(c.name||c.phone)}')">Limpar</button>
+            <button class="btn btn-danger btn-xs" onclick="confirmDeleteContact(${c.id},'${esc(c.name||c.phone)}')" title="Excluir este contato permanentemente">Excluir</button>
+
           </div></td>
         </tr>`;
       }).join('');
@@ -966,7 +968,7 @@ async function unblockContact(id) {
   catch(e) { alert('Erro: '+e.message); }
 }
 
-async function blockByPhone() {
+async function blockByPhone() {x
   const phone = document.getElementById('blockPhoneInput').value.trim();
   if (!phone) return alert('Informe o numero.');
   try {
@@ -1199,9 +1201,38 @@ async function loadServices() {
       <td class="actions-row">
         <button class="btn btn-ghost btn-xs" onclick="openEditServiceModal(${s.id})">Editar</button>
         <button class="btn btn-danger btn-xs" onclick="toggleServiceActive(${s.id},${!s.is_active})">${s.is_active?'Desativar':'Ativar'}</button>
+        <button class="btn btn-danger btn-xs" onclick="confirmDeleteService(${s.id},'${esc(s.name)}')" title="Excluir permanentemente">Excluir</button>
       </td>
     </tr>`).join('');
   } catch(e) { alert('Erro: '+e.message); }
+}
+
+async function confirmDeleteContact(id, name) {
+  openConfirm(
+    `Excluir contato "${name}"`,
+    'Isso apagará o contato, todas as mensagens e o histórico. Não pode ser desfeito.',
+    'Excluir',
+    async () => {
+      try {
+        await api(`/admin/contacts/${id}/clear-data`, 'POST');
+        loadContacts();
+      } catch(e) { alert('Erro: ' + e.message); }
+    }
+  );
+}
+
+async function confirmDeleteService(id, name) {
+  openConfirm(
+    `Excluir serviço "${name}"`,
+    'Esta ação é permanente. Agendamentos existentes não serão afetados.',
+    'Excluir',
+    async () => {
+      try {
+        await api(`/scheduling/services/${id}`, 'DELETE');
+        loadServices();
+      } catch(e) { alert('Erro: ' + e.message); }
+    }
+  );
 }
 
 function renderWeekdayBadges(weekdays) {

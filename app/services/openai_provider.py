@@ -44,26 +44,35 @@ async def call_openai(
     # =========================
     format_instruction = """
 
-[FORMATO DE RESPOSTA OBRIGATÓRIO]
-Você DEVE responder em JSON válido com exatamente este formato:
-{"response": "sua resposta normal em texto", "confidence": 0.0 a 1.0, "needs_human": false, "handoff_reason": ""}
+[FORMATO OBRIGATÓRIO — responda SEMPRE em JSON válido]
+{"response": "mensagem ao cliente", "confidence": 0.0, "needs_human": false, "handoff_reason": ""}
 
-confidence representa o quão segura você está de que sua resposta resolve a necessidade do cliente.
+REGRAS:
+- confidence: 0.0 a 1.0
+- needs_human: true SOMENTE para limitações explícitas no prompt OU para confirmar agendamento
+- Nunca use linguagem de "encaminhar para atendente" para resolver agendamentos — o sistema faz isso automaticamente
 
-AGENDAMENTO — quando o cliente confirmar serviço + data + horário + nome:
-- handoff_reason no formato EXATO: scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_COMPLETO
-- Exemplo correto: scheduling:1:2026-07-21:0900:Gabriel da Silva
-- HHMM sem dois pontos: 09:00 → 0900, 10:30 → 1030, 14:00 → 1400
-- Use o ID numérico do serviço (está no contexto como ID:N)
-- Antes de confirmar, certifique-se de ter: nome completo do cliente, serviço desejado, data e horário
+AGENDAMENTO — SIGA ESTE FLUXO OBRIGATÓRIO:
+1. Pergunte qual serviço (se houver mais de 1 disponível — liste-os pelo nome)
+2. Pergunte qual dia o cliente prefere
+3. Mostre APENAS os slots disponíveis naquele dia para aquele serviço (estão no contexto)
+4. Se o serviço exige campos extras (listados no contexto), colete TODOS antes de confirmar
+5. Se o serviço exige CEP, pergunte o CEP do cliente antes de confirmar
+6. Só confirme quando tiver: serviço + data + horário + nome completo + campos extras (se houver)
 
-needs_human deve ser true SOMENTE quando o pedido do cliente exigir uma capacidade que está
-explicitamente listada como NÃO DISPONÍVEL nas instruções acima (ex: agendamento, consulta de estoque,
-ou qualquer outra limitação descrita no system prompt). Quando isso ocorrer:
-- sua "response" deve avisar educadamente o cliente que você vai encaminhá-lo para um atendente
-- "handoff_reason" deve descrever em poucas palavras o que o cliente precisa (ex: "cliente quer agendar horário")
+QUANDO CONFIRMAR O AGENDAMENTO:
+- needs_human: true
+- handoff_reason EXATO: scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_COMPLETO
+- HHMM sem dois-pontos: 09:00 → 0900, 14:30 → 1430
+- Exemplo: scheduling:1:2026-07-21:0900:Gabriel da Silva
 
-Não marque needs_human=true por dúvidas genéricas, apenas por limitações explícitas de capacidade.
+ERROS COMUNS — NUNCA FAÇA:
+- ❌ Não invente horários — use SOMENTE os do contexto
+- ❌ Não confirme agendamento sem ter todos os dados
+- ❌ Não diga que vai "encaminhar para atendente" para agendar — o sistema cuida disso
+- ❌ Não use dois-pontos na hora: 09:00 é ERRADO, 0900 é CERTO
+- ❌ Não ignore os campos obrigatórios do serviço
+- ❌ Não ignore restrição de CEP quando o serviço exige
 """
 
     messages = [

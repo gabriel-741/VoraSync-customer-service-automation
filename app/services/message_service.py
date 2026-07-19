@@ -210,7 +210,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         await send_message(sender, "Posso te encaminhar para um especialista humano. Deseja isso?", api_key=tenant.api_key, instance=tenant.whatsapp_instance)
         return None
 
-    # ← NOVO — injeta disponibilidade de agendamento se habilitado e detectado
+    # injeta disponibilidade de agendamento se habilitado e detectado
     scheduling_context = ""
     scheduling_context = ""
     if tenant.scheduling_enabled and (intent.get("wants_schedule") or scheduling_context == ""):
@@ -224,7 +224,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         model=tenant.ai_model,
         recent_messages=recent_messages,
         contact_profile=contact.profile or {},
-        scheduling_context=scheduling_context   # ← NOVO
+        scheduling_context=scheduling_context 
     )
 
     if not response_data:
@@ -233,32 +233,72 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     response = response_data["text"]
     if not response:
         return None
+    
 
-    # ← NOVO — handoff direto por agendamento ou limitação de capacidade
-    if response_data.get("needs_human"):
-        reason = response_data.get("handoff_reason") or "Capacidade não disponível automaticamente"
 
-        await send_message(sender, response, api_key=tenant.api_key, instance=tenant.whatsapp_instance)
-        db.add(Message(tenant_id=tenant.id, conversation_id=conversation.id, contact_id=contact.id, direction=DirectionEnum.outbound, content=response))
-        db.commit()
+# ── Detecta handoff de agendamento ──
+    if response_data.get("needs_human") and response_data.get("handoff_reason", "").startswith("scheduling:"):
+        from app.services.scheduling_service import create_appointment_from_ai
+        from app.database.scheduling_models import Service, AppointmentStatusEnum
 
-        # Tenta criar agendamento se for um scheduling handoff
-        if tenant.scheduling_enabled and reason.startswith("scheduling:"):
-            from app.services.scheduling_service import create_appointment_from_ai
-            appt = create_appointment_from_ai(tenant.id, reason, contact.id, sender, db)
-            if appt:
-                log.info(f"[SCHEDULING] Agendamento {appt.id} criado via IA")
-                # Se auto_confirm, não precisa de handoff humano
-                if appt.status.value == "confirmed":
-                    background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
-                    return response
+        appt = create_appointment_from_ai(
+            tenant_id=tenant.id,
+            handoff_reason=response_data["handoff_reason"],
+            contact_id=contact.id,
+            customer_phone=contact.phone,
+            db=db
+        )
 
-        summary = await generate_handoff_summary(recent_messages + [{"direction": "outbound", "content": response}], reason)
-        conversation.state = ConversationStateEnum.human_active
-        conversation.handoff_offered = True; conversation.handoff_reason = reason; conversation.handoff_summary = summary; db.commit()
-        background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
-        background_tasks.add_task(trim_old_messages, conversation.id)
-        return response
+        if appt:
+            # Busca nome do serviço
+            svc = db.query(Service).filter(Service.id == appt.service_id).first()
+            svc_name = svc.name if svc else "Serviço"
+            data_hora = appt.scheduled_at.strftime("%d/%m/%Y às %H:%M")
+
+            if appt.status == AppointmentStatusEnum.confirmed:
+                # Auto-confirmado — informa o cliente diretamente, sem handoff
+                msg = (
+                    f"✅ *Agendamento confirmado!*\n\n"
+                    f"📋 *{svc_name}*\n"
+                    f"📅 {data_hora}\n\n"
+                    f"Te esperamos! Qualquer dúvida é só chamar. 😊"
+                )
+            else:
+                # Pendente — operador precisa confirmar
+                msg = (
+                    f"📋 *Solicitação de agendamento recebida!*\n\n"
+                    f"*{svc_name}*\n"
+                    f"📅 {data_hora}\n\n"
+                    f"Vamos verificar e confirmar em breve. "
+                    f"Você receberá uma mensagem assim que for confirmado. 😊"
+                )
+
+            await send_message(tenant, contact.phone, msg)
+
+            # Atualiza conversa mas NÃO vai para handoff
+            conversation.state = "ai_active"
+            conversation.handoff_offered = False
+            db.commit()
+            return  # ← Sai sem handoff
+
+        else:
+            # Slot inválido ou passado — aumenta score, NÃO jogar para handoff
+            log.warning(f"[SCHEDULING] create_appointment_from_ai retornou None para: {response_data['handoff_reason']}")
+
+            # Injeta feedback na resposta ao invés de handoff
+            response_text = response_data.get("response", "")
+            if not response_text or "humano" in response_text.lower() or "atendente" in response_text.lower():
+                response_text = (
+                    "Não consegui confirmar esse horário — pode ser que já esteja ocupado ou seja uma data/hora inválida. "
+                    "Posso te mostrar os horários disponíveis? Qual dia você prefere?"
+                )
+
+            await send_message(tenant, contact.phone, response_text)
+
+            # Aumenta soft_score mas não faz handoff
+            conversation.soft_score = min(90, (conversation.soft_score or 0) + 10)
+            db.commit()
+            return
 
     if response_data["confidence"] < 0.7:
         conversation.soft_score = min((conversation.soft_score or 0) + 20, SOFT_CAP)

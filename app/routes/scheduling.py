@@ -120,7 +120,7 @@ async def delete_service(service_id: int, tenant=Depends(get_current_tenant), db
     svc = db.query(Service).filter(Service.id == service_id, Service.tenant_id == tenant.id).first()
     if not svc:
         raise HTTPException(status_code=404, detail="Service not found")
-    svc.is_active = False
+    db.delete(svc)
     db.commit()
     return {"success": True}
 
@@ -335,6 +335,7 @@ async def get_availability(
 
 @router.get("/appointments")
 async def list_appointments(
+
     status: Optional[str] = None,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
@@ -351,6 +352,29 @@ async def list_appointments(
         q = q.filter(Appointment.scheduled_at >= datetime.fromisoformat(from_date))
     if to_date:
         q = q.filter(Appointment.scheduled_at <= datetime.fromisoformat(to_date))
+
+    # Auto-atualiza status de agendamentos passados
+    now = datetime.now()
+    expired = db.query(Appointment).filter(
+        Appointment.tenant_id == tenant.id,
+        Appointment.scheduled_at < now,
+        Appointment.status.in_([AppointmentStatusEnum.pending, AppointmentStatusEnum.confirmed])
+    ).all()
+    
+    for appt in expired:
+        old = appt.status
+        # pending vencido → no_show; confirmed vencido → completed (operador confirma manualmente se quiser)
+        appt.status = AppointmentStatusEnum.no_show if old == AppointmentStatusEnum.pending else AppointmentStatusEnum.completed
+        db.add(AppointmentHistory(
+            appointment_id=appt.id,
+            changed_by="sistema",
+            action="status_auto",
+            notes=f"Atualizado automaticamente: {old.value} → {appt.status.value}"
+        ))
+    
+    if expired:
+        db.commit()
+    
 
     total = q.count()
     appointments = q.order_by(Appointment.scheduled_at.asc()).offset((page - 1) * limit).limit(limit).all()
