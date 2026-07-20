@@ -338,17 +338,6 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
 
     db.commit()
 
-    if confidence < 0.7 and not is_helping:
-        conversation.soft_score = min(90, (conversation.soft_score or 0) + 25)
-        conversation.consecutive_friction = (
-            (conversation.consecutive_friction or 0) + 1
-        )
-    elif confidence >= 0.7:
-        # Decay: resposta boa reduz o score
-        conversation.soft_score = max(0, (conversation.soft_score or 0) - 10)
-        conversation.consecutive_friction = 0
-    db.commit()
-
     should_offer_after = (conversation.explicit_score >= EXPLICIT_CAP or conversation.soft_score >= SOFT_CAP or (conversation.consecutive_friction or 0) >= FRICTION_STREAK_THRESHOLD)
 
     await send_message(sender, response, api_key=tenant.api_key, instance=tenant.whatsapp_instance)
