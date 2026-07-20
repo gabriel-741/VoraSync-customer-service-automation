@@ -8,13 +8,6 @@ log = get_logger(__name__)
 
 
 async def analyze_intent(text: str, recent_messages: list = None) -> dict:
-    """
-    Classifica a intenção da mensagem atual.
-    
-    Parâmetros:
-    - text: mensagem atual do usuário
-    - recent_messages: lista das últimas mensagens (máx 4) para contexto
-    """
     recent = (recent_messages or [])[-4:]
 
     try:
@@ -37,24 +30,29 @@ Retorne APENAS JSON:
   "wants_schedule": false
 }
 
-REGRAS:
+REGRAS ESTRITAS:
 
-wants_human = true APENAS quando o cliente pede explicitamente: "quero falar com humano", 
-"me passa para um atendente", "preciso de uma pessoa real". NÃO marque por frustração sozinha.
+wants_human = true APENAS quando explícito:
+"quero falar com humano", "me passa para atendente", "preciso de uma pessoa".
+NÃO marque por frustração, pergunta repetida ou resposta inesperada.
 
-accepted_handoff = true quando o bot perguntou se quer atendente E o cliente disse sim/pode ser/quero.
+accepted_handoff = true quando o bot ACABOU DE PERGUNTAR se quer atendente
+E o cliente claramente disse sim: "sim", "pode ser", "quero", "pode", "por favor".
 
-declined_handoff = true quando o bot perguntou se quer atendente E o cliente disse não/pode continuar.
+declined_handoff = true quando o bot ACABOU DE PERGUNTAR se quer atendente
+E o cliente claramente disse não: "não", "nao", "pode continuar", "tudo bem".
 
-confusion = true quando o cliente demonstra frustração PORQUE a IA não conseguiu resolver:
-"não me ajudou", "não entendeu", "isso não é o que eu quis dizer", repetição de mesma pergunta 3x.
-NÃO marque apenas por perguntas simples.
+confusion = true SOMENTE quando há frustração EXPLÍCITA porque a IA não resolveu:
+"isso não é o que eu quis dizer", "você não me entende", "já falei isso",
+repetição idêntica da mesma pergunta pela TERCEIRA vez consecutiva.
+NÃO marque para: "mas eu nem falei nada", "não entendi", respostas curtas, saudações.
 
-wants_schedule = true para: marcar/agendar/remarcar/cancelar horário, verificar disponibilidade,
-"tem horário?", "quando posso ir?", "quais horários têm?", "posso marcar para X?".
-NÃO marque para perguntas sobre preço ou informações gerais do serviço sem intenção de agendar.
+wants_schedule = true para: marcar, agendar, remarcar, cancelar horário,
+verificar disponibilidade, "tem horário?", "quando posso ir?", "quais horários têm?".
+NÃO marque para perguntas sobre preço ou informações sem intenção de agendar.
 
-accepted_handoff e declined_handoff nunca podem ser true simultaneamente."""
+accepted_handoff e declined_handoff nunca true simultaneamente.
+Em caso de dúvida, marque false. Falso negativo é melhor que falso positivo."""
                 },
                 {
                     "role": "user",
@@ -65,7 +63,7 @@ accepted_handoff e declined_handoff nunca podem ser true simultaneamente."""
                 }
             ],
             temperature=0,
-            max_tokens=150
+            max_tokens=120
         )
 
         result = json.loads(response.choices[0].message.content)

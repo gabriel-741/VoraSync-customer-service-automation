@@ -17,109 +17,101 @@ client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 # =========================
 async def call_openai(
     message: str,
-    model: str,
-    system_prompt: str,
-    recent_messages: list | None = None,
-    contact_profile: dict | None = None,
-    memory_summary: str | None = None
-) -> dict:
+    system_prompt: str = "",
+    model: str = "gpt-4o-mini",
+    recent_messages: list = None,
+    scheduling_context: str = "",
+    crm_context: str = ""
+) -> tuple:
 
-    recent_messages = recent_messages or []
-    contact_profile = normalize_profile(contact_profile or {})
+    DEFAULT_PROMPT = """Você é um assistente virtual simpático e descontraído.
+Responda sempre em português brasileiro informal e natural.
+Use linguagem simples e direta.
+Evite expressões formais como "assisti-lo" ou "em que posso ser útil".
 
-    profile_text = ""
-    if contact_profile:
-        profile_text = (
-            "\n\n[PERFIL DO CLIENTE]\n"
-            f"Nome: {contact_profile.get('nome', '')}\n"
-            f"Empresa: {contact_profile.get('empresa', '')}\n"
-            f"Interesse: {contact_profile.get('interesse', '')}\n"
-            f"Etapa: {contact_profile.get('etapa_venda', '')}\n"
-        )
+IMPORTANTE:
+- Trate cada conversa como um NOVO atendimento
+- Não assuma o que o cliente quer com base em conversas anteriores
+- Faça perguntas para entender a necessidade atual
+- Seja direto e objetivo"""
 
-    memory_text = f"\n\n[RESUMO DA CONVERSA]\n{memory_summary}" if memory_summary else ""
+    base_prompt = system_prompt.strip() if system_prompt and system_prompt.strip() else DEFAULT_PROMPT
 
-    # =========================
-    # FORMATO + REGRA DE HANDOFF DIRETO
-    # =========================
+    # CRM — contexto de identificação, separado do system prompt principal
+    crm_block = ""
+    if crm_context and crm_context.strip():
+        crm_block = f"\n\n{crm_context}"
+
+    # Agendamento — só aparece quando relevante
+    scheduling_block = ""
+    if scheduling_context and scheduling_context.strip():
+        scheduling_block = f"\n\n{scheduling_context}"
+
     format_instruction = """
 
-[FORMATO OBRIGATÓRIO — responda SEMPRE em JSON válido]
-{"response": "mensagem ao cliente", "confidence": 0.0, "needs_human": false, "handoff_reason": ""}
+[FORMATO DE RESPOSTA OBRIGATÓRIO]
+Responda SEMPRE em JSON válido com exatamente este formato:
+{"response": "sua mensagem ao cliente", "confidence": 0.85, "needs_human": false, "handoff_reason": ""}
 
-REGRAS:
-- confidence: 0.0 a 1.0
-- needs_human: true SOMENTE para limitações explícitas no prompt OU para confirmar agendamento
-- Nunca use linguagem de "encaminhar para atendente" para resolver agendamentos — o sistema faz isso automaticamente
+- confidence: 0.0 a 1.0 (quão certa está sua resposta)
+- needs_human: true SOMENTE para limitações explícitas no system prompt OU para confirmar agendamento
+- Nunca diga "vou encaminhar para um atendente" para resolver agendamentos — o sistema faz isso automaticamente
 
-AGENDAMENTO — SIGA ESTE FLUXO OBRIGATÓRIO:
-1. Pergunte qual serviço (se houver mais de 1 disponível — liste-os pelo nome)
-2. Pergunte qual dia o cliente prefere
-3. Mostre APENAS os slots disponíveis naquele dia para aquele serviço (estão no contexto)
-4. Se o serviço exige campos extras (listados no contexto), colete TODOS antes de confirmar
-5. Se o serviço exige CEP, pergunte o CEP do cliente antes de confirmar
-6. Só confirme quando tiver: serviço + data + horário + nome completo + campos extras (se houver)
+AGENDAMENTO — siga este fluxo obrigatório:
+1. Pergunte qual serviço (se houver mais de 1 — liste pelo nome)
+2. Pergunte qual dia prefere
+3. Mostre APENAS os slots disponíveis naquele dia (estão no contexto)
+4. Colete campos obrigatórios do serviço (se listados no contexto)
+5. Só confirme quando tiver: serviço + data + horário + nome completo
 
-QUANDO CONFIRMAR O AGENDAMENTO:
+Quando confirmar:
 - needs_human: true
-- handoff_reason EXATO: scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_COMPLETO
-- HHMM sem dois-pontos: 09:00 → 0900, 14:30 → 1430
-- Exemplo: scheduling:1:2026-07-21:0900:Gabriel da Silva
+- handoff_reason: scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_COMPLETO
+- HHMM sem dois-pontos: 09:00 → 0900
 
-ERROS COMUNS — NUNCA FAÇA:
-- ❌ Não invente horários — use SOMENTE os do contexto
-- ❌ Não confirme agendamento sem ter todos os dados
-- ❌ Não diga que vai "encaminhar para atendente" para agendar — o sistema cuida disso
-- ❌ Não use dois-pontos na hora: 09:00 é ERRADO, 0900 é CERTO
-- ❌ Não ignore os campos obrigatórios do serviço
-- ❌ Não ignore restrição de CEP quando o serviço exige
-"""
+NUNCA invente horários. NUNCA confirme sem todos os dados."""
 
-    messages = [
-        {
-            "role": "system",
-            "content": system_prompt + profile_text + memory_text + format_instruction
-        }
-    ]
+    full_system = base_prompt + crm_block + scheduling_block + format_instruction
 
-    MAX_HISTORY = 8
-    for msg in recent_messages[-MAX_HISTORY:]:
-        role = "user" if msg.get("direction") == "inbound" else "assistant"
-        content = msg.get("content", "")
-        if len(content) > 1000:
-            content = content[:1000]
-        messages.append({"role": role, "content": content})
+    messages = [{"role": "system", "content": full_system}]
 
-    messages.append({"role": "user", "content": message[:1500]})
+    for msg in (recent_messages or [])[-8:]:
+        role = "assistant" if msg.get("direction") == "outbound" else "user"
+        messages.append({"role": role, "content": msg.get("content", "")})
+
+    messages.append({"role": "user", "content": message})
 
     try:
         response = await client.chat.completions.create(
             model=model,
             messages=messages,
-            max_tokens=500,
-            temperature=0.3,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            temperature=0.4,
+            max_tokens=600
         )
 
-        result = json.loads(response.choices[0].message.content)
+        import json
+        raw = response.choices[0].message.content
+        data = json.loads(raw)
 
         return {
-            "text": result.get("response", "").strip(),
-            "confidence": max(0.0, min(1.0, float(result.get("confidence", 0.8)))),
-            "needs_human": bool(result.get("needs_human", False)),
-            "handoff_reason": (result.get("handoff_reason") or "").strip()
-        }
+            "text":           data.get("response", ""),
+            "response":       data.get("response", ""),
+            "confidence":     float(data.get("confidence", 0.8)),
+            "needs_human":    bool(data.get("needs_human", False)),
+            "handoff_reason": data.get("handoff_reason", "")
+        }, None
 
     except Exception as e:
-        log.error(f"[OPENAI] Erro na chamada principal: {e}")
+        log.error(f"[OPENAI] Erro: {e}")
         return {
-            "text": "Desculpe, tive um problema para processar sua mensagem. Pode repetir?",
-            "confidence": 0.3,
+            "text": "Desculpe, tive um problema técnico. Pode repetir?",
+            "response": "Desculpe, tive um problema técnico. Pode repetir?",
+            "confidence": 0.0,
             "needs_human": False,
             "handoff_reason": ""
-        }
-
-
+        }, None
+    
 # =========================
 # EXTRAÇÃO DE PERFIL (sem mudanças)
 # =========================

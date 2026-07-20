@@ -22,36 +22,41 @@ MODELS = {
 
 async def handle_message(
     message: str,
-    system_prompt: str | None = None,
-    model: str | None = None,
-    recent_messages: list | None = None,
-    contact_profile: dict | None = None,
-    scheduling_context: str = ""   # ← NOVO
+    system_prompt: str = "",
+    model: str = "gpt-4o-mini",
+    recent_messages: list = None,
+    contact_profile: dict = None,
+    scheduling_context: str = "",
+    crm_context: str = ""
 ) -> tuple[dict | None, dict]:
 
     if not message.strip():
         return None, {"model_tier": "simple"}
 
-    recent_messages  = recent_messages or []
-    contact_profile  = contact_profile or {}
-    classification   = classify_message(message)
+    recent_messages = recent_messages or []
+    contact_profile = contact_profile or {}
+    classification = classify_message(message)
 
     log.info(f"[IA] classificação: {classification}")
 
     prompt = system_prompt if system_prompt else DEFAULT_PROMPT
 
-    # Injeta contexto de agendamento se disponível
+    # Injeta contexto de agendamento
     if scheduling_context:
-        prompt = prompt + "\n\n" + scheduling_context
+        prompt += "\n\n" + scheduling_context
 
-    selected_model = model or MODELS.get(classification["model_tier"], MODELS["simple"])
+    selected_model = model or MODELS.get(
+        classification["model_tier"],
+        MODELS["simple"]
+    )
 
     response_data = await call_openai(
         message=message,
         model=selected_model,
         system_prompt=prompt,
         recent_messages=recent_messages,
-        contact_profile=contact_profile
+        scheduling_context=scheduling_context,
+        crm_context=crm_context
     )
 
     return response_data, classification
