@@ -785,33 +785,53 @@ function parseApiError(err, fb) {
 async function api(path, method = 'GET', body = null) {
   const res = await fetch(API + path, {
     method,
-    headers: {'Content-Type':'application/json','x-api-key':getKey()},
+    headers: { 'Content-Type': 'application/json', 'x-api-key': getKey() },
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) {
-    let e = {}; try { e = await res.json(); } catch(_) {}
-    throw new Error(parseApiError(e.detail, res.statusText));
+    let e = {}; try { e = await res.json(); } catch (_) {}
+    // Inclui o status no erro para distinguir auth vs rede
+    const detail = parseApiError(e.detail, res.statusText);
+    const err = new Error(detail);
+    err.status = res.status;
+    throw err;
   }
   return res.json();
 }
-
 // ── APP START ──
 
 async function startApp() {
   let stats;
-  try { stats = await api('/admin/stats'); }
-  catch(e) {
-    alert('Dashboard Key invalida. Verifique e tente novamente.');
-    localStorage.removeItem('clientApiKey'); return;
+
+  try {
+    stats = await api('/admin/stats');
+  } catch (e) {
+    const isAuthError = e.status === 401 || e.status === 403;
+
+    if (isAuthError) {
+      alert('Dashboard Key inválida. Verifique e tente novamente.');
+      localStorage.removeItem('clientApiKey');
+    } else {
+      alert('Erro ao conectar ao servidor. Tente novamente.');
+    }
+
+    document.getElementById('shell').classList.add('hidden');
+    document.getElementById('loginPage').style.display = 'flex';
+    return;
   }
+
   document.getElementById('loginPage').style.display = 'none';
   document.getElementById('shell').classList.remove('hidden');
-  document.getElementById('userAvatar').textContent = (stats.tenant_name||'V').charAt(0).toUpperCase();
+
+  const initials = (stats.tenant_name || 'V').charAt(0).toUpperCase();
+  document.getElementById('userAvatar').textContent = initials;
   document.getElementById('userName').textContent = stats.tenant_name || 'Minha conta';
-  document.getElementById('userPlan').textContent = 'Plano ' + (stats.plan||'—');
+  document.getElementById('userPlan').textContent = 'Plano ' + (stats.plan || '—');
+
   goTo('dashboard');
   requestNotificationPermission();
   startAlertPolling();
+
   await checkSchedulingEnabled();
 }
 
@@ -925,24 +945,36 @@ async function loadContacts() {
     if (result.data.length === 0) {
       tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 17C3 13.6863 6.13401 11 10 11C13.866 11 17 13.6863 17 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div class="empty-title">Nenhum contato encontrado</div><div class="empty-desc">Tente outro nome ou telefone.</div></div></td></tr>`;
     } else {
-      tbody.innerHTML = result.data.map(c => {
-        const hasProfile = c.profile && Object.keys(c.profile).length > 0;
-        const cleanPhone = c.phone.replace('@s.whatsapp.net','').replace('@g.us','');
-        return `<tr>
-          <td><div class="cell-primary">${esc(c.name||'(sem nome)')}</div><div class="cell-secondary">${esc(c.phone)}</div></td>
-          <td><span class="text-sm text-muted">${c.last_seen?new Date(c.last_seen).toLocaleString('pt-BR'):'—'}</span></td>
-          <td>${c.ai_blocked?'<span class="badge badge-blocked">Bloqueado</span>':'<span class="text-muted text-sm">Ativo</span>'}</td>
-          <td><div class="actions-row">
-            <a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs" title="Abrir no WhatsApp">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 10.5C5.5 10.5 6.5 12 8 12C9.5 12 10.5 11 10.5 9.5C10.5 8 9 7.5 8 7C7 6.5 5.5 6 5.5 4.5C5.5 3 6.5 2 8 2C9.5 2 10.5 3 10.5 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> WA
-            </a>
-            <button class="btn btn-ghost btn-xs${!hasProfile?'" style="opacity:.45':''}" onclick='openCrmModal(${c.id},${JSON.stringify(c.name||"")},${JSON.stringify(c.phone||"")},${JSON.stringify(c.profile||{})})'>CRM${hasProfile?'':' vazio'}</button>
-            ${c.ai_blocked?`<button class="btn btn-ghost btn-xs" onclick="unblockContact(${c.id})">Desbloquear</button>`:`<button class="btn btn-danger btn-xs" onclick="blockContact(${c.id})">Bloquear bot</button>`}
-            <button class="btn btn-ghost btn-xs" onclick="clearContactData(${c.id},'${esc(c.name||c.phone)}')">Limpar</button>
-            <button class="btn btn-danger btn-xs" onclick="confirmDeleteContact(${c.id},'${esc(c.name||c.phone)}')" title="Excluir este contato permanentemente">Excluir</button>
+        tbody.innerHTML = result.data.map(c => {
+          const hasProfile = c.profile && Object.keys(c.profile).length > 0;
+          const cleanPhone = c.phone.replace('@s.whatsapp.net','').replace('@g.us','');
+          // Serializa profile de forma segura para o atributo HTML
+          const profileJson = JSON.stringify(c.profile || {}).replace(/'/g, "&#39;");
+          const nameJson    = JSON.stringify(c.name || "").replace(/'/g, "&#39;");
+          const phoneJson   = JSON.stringify(c.phone || "").replace(/'/g, "&#39;");
 
-          </div></td>
-        </tr>`;
+          return `<tr>
+            <td>
+              <div class="cell-primary">${esc(c.name || '(sem nome)')}</div>
+              <div class="cell-secondary">${esc(c.phone)}</div>
+            </td>
+            <td><span class="text-sm text-muted">${c.last_seen ? new Date(c.last_seen).toLocaleString('pt-BR') : '—'}</span></td>
+            <td>${c.ai_blocked ? '<span class="badge badge-blocked">Bloqueado</span>' : '<span class="text-muted text-sm">Ativo</span>'}</td>
+            <td>
+              <div class="actions-row">
+                <a href="https://wa.me/${cleanPhone}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs">WA</a>
+                <button class="btn btn-ghost btn-xs" style="${hasProfile ? '' : 'opacity:.45'}"
+                  onclick="openCrmModal(${c.id}, ${nameJson}, ${phoneJson}, ${profileJson})">
+                  CRM${hasProfile ? '' : ' vazio'}
+                </button>
+                ${c.ai_blocked
+                  ? `<button class="btn btn-ghost btn-xs" onclick="unblockContact(${c.id})">Desbloquear</button>`
+                  : `<button class="btn btn-danger btn-xs" onclick="blockContact(${c.id})">Bloquear bot</button>`}
+                <button class="btn btn-ghost btn-xs" onclick="clearContactData(${c.id}, '${esc(c.name||c.phone)}')">Limpar</button>
+                <button class="btn btn-danger btn-xs" onclick="confirmDeleteContact(${c.id}, '${esc(c.name||c.phone)}')">Excluir</button>
+              </div>
+            </td>
+          </tr>`;
       }).join('');
     }
     renderPagination(result.total, result.page, result.limit);
@@ -968,7 +1000,7 @@ async function unblockContact(id) {
   catch(e) { alert('Erro: '+e.message); }
 }
 
-async function blockByPhone() {x
+async function blockByPhone() {
   const phone = document.getElementById('blockPhoneInput').value.trim();
   if (!phone) return alert('Informe o numero.');
   try {
@@ -1029,7 +1061,6 @@ async function saveSettings() {
   } catch(e) { btn.disabled=false; btn.textContent='Salvar alteracoes'; alert('Erro: '+e.message); }
 }
 
-SCHEDULING// ──  ──
 
 
 

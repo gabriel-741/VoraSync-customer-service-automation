@@ -76,7 +76,18 @@ def _aware(dt):
     return dt.replace(tzinfo=timezone.utc) if dt and dt.tzinfo is None else dt
 
 
+_scheduling_cache: dict = {}
+
 def _get_scheduling_context(tenant_id: int, db: Session) -> str:
+    import time
+
+    now = time.time()
+    cached = _scheduling_cache.get(tenant_id)
+
+    # Reutiliza o contexto por até 5 minutos
+    if cached and (now - cached["ts"]) < 300:
+        return cached["ctx"]
+
     try:
         from app.database.scheduling_models import Service
         from app.services.scheduling_service import get_next_days_availability
@@ -89,11 +100,21 @@ def _get_scheduling_context(tenant_id: int, db: Session) -> str:
         if not services:
             return ""
 
-        return get_next_days_availability(
-            tenant_id, services, date.today(),
-            14, #numero de dias que a agenda alcança 
+        ctx = get_next_days_availability(
+            tenant_id,
+            services,
+            date.today(),
+            14,  # número de dias que a agenda alcança
             db
         )
+
+        _scheduling_cache[tenant_id] = {
+            "ctx": ctx,
+            "ts": now
+        }
+
+        return ctx
+
     except Exception as e:
         log.error(f"[SCHEDULING] Erro ao buscar disponibilidade: {e}")
         return ""
@@ -183,13 +204,15 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             return None
         return None
 
+    # Seção de intent — substitui o bloco atual
     intent = await analyze_intent(text, recent_messages=recent_messages[-2:])
     friction_this_turn = False
 
     if intent.get("wants_human"):
         conversation.explicit_score = min((conversation.explicit_score or 0) + 100, EXPLICIT_CAP)
 
-    if intent.get("confusion") and intent.get("confidence", 1.0) > 0.75:
+    # Confusão genuína — só penaliza se o usuário está visivelmente frustrado
+    if intent.get("confusion"):
         conversation.soft_score = min((conversation.soft_score or 0) + 25, SOFT_CAP)
         friction_this_turn = True
 
@@ -197,7 +220,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
 
     db.commit()
-
+    
     should_offer = (
         conversation.explicit_score >= EXPLICIT_CAP
         or conversation.soft_score  >= SOFT_CAP
@@ -212,11 +235,9 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
 
     # injeta disponibilidade de agendamento se habilitado e detectado
     scheduling_context = ""
-    scheduling_context = ""
     if tenant.scheduling_enabled and (intent.get("wants_schedule") or scheduling_context == ""):
-        if intent.get("wants_schedule"):
-            scheduling_context = _get_scheduling_context(tenant.id, db)
-            log.info(f"[SCHEDULING] Contexto injetado para tenant {tenant.id}")
+        scheduling_context = _get_scheduling_context(tenant.id, db)
+        log.info(f"[SCHEDULING] Contexto injetado para tenant {tenant.id}")
 
     response_data, classification = await handle_message(
         text,
@@ -249,14 +270,14 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             db=db
         )
 
+
+        # Bloco de handoff de agendamento 
         if appt:
-            # Busca nome do serviço
             svc = db.query(Service).filter(Service.id == appt.service_id).first()
             svc_name = svc.name if svc else "Serviço"
             data_hora = appt.scheduled_at.strftime("%d/%m/%Y às %H:%M")
 
             if appt.status == AppointmentStatusEnum.confirmed:
-                # Auto-confirmado — informa o cliente diretamente, sem handoff
                 msg = (
                     f"✅ *Agendamento confirmado!*\n\n"
                     f"📋 *{svc_name}*\n"
@@ -264,22 +285,27 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
                     f"Te esperamos! Qualquer dúvida é só chamar. 😊"
                 )
             else:
-                # Pendente — operador precisa confirmar
                 msg = (
-                    f"📋 *Solicitação de agendamento recebida!*\n\n"
+                    f"📋 *Solicitação recebida!*\n\n"
                     f"*{svc_name}*\n"
                     f"📅 {data_hora}\n\n"
-                    f"Vamos verificar e confirmar em breve. "
-                    f"Você receberá uma mensagem assim que for confirmado. 😊"
+                    f"Confirmaremos em breve. Você receberá uma mensagem quando for confirmado. 😊"
                 )
 
-            await send_message(tenant, contact.phone, msg)
+            # ← CORRIGIDO: send_message com parâmetros corretos
+            await send_message(contact.phone, msg, api_key=tenant.api_key, instance=tenant.whatsapp_instance)
 
-            # Atualiza conversa mas NÃO vai para handoff
-            conversation.state = "ai_active"
+            db.add(Message(
+                tenant_id=tenant.id, conversation_id=conversation.id,
+                contact_id=contact.id, direction=DirectionEnum.outbound, content=msg
+            ))
+
+            # ← CORRIGIDO: enum em vez de string
+            conversation.state = ConversationStateEnum.ai_active
             conversation.handoff_offered = False
             db.commit()
-            return  # ← Sai sem handoff
+            return
+
 
         else:
             # Slot inválido ou passado — aumenta score, NÃO jogar para handoff
@@ -300,11 +326,26 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             db.commit()
             return
 
-    if response_data["confidence"] < 0.7:
-        conversation.soft_score = min((conversation.soft_score or 0) + 20, SOFT_CAP)
+    # Bloco de penalização — só por confidence baixo, sem o "is_helping" frágil
+    confidence = response_data.get("confidence", 1.0)
+
+    if confidence < 0.5:  # threshold mais conservador
+        conversation.soft_score = min(SOFT_CAP, (conversation.soft_score or 0) + 15)
         conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
-    else:
-        conversation.soft_score = max((conversation.soft_score or 0) - 10, 0)
+    elif confidence >= 0.7:
+        conversation.soft_score = max(0, (conversation.soft_score or 0) - 10)
+        conversation.consecutive_friction = 0
+
+    db.commit()
+
+    if confidence < 0.7 and not is_helping:
+        conversation.soft_score = min(90, (conversation.soft_score or 0) + 25)
+        conversation.consecutive_friction = (
+            (conversation.consecutive_friction or 0) + 1
+        )
+    elif confidence >= 0.7:
+        # Decay: resposta boa reduz o score
+        conversation.soft_score = max(0, (conversation.soft_score or 0) - 10)
         conversation.consecutive_friction = 0
     db.commit()
 
