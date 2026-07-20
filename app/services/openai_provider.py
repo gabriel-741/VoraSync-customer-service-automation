@@ -1,9 +1,6 @@
 # app/services/openai_provider.py
-
 import json
-
 from openai import AsyncOpenAI
-
 from app.core.config import settings
 from app.utils.logger import get_logger
 from app.services.profile_manager import ALLOWED_FIELDS, normalize_profile
@@ -12,9 +9,6 @@ log = get_logger(__name__)
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 
-# =========================
-# CHAT PRINCIPAL
-# =========================
 async def call_openai(
     message: str,
     system_prompt: str = "",
@@ -22,105 +16,109 @@ async def call_openai(
     recent_messages: list = None,
     scheduling_context: str = "",
     crm_context: str = ""
-) -> tuple:
+) -> dict:
+    """
+    Retorna um dict com as chaves: text, response, confidence, needs_human, handoff_reason.
+    NUNCA retorna None — em caso de erro, retorna fallback seguro.
+    """
 
-    DEFAULT_PROMPT = """Você é um assistente virtual simpático e descontraído.
-Responda sempre em português brasileiro informal e natural.
-Use linguagem simples e direta.
-Evite expressões formais como "assisti-lo" ou "em que posso ser útil".
-
-IMPORTANTE:
-- Trate cada conversa como um NOVO atendimento
-- Não assuma o que o cliente quer com base em conversas anteriores
-- Faça perguntas para entender a necessidade atual
-- Seja direto e objetivo"""
+    DEFAULT_PROMPT = (
+        "Você é um assistente virtual simpático e descontraído.\n"
+        "Responda sempre em português brasileiro informal e natural.\n"
+        "Use linguagem simples e direta.\n"
+        "Evite expressões formais como 'assisti-lo' ou 'em que posso ser útil'.\n\n"
+        "IMPORTANTE:\n"
+        "- Trate cada conversa como um NOVO atendimento\n"
+        "- Não assuma o que o cliente quer com base em conversas anteriores\n"
+        "- Faça perguntas para entender a necessidade atual\n"
+        "- Seja direto e objetivo"
+    )
 
     base_prompt = system_prompt.strip() if system_prompt and system_prompt.strip() else DEFAULT_PROMPT
 
-    # CRM — contexto de identificação, separado do system prompt principal
-    crm_block = ""
-    if crm_context and crm_context.strip():
-        crm_block = f"\n\n{crm_context}"
+    # Bloco CRM — só identificação, nunca intenção
+    crm_block = f"\n\n{crm_context.strip()}" if crm_context and crm_context.strip() else ""
 
-    # Agendamento — só aparece quando relevante
-    scheduling_block = ""
-    if scheduling_context and scheduling_context.strip():
-        scheduling_block = f"\n\n{scheduling_context}"
+    # Bloco de agendamento — só quando relevante (injetado pelo message_service)
+    sched_block = f"\n\n{scheduling_context.strip()}" if scheduling_context and scheduling_context.strip() else ""
 
-    format_instruction = """
+    format_instruction = (
+        "\n\n[FORMATO DE RESPOSTA OBRIGATÓRIO]\n"
+        "Responda SEMPRE em JSON válido:\n"
+        '{"response": "mensagem ao cliente", "confidence": 0.85, "needs_human": false, "handoff_reason": ""}\n\n'
+        "- confidence: 0.0 a 1.0\n"
+        "- needs_human: true SOMENTE para limitações explícitas do sistema OU para confirmar agendamento\n"
+        "- Nunca diga 'encaminhar para atendente' para agendar — o sistema faz isso automaticamente\n\n"
+        "AGENDAMENTO — fluxo obrigatório:\n"
+        "1. Pergunte qual serviço (se houver mais de 1)\n"
+        "2. Pergunte qual dia prefere\n"
+        "3. Mostre APENAS slots disponíveis naquele dia (estão no contexto)\n"
+        "4. Colete campos obrigatórios do serviço\n"
+        "5. Confirme apenas quando tiver: serviço + data + horário + nome completo\n\n"
+        "Ao confirmar:\n"
+        "- needs_human: true\n"
+        "- handoff_reason: scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_COMPLETO\n"
+        "- HHMM sem dois-pontos: 09:00 → 0900, 14:30 → 1430\n\n"
+        "NUNCA invente horários. NUNCA confirme sem todos os dados."
+    )
 
-[FORMATO DE RESPOSTA OBRIGATÓRIO]
-Responda SEMPRE em JSON válido com exatamente este formato:
-{"response": "sua mensagem ao cliente", "confidence": 0.85, "needs_human": false, "handoff_reason": ""}
+    full_system = base_prompt + crm_block + sched_block + format_instruction
 
-- confidence: 0.0 a 1.0 (quão certa está sua resposta)
-- needs_human: true SOMENTE para limitações explícitas no system prompt OU para confirmar agendamento
-- Nunca diga "vou encaminhar para um atendente" para resolver agendamentos — o sistema faz isso automaticamente
-
-AGENDAMENTO — siga este fluxo obrigatório:
-1. Pergunte qual serviço (se houver mais de 1 — liste pelo nome)
-2. Pergunte qual dia prefere
-3. Mostre APENAS os slots disponíveis naquele dia (estão no contexto)
-4. Colete campos obrigatórios do serviço (se listados no contexto)
-5. Só confirme quando tiver: serviço + data + horário + nome completo
-
-Quando confirmar:
-- needs_human: true
-- handoff_reason: scheduling:SERVICE_ID:YYYY-MM-DD:HHMM:NOME_COMPLETO
-- HHMM sem dois-pontos: 09:00 → 0900
-
-NUNCA invente horários. NUNCA confirme sem todos os dados."""
-
-    full_system = base_prompt + crm_block + scheduling_block + format_instruction
-
-    messages = [{"role": "system", "content": full_system}]
+    messages_list = [{"role": "system", "content": full_system}]
 
     for msg in (recent_messages or [])[-8:]:
         role = "assistant" if msg.get("direction") == "outbound" else "user"
-        messages.append({"role": role, "content": msg.get("content", "")})
+        content = msg.get("content", "").strip()
+        if content:
+            messages_list.append({"role": role, "content": content})
 
-    messages.append({"role": "user", "content": message})
+    messages_list.append({"role": "user", "content": message})
 
     try:
         response = await client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=messages_list,
             response_format={"type": "json_object"},
             temperature=0.4,
             max_tokens=600
         )
 
-        import json
         raw = response.choices[0].message.content
         data = json.loads(raw)
 
-        return {
-            "text":           data.get("response", ""),
-            "response":       data.get("response", ""),
-            "confidence":     float(data.get("confidence", 0.8)),
-            "needs_human":    bool(data.get("needs_human", False)),
-            "handoff_reason": data.get("handoff_reason", "")
-        }, None
+        text = data.get("response") or data.get("text") or ""
+        if not text:
+            log.warning("[OPENAI] Resposta sem texto. Raw: %s", raw[:200])
+            text = "Pode repetir? Não entendi bem."
 
-    except Exception as e:
-        log.error(f"[OPENAI] Erro: {e}")
         return {
-            "text": "Desculpe, tive um problema técnico. Pode repetir?",
-            "response": "Desculpe, tive um problema técnico. Pode repetir?",
-            "confidence": 0.0,
-            "needs_human": False,
-            "handoff_reason": ""
-        }, None
-    
-# =========================
-# EXTRAÇÃO DE PERFIL (sem mudanças)
-# =========================
+            "text":           text,
+            "response":       text,
+            "confidence":     max(0.0, min(1.0, float(data.get("confidence", 0.8)))),
+            "needs_human":    bool(data.get("needs_human", False)),
+            "handoff_reason": str(data.get("handoff_reason") or ""),
+        }
+
+    except json.JSONDecodeError as e:
+        log.error("[OPENAI] JSON inválido: %s", e)
+    except Exception as e:
+        log.error("[OPENAI] Erro: %s", e)
+
+    # Fallback seguro — nunca retorna None
+    return {
+        "text":           "Desculpe, tive um problema técnico. Pode repetir?",
+        "response":       "Desculpe, tive um problema técnico. Pode repetir?",
+        "confidence":     0.0,
+        "needs_human":    False,
+        "handoff_reason": "",
+    }
+
+
 async def smart_extract_profile(
     message: str,
     current_profile: dict,
     recent_messages: list | None = None
 ) -> dict:
-
     recent_messages = recent_messages or []
 
     try:
@@ -130,43 +128,28 @@ async def smart_extract_profile(
             messages=[
                 {
                     "role": "user",
-                    "content": f"""
-Você é um sistema de EXTRAÇÃO DE PERFIL COMERCIAL.
-
-RETORNE APENAS JSON VÁLIDO.
-
-FORMATO:
-{{"has_new_info": true, "profile": {{}}}}
-ou
-{{"has_new_info": false, "profile": {{}}}}
-
-CAMPOS PERMITIDOS:
-{{
-  "nome": "", "empresa": "", "segmento": "", "cargo": "", "cidade": "",
-  "orcamento": null, "interesse": "", "necessidades": [], "objecoes": [],
-  "etapa_venda": "", "tamanho_empresa": "", "decisor": "",
-  "prazo_decisao": "", "produto_atual": "", "processo_atual": "",
-  "urgencia": "", "resumo_cliente": ""
-}}
-
-REGRAS:
-- não criar campos
-- não inventar dados
-- não sobrescrever informações boas
-- ignorar mensagens vazias
-
-PERFIL ATUAL:
-{json.dumps(current_profile, ensure_ascii=False)}
-
-MENSAGENS:
-{json.dumps(recent_messages, ensure_ascii=False)}
-
-MENSAGEM:
-"{message}"
-"""
+                    "content": (
+                        "Você é um sistema de EXTRAÇÃO DE PERFIL COMERCIAL.\n\n"
+                        "RETORNE APENAS JSON VÁLIDO:\n"
+                        '{{"has_new_info": true, "profile": {{}}}}\n\n'
+                        "CAMPOS PERMITIDOS:\n"
+                        '{{"nome":"","empresa":"","segmento":"","cargo":"","cidade":"",'
+                        '"orcamento":null,"interesse":"","necessidades":[],"objecoes":[],'
+                        '"etapa_venda":"","tamanho_empresa":"","decisor":"",'
+                        '"prazo_decisao":"","produto_atual":"","processo_atual":"",'
+                        '"urgencia":"","resumo_cliente":""}}\n\n'
+                        "REGRAS:\n"
+                        "- Não criar campos novos\n"
+                        "- Não inventar dados\n"
+                        "- Não sobrescrever informações boas com inferências\n"
+                        "- Ignorar mensagens vazias ou sem dados relevantes\n\n"
+                        f"PERFIL ATUAL:\n{json.dumps(current_profile, ensure_ascii=False)}\n\n"
+                        f"MENSAGENS:\n{json.dumps(recent_messages, ensure_ascii=False)}\n\n"
+                        f'MENSAGEM:\n"{message}"'
+                    )
                 }
             ],
-            max_tokens=350,
+            max_tokens=400,
             temperature=0
         )
 
@@ -175,10 +158,10 @@ MENSAGEM:
         if not result.get("has_new_info"):
             return current_profile
 
-        extracted_profile = result.get("profile", {}) or {}
+        extracted = result.get("profile") or {}
         merged = current_profile.copy()
 
-        for key, value in extracted_profile.items():
+        for key, value in extracted.items():
             if key not in ALLOWED_FIELDS:
                 continue
             if isinstance(value, list):
@@ -186,13 +169,11 @@ MENSAGEM:
                 if not isinstance(existing, list):
                     existing = []
                 merged[key] = existing + value
-            else:
+            elif value:
                 merged[key] = value
 
-        merged = normalize_profile(merged)
-        log.info(f"[PROFILE] Atualizado: {merged}")
-        return merged
+        return normalize_profile(merged)
 
     except Exception as e:
-        log.error(f"[PROFILE] Erro na extração: {e}")
+        log.error("[PROFILE] Erro na extração: %s", e)
         return current_profile

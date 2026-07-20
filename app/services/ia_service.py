@@ -1,23 +1,9 @@
 # app/services/ia_service.py
-
 from app.services.openai_provider import call_openai
 from app.services.classifier import classify_message
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
-
-DEFAULT_PROMPT = """
-Você é um assistente virtual simpático e descontraído.
-Responda sempre em português brasileiro informal e natural.
-Use linguagem simples e direta. Evite expressões formais.
-Se não souber responder algo, diga de forma simples e ofereça ajuda alternativa.
-Nunca transfira para um humano antes de tentar ajudar.
-"""
-
-MODELS = {
-    "simple":  "gpt-4o-mini",
-    "complex": "gpt-4.1-mini",
-}
 
 
 async def handle_message(
@@ -25,38 +11,36 @@ async def handle_message(
     system_prompt: str = "",
     model: str = "gpt-4o-mini",
     recent_messages: list = None,
-    contact_profile: dict = None,
+    contact_profile: dict = None,    # mantido por compatibilidade — ignorado aqui
     scheduling_context: str = "",
     crm_context: str = ""
-) -> tuple[dict | None, dict]:
+) -> tuple[dict, dict]:
+    """
+    Retorna (response_dict, classification_dict).
+    response_dict SEMPRE é um dict com chaves: text, response, confidence, needs_human, handoff_reason.
+    """
 
-    if not message.strip():
-        return None, {"model_tier": "simple"}
+    if not message or not message.strip():
+        return {
+            "text": "", "response": "", "confidence": 1.0,
+            "needs_human": False, "handoff_reason": ""
+        }, {"model_tier": "simple"}
 
-    recent_messages = recent_messages or []
-    contact_profile = contact_profile or {}
-    classification = classify_message(message)
+    recent_messages  = recent_messages or []
+    classification   = classify_message(message)
 
-    log.info(f"[IA] classificação: {classification}")
+    log.info("[IA] classificação: %s", classification)
 
-    prompt = system_prompt if system_prompt else DEFAULT_PROMPT
+    selected_model = model or "gpt-4o-mini"
 
-    # Injeta contexto de agendamento
-    if scheduling_context:
-        prompt += "\n\n" + scheduling_context
-
-    selected_model = model or MODELS.get(
-        classification["model_tier"],
-        MODELS["simple"]
-    )
-
-    response_data = await call_openai(
+    # call_openai agora retorna dict diretamente (não tuple)
+    response_dict = await call_openai(
         message=message,
         model=selected_model,
-        system_prompt=prompt,
+        system_prompt=system_prompt,
         recent_messages=recent_messages,
-        scheduling_context=scheduling_context,
+        scheduling_context=scheduling_context,  # ← injetado UMA vez, aqui
         crm_context=crm_context
     )
 
-    return response_data, classification
+    return response_dict, classification
