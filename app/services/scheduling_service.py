@@ -120,106 +120,54 @@ def get_available_slots(
     return available
 
 
-def get_next_days_availability(
+
+def get_next_days_availability_compact(
     tenant_id: int,
     services: list,
     from_date: date,
     days_ahead: int,
     db: Session
 ) -> str:
-    WEEKDAY_PT   = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
-    WEEKDAY_ABBR = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-    now = datetime.now()
+    """
+    Versão compacta do contexto — usa ~400 tokens em vez de ~1.900.
+    Formato tabular em vez de descritivo.
+    """
+    WDAY = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]
+    now  = datetime.now()
 
-    lines = [
-        f"[AGENDA — gerada em {now.strftime('%d/%m/%Y %H:%M')} — dados reais do banco]",
-        "",
-        "━━━ REGRAS ABSOLUTAS ━━━",
-        "• Use SOMENTE os horários listados abaixo. Se não aparece → NÃO existe.",
-        "• Se o cliente pedir uma data fora desta lista → informe que não há disponibilidade naquele dia.",
-        "• NÃO invente horários. NÃO confirme sem os dados obrigatórios.",
-        "• Horários passados e bloqueios já foram removidos automaticamente.",
-        "",
-        "━━━ SERVIÇOS ━━━",
-    ]
+    # Cabeçalho mínimo
+    lines = [f"[AGENDA {now.strftime('%d/%m %H:%M')}]"]
 
+    # Serviços em uma linha cada
     for svc in services:
-        wdays      = svc.available_weekdays or [0, 1, 2, 3, 4, 5, 6]
-        wday_names = ", ".join(WEEKDAY_ABBR[w] for w in sorted(wdays))
+        wdays = ",".join(WDAY[w] for w in sorted(svc.available_weekdays or [0,1,2,3,4,5,6]))
+        req   = "|campos:" + ",".join(f.get("key","") for f in (svc.required_fields or [])) if svc.required_fields else ""
+        loc   = f"|cep:{svc.location_radius_km}km" if svc.location_enabled else ""
+        ac    = "auto" if svc.auto_confirm else "manual"
+        lines.append(f"SVC[{svc.id}]{svc.name}|{svc.duration_minutes}min|{ac}|dias:{wdays}{req}{loc}")
 
-        required_fields_info = ""
-        if svc.required_fields:
-            field_names          = [f.get("label", f.get("key", "")) for f in svc.required_fields]
-            required_fields_info = f"\n    Campos obrigatórios: {', '.join(field_names)}"
-
-        location_info = ""
-        if svc.location_enabled:
-            location_info = f"\n    ⚠️ Exige CEP do cliente (raio máximo: {svc.location_radius_km}km)"
-
-        confirm_info = "confirmação automática" if svc.auto_confirm else "aguarda aprovação do operador"
-
-        lines.append(
-            f"  [{svc.id}] {svc.name} — {svc.duration_minutes}min — {confirm_info}"
-            f"\n    Dias disponíveis: {wday_names}"
-            f"{required_fields_info}"
-            f"{location_info}"
-        )
-
-    lines.append("")
-    lines.append("━━━ DISPONIBILIDADE (próximos dias) ━━━")
-    lines.append("")
-
-    found_any = False
+    # Disponibilidade — só lista dias que têm slots, slots agrupados
+    found = False
     for i in range(days_ahead):
-        d        = from_date + timedelta(days=i)
-        day_name = WEEKDAY_PT[d.weekday()]
-        label    = (
-            f"Hoje ({day_name} {d.strftime('%d/%m')})"    if i == 0 else
-            f"Amanhã ({day_name} {d.strftime('%d/%m')})"  if i == 1 else
-            f"{day_name} {d.strftime('%d/%m')}"
-        )
+        d     = from_date + timedelta(days=i)
+        label = f"hoje" if i==0 else f"amanhã" if i==1 else f"{WDAY[d.weekday()]}{d.strftime('%d/%m')}"
 
-        day_lines = []
+        day_parts = []
         for svc in services:
             slots = get_available_slots(tenant_id, svc.id, d, db)
             if slots:
-                found_any = True
-                day_lines.append(f"    [{svc.id}] {svc.name}: {', '.join(slots)}")
+                found = True
+                # Agrupa slots em ranges para economizar tokens
+                day_parts.append(f"[{svc.id}]:{','.join(slots)}")
 
-        if day_lines:
-            lines.append(f"  📅 {label}:")
-            lines.extend(day_lines)
+        if day_parts:
+            lines.append(f"{label}|{'|'.join(day_parts)}")
 
-    if not found_any:
-        lines.append("  ❌ Nenhum horário disponível nos próximos dias.")
-        lines.append("  Informe ao cliente e sugira contato direto.")
-    else:
-        lines.append("")
-        lines.append("━━━ FLUXO OBRIGATÓRIO ━━━")
-        lines.append("1. Identifique o SERVIÇO desejado")
-        lines.append("2. Pergunte o DIA preferido")
-        lines.append("3. Verifique se aquele dia TEM horários na lista para aquele serviço")
-        lines.append("   → NÃO está na lista: 'Não temos disponibilidade nesse dia. Próximos dias: [liste]'")
-        lines.append("   → NUNCA diga 'está ocupado' se o dia não aparece — ele simplesmente não existe")
-        lines.append("4. Se está na lista: mostre os horários disponíveis naquele dia")
-        lines.append("5. Colete campos obrigatórios do serviço (se houver)")
-        lines.append("6. Se o serviço exige CEP: pergunte o CEP do cliente")
-        lines.append("7. Colete NOME COMPLETO do cliente")
-        lines.append("8. Confirme TODOS os dados antes de finalizar")
-        lines.append("9. Com tudo confirmado: use needs_human=true")
-        lines.append("")
-        lines.append("━━━ FORMATO DO handoff_reason ━━━")
-        lines.append("Com CEP:   scheduling:ID:YYYY-MM-DD:HHMM:NOME_COMPLETO:CEP")
-        lines.append("Sem CEP:   scheduling:ID:YYYY-MM-DD:HHMM:NOME_COMPLETO:sem_cep")
-        lines.append("")
-        lines.append("Exemplos:")
-        lines.append("  scheduling:1:2026-07-24:1030:Gabriel Henrique:74948180")
-        lines.append("  scheduling:2:2026-08-04:0900:Maria Silva:sem_cep")
-        lines.append("")
-        lines.append("⚠️ HHMM sem dois-pontos: 10:30 → 1030, 14:00 → 1400")
-        lines.append("⚠️ Use o ID numérico do serviço (número entre colchetes)")
+    if not found:
+        lines.append("SEM_HORARIOS")
 
     return "\n".join(lines)
+
 
 
 async def _geocode_cep(cep: str) -> tuple[Optional[float], Optional[float]]:

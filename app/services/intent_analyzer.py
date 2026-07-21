@@ -8,6 +8,49 @@ log = get_logger(__name__)
 
 
 async def analyze_intent(text: str, recent_messages: list = None) -> dict:
+    recent = (recent_messages or [])[-2:]  
+
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Classifica intenção. JSON:\n"
+                        '{"wants_human":false,"accepted_handoff":false,"declined_handoff":false,"confusion":false,"wants_schedule":false}\n\n'
+                        "wants_human=true: só se explícito ('falar com humano','atendente','pessoa real')\n"
+                        "accepted_handoff=true: bot perguntou sobre atendente E cliente disse sim\n"
+                        "declined_handoff=true: bot perguntou sobre atendente E cliente disse não\n"
+                        "confusion=true: frustração EXPLÍCITA + 3+ repetições da mesma pergunta\n"
+                        "wants_schedule=true: marcar/agendar/remarcar/cancelar horário/ver disponibilidade\n"
+                        "Em dúvida=false. Falso negativo > falso positivo."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": json.dumps({
+                        "msg": text[:300],
+                        "ctx": [m.get("content","")[:150] for m in recent]
+                    }, ensure_ascii=False)
+                }
+            ],
+            temperature=0,
+            max_tokens=80   # ← reduz de 120 para 80
+        )
+
+        result = json.loads(response.choices[0].message.content)
+        return {
+            "wants_human":      bool(result.get("wants_human", False)),
+            "accepted_handoff": bool(result.get("accepted_handoff", False)),
+            "declined_handoff": bool(result.get("declined_handoff", False)),
+            "confusion":        bool(result.get("confusion", False)),
+            "wants_schedule":   bool(result.get("wants_schedule", False)),
+        }
+    except Exception as e:
+        log.error("[INTENT] Erro: %s", e)
+        return {"wants_human":False,"accepted_handoff":False,"declined_handoff":False,"confusion":False,"wants_schedule":False}
     recent = (recent_messages or [])[-4:]
 
     try:

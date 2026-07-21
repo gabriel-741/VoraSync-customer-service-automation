@@ -98,6 +98,8 @@ def _aware(dt):
 _scheduling_cache: dict = {}
 
 
+
+# Substitui _get_scheduling_context:
 def _get_scheduling_context(tenant_id: int, db: Session) -> str:
     import time as _time
     now = _time.time()
@@ -107,7 +109,7 @@ def _get_scheduling_context(tenant_id: int, db: Session) -> str:
 
     try:
         from app.database.scheduling_models import Service
-        from app.services.scheduling_service import get_next_days_availability
+        from app.services.scheduling_service import get_next_days_availability_compact  # ← compacto
 
         services = db.query(Service).filter(
             Service.tenant_id == tenant_id,
@@ -117,39 +119,25 @@ def _get_scheduling_context(tenant_id: int, db: Session) -> str:
         if not services:
             return ""
 
-        ctx = get_next_days_availability(tenant_id, services, date.today(), 60, db)
+        ctx = get_next_days_availability_compact(tenant_id, services, date.today(), 21, db)  # ← 21 dias
         _scheduling_cache[tenant_id] = {"ctx": ctx, "ts": now}
         return ctx
     except Exception as e:
-        log.error("[SCHEDULING] Erro ao buscar disponibilidade: %s", e)
+        log.error("[SCHEDULING] Erro: %s", e)
         return ""
 
 
+# Substitui _build_crm_context — mais compacto:
 def _build_crm_context(profile: dict) -> str:
-    """
-    Contexto CRM apenas para identificação — nunca para assumir intenção.
-    """
     if not profile:
         return ""
+    parts = []
+    if profile.get("nome"):    parts.append(f"nome:{profile['nome']}")
+    if profile.get("empresa"): parts.append(f"empresa:{profile['empresa']}")
+    if parts:
+        return "[CONTATO — só identificação, não assuma intenção]\n" + "|".join(parts)
+    return ""
 
-    lines = [
-        "[PERFIL DO CONTATO — use APENAS para identificação]",
-        "NÃO assuma que este perfil representa a intenção ATUAL.",
-        "Trate cada sessão como novo atendimento.",
-        ""
-    ]
-
-    if profile.get("nome"):
-        lines.append(f"Nome: {profile['nome']}")
-    if profile.get("empresa"):
-        lines.append(f"Empresa: {profile['empresa']}")
-    if profile.get("resumo_cliente"):
-        lines.append(f"Histórico: {profile['resumo_cliente']}")
-
-    # Nunca passa: etapa_venda, interesse, objecoes, necessidades
-    # Esses dados são do passado e não refletem a intenção atual
-
-    return "\n".join(lines) if len(lines) > 4 else ""
 
 
 async def _send_and_save(
