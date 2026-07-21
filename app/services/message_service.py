@@ -117,7 +117,7 @@ def _get_scheduling_context(tenant_id: int, db: Session) -> str:
         if not services:
             return ""
 
-        ctx = get_next_days_availability(tenant_id, services, date.today(), 14, db)
+        ctx = get_next_days_availability(tenant_id, services, date.today(), 60, db)
         _scheduling_cache[tenant_id] = {"ctx": ctx, "ts": now}
         return ctx
     except Exception as e:
@@ -445,23 +445,30 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         log.warning("[MSG] Resposta vazia da IA para conversa %s", conversation.id)
         return None
 
-    # ── Detecta handoff de agendamento ──
+# ── Detecta handoff de agendamento ──
     needs_human    = response_data.get("needs_human", False)
     handoff_reason = response_data.get("handoff_reason", "") or ""
 
     if needs_human and handoff_reason.startswith("scheduling:"):
-        from app.services.scheduling_service import create_appointment_from_ai
+        from app.services.scheduling_service import create_appointment_from_ai, AppointmentError
         from app.database.scheduling_models import Service, AppointmentStatusEnum
 
-        log.info("[SCHEDULING] Tentando criar agendamento: %s", handoff_reason)
+        log.info("[SCHEDULING] Criando agendamento: %s", handoff_reason)
 
-        appt = create_appointment_from_ai(
-            tenant_id=tenant.id,
-            handoff_reason=handoff_reason,
-            contact_id=contact.id,
-            customer_phone=contact.phone,
-            db=db
-        )
+        try:
+            appt, error = create_appointment_from_ai(
+                tenant_id=tenant.id,
+                handoff_reason=handoff_reason,
+                contact_id=contact.id,
+                customer_phone=contact.phone,
+                db=db
+            )
+        except AppointmentError as e:
+            appt  = None
+            error = e
+        except Exception as e:
+            appt  = None
+            error = AppointmentError("unknown", str(e))
 
         if appt:
             svc = db.query(Service).filter(Service.id == appt.service_id).first()
@@ -480,30 +487,44 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
                     f"📋 *Solicitação de agendamento recebida!*\n\n"
                     f"*{svc_name}*\n"
                     f"📅 {data_hora}\n\n"
-                    f"Vamos verificar e confirmar em breve. "
-                    f"Você receberá uma mensagem assim que for confirmado. 😊"
+                    f"Confirmaremos em breve e você receberá uma mensagem. 😊"
                 )
 
-            conversation.state = ConversationStateEnum.ai_active
+            conversation.state       = ConversationStateEnum.ai_active
             conversation.handoff_offered = False
             db.commit()
+
+            # Invalida o cache de disponibilidade
+            _scheduling_cache.pop(tenant.id, None)
+
+
             await _send_and_save(sender, msg, tenant, conversation, contact, db)
-            log.info("[SCHEDULING] Agendamento #%s criado com sucesso", appt.id)
             background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
             background_tasks.add_task(trim_old_messages, conversation.id)
             return msg
 
         else:
-            log.warning("[SCHEDULING] Slot inválido ou erro: %s", handoff_reason)
-            fallback = (
-                "Não consegui confirmar esse horário — "
-                "pode estar ocupado ou a data é inválida. "
-                "Qual outro dia ou horário você prefere?"
-            )
-            await _send_and_save(sender, fallback, tenant, conversation, contact, db)
+            # Mensagem de erro específica por código
+            error_messages = {
+                "wrong_weekday":    f"Esse serviço não atende nesse dia da semana. {error.message}",
+                "slot_unavailable": f"Esse horário não está mais disponível. {error.message}",
+                "outside_radius":   f"Infelizmente não atendemos na sua região. {error.message}",
+                "cep_invalid":      "Não encontrei esse CEP. Pode confirmar o número?",
+                "cep_required":     "Preciso do seu CEP para verificar se estamos na sua região. Qual é o seu CEP?",
+                "past_date":        "Essa data já passou. Qual outro dia você prefere?",
+                "service_not_found":"Serviço não encontrado. Pode me dizer qual serviço deseja?",
+                "invalid_format":   "Precisei de mais informações. Pode confirmar: serviço, data, horário e nome completo?",
+                "unknown":          "Tive um problema ao confirmar. Pode tentar novamente com os dados completos?",
+            }
+
+            code    = error.code if error else "unknown"
+            msg_err = error_messages.get(code, "Não consegui confirmar. Pode tentar novamente?")
+            log.warning("[SCHEDULING] Falha [%s]: %s", code, error.message if error else "")
+
+            await _send_and_save(sender, msg_err, tenant, conversation, contact, db)
             background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
             background_tasks.add_task(trim_old_messages, conversation.id)
-            return fallback
+            return msg_err
 
     # ── Atualiza score pós-resposta ──
     confidence = response_data.get("confidence", 1.0)
