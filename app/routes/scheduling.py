@@ -14,7 +14,7 @@ from app.database.scheduling_models import (
     Service, Appointment, AppointmentHistory,
     AppointmentStatusEnum, AppointmentSourceEnum
 )
-from app.services.scheduling_service import get_available_slots, get_next_days_availability
+from app.services.scheduling_service import get_available_slots, get_next_days_availability_compact as get_next_days_availability
 from app.utils.logger import get_logger
 
 log = get_logger(__name__)
