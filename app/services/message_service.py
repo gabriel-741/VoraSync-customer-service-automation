@@ -20,9 +20,9 @@ INACTIVITY_RESET_HOURS    = 12
 COOLDOWN_MINUTES          = 30
 EXPLICIT_CAP              = 100
 SOFT_CAP                  = 90
-FRICTION_STREAK_THRESHOLD = 4
+FRICTION_STREAK_THRESHOLD = 5    
 MAX_MESSAGES_PER_CONV     = 500
-HANDOFF_OFFER_SCORE_MIN   = 75
+HANDOFF_OFFER_SCORE_MIN   = 85  
 
 
 def get_monthly_message_count(tenant_id: int, db: Session) -> int:
@@ -353,6 +353,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
     log.info("[INTENT] %s | msg='%s'", intent, text[:60])
 
     # ── Atualiza scores ──
+
     friction_this_turn = False
 
     if intent.get("wants_human"):
@@ -360,17 +361,18 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             (conversation.explicit_score or 0) + 100, EXPLICIT_CAP
         )
 
-    if intent.get("confusion") and len(recent_messages) >= 3:
+    # Confusão só conta se houver histórico suficiente E for genuína
+    if intent.get("confusion") and len(recent_messages) >= 4:
         conversation.soft_score = min(
-            (conversation.soft_score or 0) + 20, SOFT_CAP
+            (conversation.soft_score or 0) + 15, SOFT_CAP
         )
         friction_this_turn = True
 
     if friction_this_turn:
         conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
     else:
-        # Decay em interações normais
-        conversation.soft_score = max(0, (conversation.soft_score or 0) - 5)
+        # Decay agressivo — boas interações limpam o score rapidamente
+        conversation.soft_score           = max(0, (conversation.soft_score or 0) - 10)
         conversation.consecutive_friction = max(0, (conversation.consecutive_friction or 0) - 1)
 
     db.commit()
@@ -427,19 +429,32 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         crm_context=crm_context
     )
 
-    # response_data é SEMPRE um dict — nunca None graças ao fallback em call_openai
-    response_text = response_data.get("text") or response_data.get("response", "")
-    if not response_text:
-        log.warning("[MSG] Resposta vazia da IA para conversa %s", conversation.id)
-        return None
 
-# ── Detecta handoff de agendamento ──
+    # ── Resultado da IA ──
+    response_text  = response_data.get("text") or response_data.get("response", "")
     needs_human    = response_data.get("needs_human", False)
     handoff_reason = response_data.get("handoff_reason", "") or ""
 
+    # Correção: modelo pode colocar scheduling string no response em vez do handoff_reason
+    if response_text.startswith("scheduling:") and not handoff_reason.startswith("scheduling:"):
+        handoff_reason = response_text
+        response_text  = "Ótimo! Vou confirmar seu agendamento agora."
+        needs_human    = True
+
+    if not response_text and not (needs_human and handoff_reason.startswith("scheduling:")):
+        log.warning("[MSG] Resposta vazia da IA para conversa %s", conversation.id)
+        return None
+
+    # ── Detecta handoff de agendamento ──
     if needs_human and handoff_reason.startswith("scheduling:"):
-        from app.services.scheduling_service import create_appointment_from_ai, AppointmentError
-        from app.database.scheduling_models import Service, AppointmentStatusEnum
+        from app.services.scheduling_service import (
+            create_appointment_from_ai,
+            AppointmentError,
+        )
+        from app.database.scheduling_models import (
+            Service,
+            AppointmentStatusEnum,
+        )
 
         log.info("[SCHEDULING] Processando: %s", handoff_reason)
 
@@ -454,6 +469,8 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         if appt:
             # Sucesso — invalida cache e confirma
             _scheduling_cache.pop(tenant.id, None)
+
+
 
             svc = db.query(Service).filter(Service.id == appt.service_id).first()
             svc_name  = svc.name if svc else "Serviço"
@@ -542,12 +559,20 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
 
     # ── Atualiza score pós-resposta ──
     confidence = response_data.get("confidence", 1.0)
-    if confidence < 0.45:
-        conversation.soft_score = min(SOFT_CAP, (conversation.soft_score or 0) + 10)
-        conversation.consecutive_friction = (conversation.consecutive_friction or 0) + 1
-    elif confidence >= 0.7:
-        conversation.soft_score = max(0, (conversation.soft_score or 0) - 5)
-        conversation.consecutive_friction = max(0, (conversation.consecutive_friction or 0) - 1)
+
+    if confidence < 0.35:   # só penaliza respostas muito ruins
+        conversation.soft_score = min(
+            SOFT_CAP, (conversation.soft_score or 0) + 8
+        )
+        conversation.consecutive_friction = (
+            (conversation.consecutive_friction or 0) + 1
+        )
+    elif confidence >= 0.6:  # decay em respostas razoáveis
+        conversation.soft_score = max(0, (conversation.soft_score or 0) - 10)
+        conversation.consecutive_friction = max(
+            0, (conversation.consecutive_friction or 0) - 1
+        )
+
     db.commit()
 
     # ── Envia resposta ──

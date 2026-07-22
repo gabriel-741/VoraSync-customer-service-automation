@@ -9,7 +9,6 @@ log = get_logger(__name__)
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 
-
 async def call_openai(
     message: str,
     system_prompt: str = "",
@@ -18,41 +17,71 @@ async def call_openai(
     scheduling_context: str = "",
     crm_context: str = ""
 ) -> dict:
+    from datetime import datetime as _dt
+    _now = _dt.now()
 
     DEFAULT_PROMPT = (
-        "Assistente da empresa. Português informal, direto.\n"
-        "Nunca use: 'assisti-lo', 'em que posso ser útil', 'encaminhar para atendente'.\n"
-        "Novo atendimento = não assuma intenções anteriores."
+        "Assistente de atendimento. Português brasileiro informal e direto.\n"
+        "Proibido usar: 'assisti-lo', 'em que posso ser útil', 'encaminhar para atendente'.\n"
+        "Cada conversa é um novo atendimento — não assuma intenções anteriores."
     )
 
-    base_prompt = system_prompt.strip() if system_prompt and system_prompt.strip() else DEFAULT_PROMPT
-
-    crm_block  = f"\nCLIENTE:{crm_context.strip()}" if crm_context and crm_context.strip() else ""
-    sched_block = f"\n{scheduling_context.strip()}" if scheduling_context and scheduling_context.strip() else ""
-
-    # Instruções de formato compactas mas completas
-    format_block = (
-        "\n[JSON OBRIGATÓRIO]"
-        '\n{"response":"...","confidence":0.9,"needs_human":false,"handoff_reason":""}'
-        "\nneeds_human=true só para: limitação do sistema OU confirmar agendamento"
-        "\nAGENDAMENTO: SVC[id]nome|duracao|auto/manual|dias:... e slots por dia"
-        "\nFluxo: serviço→dia→horário→campos obrigatórios→nome completo→CEP(se cep:Xkm)"
-        "\nConfirmar: scheduling:ID:YYYY-MM-DD:HHMM:NOME:CEP_ou_sem_cep"
-        "\nEx: scheduling:1:2026-07-24:1030:Gabriel Silva:74948180"
-        "\nHHMM sem ':' → 10:30=1030 | NÃO invente slots | NÃO confirme sem todos os dados"
-        "\nErro de slot: explique o motivo específico, não diga apenas 'problema ao confirmar'"
+    base_prompt = (
+        system_prompt.strip()
+        if system_prompt and system_prompt.strip()
+        else DEFAULT_PROMPT
     )
+
+    crm_block   = f"\n[CLIENTE]{crm_context.strip()}" if crm_context and crm_context.strip() else ""
+    sched_block = f"\n{scheduling_context.strip()}"   if scheduling_context and scheduling_context.strip() else ""
+
+    format_block = f"""
+
+[FORMATO OBRIGATORIO — sempre JSON válido]
+{{"response":"mensagem ao cliente","confidence":0.85,"needs_human":false,"handoff_reason":""}}
+
+REGRAS:
+- confidence: 0.0-1.0 — sua certeza. Se não sabe algo = 0.5, não 0.2
+- needs_human: true SOMENTE para confirmar agendamento OU limitação explícita do sistema
+- response: NUNCA coloque "scheduling:..." aqui — isso vai em handoff_reason
+- Se precisar de mais informações antes de confirmar = needs_human:false, pergunte normalmente
+
+FLUXO DE AGENDAMENTO (siga em ordem — não pule etapas):
+1. Identifique o SERVIÇO (se mais de 1, liste e pergunte)
+2. Pergunte o DIA preferido
+3. Consulte a agenda — verifique se aquele DIA aparece na lista para aquele serviço
+   → Não aparece = "Não temos disponibilidade nesse dia para [serviço]. Próximos dias: [liste os que aparecem]"
+   → NUNCA diga "está ocupado" se o dia simplesmente não existe na agenda
+4. Se aparece: informe os horários disponíveis daquele dia e serviço
+5. Colete TODOS os CAMPOS_OBRIGATORIOS do serviço (um por vez, de forma natural)
+6. Se CEP_OBRIGATORIO: pergunte o CEP
+7. Colete NOME COMPLETO
+8. Confirme todos os dados com o cliente
+9. Só após confirmação: needs_human:true
+
+AO CONFIRMAR:
+- needs_human: true
+- handoff_reason: scheduling:ID:{_now.year}-MM-DD:HHMM:NOME:CEP_ou_sem_cep
+- HHMM sem ':' → 15:30 = 1530
+- response: mensagem natural de confirmação dos dados coletados, SEM o código scheduling
+
+ERROS COMUNS — NUNCA FAÇA:
+- Colocar "scheduling:..." na response
+- Confirmar sem coletar todos os campos obrigatórios
+- Inventar horários que não estão na agenda
+- Usar ano errado — hoje é {_now.strftime('%d/%m/%Y')}, ano {_now.year}
+- Dizer "está ocupado" quando o dia não existe na agenda
+"""
 
     full_system = base_prompt + crm_block + sched_block + format_block
 
     msgs = [{"role": "system", "content": full_system}]
-    for msg in (recent_messages or [])[-6:]:   # ← reduz de 8 para 6 mensagens
+    for msg in (recent_messages or [])[-6:]:
         role    = "assistant" if msg.get("direction") == "outbound" else "user"
         content = msg.get("content", "").strip()
         if content:
-            msgs.append({"role": role, "content": content[:500]})   # ← limita tamanho de cada msg
-
-    msgs.append({"role": "user", "content": message[:1000]})   # ← limita input do usuário
+            msgs.append({"role": role, "content": content[:600]})
+    msgs.append({"role": "user", "content": message[:1000]})
 
     try:
         response = await client.chat.completions.create(
@@ -60,29 +89,49 @@ async def call_openai(
             messages=msgs,
             response_format={"type": "json_object"},
             temperature=0.3,
-            max_tokens=400   # ← reduz de 700 para 400
+            max_tokens=450
         )
 
         raw  = response.choices[0].message.content
         data = json.loads(raw)
-        text = data.get("response") or data.get("text") or "Pode repetir?"
+
+        text           = data.get("response") or data.get("text") or ""
+        handoff_reason = str(data.get("handoff_reason") or "")
+        needs_human    = bool(data.get("needs_human", False))
+        confidence     = max(0.0, min(1.0, float(data.get("confidence", 0.8))))
+
+        # Correção: modelo às vezes coloca scheduling no response em vez do handoff_reason
+        if text.startswith("scheduling:") and not handoff_reason.startswith("scheduling:"):
+            handoff_reason = text
+            text           = ""
+            needs_human    = True
+
+        # Se response é vazio mas temos handoff de agendamento, usa mensagem padrão
+        if not text and needs_human and handoff_reason.startswith("scheduling:"):
+            text = "Ótimo! Vou confirmar seu agendamento agora."
+
+        if not text:
+            text = "Pode repetir? Não entendi bem."
 
         return {
             "text":           text,
             "response":       text,
-            "confidence":     max(0.0, min(1.0, float(data.get("confidence", 0.8)))),
-            "needs_human":    bool(data.get("needs_human", False)),
-            "handoff_reason": str(data.get("handoff_reason") or ""),
+            "confidence":     confidence,
+            "needs_human":    needs_human,
+            "handoff_reason": handoff_reason,
         }
+
     except json.JSONDecodeError as e:
         log.error("[OPENAI] JSON inválido: %s", e)
     except Exception as e:
         log.error("[OPENAI] Erro: %s", e)
 
     return {
-        "text": "Pode repetir? Tive um problema técnico.",
-        "response": "Pode repetir? Tive um problema técnico.",
-        "confidence": 0.0, "needs_human": False, "handoff_reason": ""
+        "text":           "Pode repetir? Tive um problema técnico.",
+        "response":       "Pode repetir? Tive um problema técnico.",
+        "confidence":     0.5,
+        "needs_human":    False,
+        "handoff_reason": "",
     }
 
 

@@ -128,46 +128,69 @@ def get_next_days_availability_compact(
     days_ahead: int,
     db: Session
 ) -> str:
-    """
-    Versão compacta do contexto — usa ~400 tokens em vez de ~1.900.
-    Formato tabular em vez de descritivo.
-    """
-    WDAY = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]
-    now  = datetime.now()
+    WDAY     = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]
+    WDAY_PT  = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
+    now      = datetime.now()
+    ano      = now.year
 
-    # Cabeçalho mínimo
-    lines = [f"[AGENDA {now.strftime('%d/%m %H:%M')}]"]
+    lines = [
+        f"[AGENDA {now.strftime('%d/%m/%Y')} {now.strftime('%H:%M')} — ano {ano}]",
+        f"HOJE é {WDAY_PT[now.weekday()]}, {now.strftime('%d/%m/%Y')}",
+        "Use SEMPRE o ano correto ao montar datas: YYYY-MM-DD com ano " + str(ano),
+        ""
+    ]
 
-    # Serviços em uma linha cada
+    # Serviços
     for svc in services:
-        wdays = ",".join(WDAY[w] for w in sorted(svc.available_weekdays or [0,1,2,3,4,5,6]))
-        req   = "|campos:" + ",".join(f.get("key","") for f in (svc.required_fields or [])) if svc.required_fields else ""
-        loc   = f"|cep:{svc.location_radius_km}km" if svc.location_enabled else ""
-        ac    = "auto" if svc.auto_confirm else "manual"
-        lines.append(f"SVC[{svc.id}]{svc.name}|{svc.duration_minutes}min|{ac}|dias:{wdays}{req}{loc}")
+        wdays = svc.available_weekdays or [0, 1, 2, 3, 4, 5, 6]
+        wday_names = ",".join(WDAY[w] for w in sorted(wdays))
+        req   = ""
+        if svc.required_fields:
+            fields = [f.get("label", f.get("key", "")) for f in svc.required_fields]
+            req    = f"|CAMPOS_OBRIGATORIOS:{','.join(fields)}"
+        loc  = f"|CEP_OBRIGATORIO:{svc.location_radius_km}km" if svc.location_enabled else ""
+        ac   = "auto" if svc.auto_confirm else "manual"
+        lines.append(
+            f"SVC[{svc.id}] {svc.name} | {svc.duration_minutes}min | {ac} | "
+            f"DIAS_DISPONIVEIS:{wday_names}{req}{loc}"
+        )
 
-    # Disponibilidade — só lista dias que têm slots, slots agrupados
+    lines.append("")
+    lines.append("SLOTS DISPONIVEIS (somente estes existem):")
+
     found = False
     for i in range(days_ahead):
         d     = from_date + timedelta(days=i)
-        label = f"hoje" if i==0 else f"amanhã" if i==1 else f"{WDAY[d.weekday()]}{d.strftime('%d/%m')}"
+        label = (
+            f"HOJE {WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}"   if i == 0 else
+            f"AMANHÃ {WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}" if i == 1 else
+            f"{WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}"
+        )
 
         day_parts = []
         for svc in services:
             slots = get_available_slots(tenant_id, svc.id, d, db)
             if slots:
                 found = True
-                # Agrupa slots em ranges para economizar tokens
                 day_parts.append(f"[{svc.id}]:{','.join(slots)}")
 
         if day_parts:
-            lines.append(f"{label}|{'|'.join(day_parts)}")
+            lines.append(f"{label} | {'|'.join(day_parts)}")
 
     if not found:
-        lines.append("SEM_HORARIOS")
+        lines.append("SEM_SLOTS_DISPONIVEIS — informe e sugira contato direto")
+
+    lines.append("")
+    lines.append(
+        "FORMATO CONFIRMACAO: scheduling:ID:YYYY-MM-DD:HHMM:NOME_COMPLETO:CEP_ou_sem_cep"
+    )
+    lines.append(f"EXEMPLO: scheduling:1:{ano}-08-04:1500:Gabriel Silva:74948180")
 
     return "\n".join(lines)
 
+
+# Alias para compatibilidade com scheduling.py
+get_next_days_availability = get_next_days_availability_compact
 
 
 async def _geocode_cep(cep: str) -> tuple[Optional[float], Optional[float]]:
