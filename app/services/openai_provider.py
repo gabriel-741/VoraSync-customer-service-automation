@@ -19,10 +19,11 @@ async def call_openai(
 ) -> dict:
     from datetime import datetime as _dt
     _now = _dt.now()
+    _ano = _now.year
 
     DEFAULT_PROMPT = (
         "Assistente de atendimento. Português brasileiro informal e direto.\n"
-        "Proibido usar: 'assisti-lo', 'em que posso ser útil', 'encaminhar para atendente'.\n"
+        "Proibido: 'assisti-lo', 'em que posso ser útil', linguagem robótica.\n"
         "Cada conversa é um novo atendimento — não assuma intenções anteriores."
     )
 
@@ -32,7 +33,7 @@ async def call_openai(
         else DEFAULT_PROMPT
     )
 
-    crm_block   = f"\n[CLIENTE]{crm_context.strip()}" if crm_context and crm_context.strip() else ""
+    crm_block   = f"\n[CLIENTE]{crm_context.strip()}" if crm_context   and crm_context.strip()   else ""
     sched_block = f"\n{scheduling_context.strip()}"   if scheduling_context and scheduling_context.strip() else ""
 
     format_block = f"""
@@ -40,37 +41,54 @@ async def call_openai(
 [FORMATO OBRIGATORIO — sempre JSON válido]
 {{"response":"mensagem ao cliente","confidence":0.85,"needs_human":false,"handoff_reason":""}}
 
-REGRAS:
-- confidence: 0.0-1.0 — sua certeza. Se não sabe algo = 0.5, não 0.2
-- needs_human: true SOMENTE para confirmar agendamento OU limitação explícita do sistema
+REGRAS GERAIS:
+- confidence: 0.5 se incerto, nunca abaixo de 0.3 sem motivo real
+- needs_human: true APENAS para confirmar agendamento OU limitação do sistema
 - response: NUNCA coloque "scheduling:..." aqui — isso vai em handoff_reason
-- Se precisar de mais informações antes de confirmar = needs_human:false, pergunte normalmente
+- Antes de confirmar agendamento: colete todos os dados necessários naturalmente
 
-FLUXO DE AGENDAMENTO (siga em ordem — não pule etapas):
-1. Identifique o SERVIÇO (se mais de 1, liste e pergunte)
-2. Pergunte o DIA preferido
-3. Consulte a agenda — verifique se aquele DIA aparece na lista para aquele serviço
-   → Não aparece = "Não temos disponibilidade nesse dia para [serviço]. Próximos dias: [liste os que aparecem]"
-   → NUNCA diga "está ocupado" se o dia simplesmente não existe na agenda
-4. Se aparece: informe os horários disponíveis daquele dia e serviço
-5. Colete TODOS os CAMPOS_OBRIGATORIOS do serviço (um por vez, de forma natural)
-6. Se CEP_OBRIGATORIO: pergunte o CEP
-7. Colete NOME COMPLETO
-8. Confirme todos os dados com o cliente
-9. Só após confirmação: needs_human:true
+━━━ FLUXO DE AGENDAMENTO (não pule etapas) ━━━
 
-AO CONFIRMAR:
-- needs_human: true
-- handoff_reason: scheduling:ID:{_now.year}-MM-DD:HHMM:NOME:CEP_ou_sem_cep
-- HHMM sem ':' → 15:30 = 1530
-- response: mensagem natural de confirmação dos dados coletados, SEM o código scheduling
+1. SERVIÇO → Identifique qual serviço o cliente quer
+2. DIA → Pergunte o dia preferido
+3. VERIFICA → Consulte os slots disponíveis:
+   • Dia NÃO está na agenda = "Não temos disponibilidade nesse dia. Próximos dias: [lista]"
+   • NUNCA diga "está ocupado" se o dia não existe — ele simplesmente não está disponível
+   • Dia ESTÁ na agenda = mostre os horários disponíveis
+4. HORÁRIO → Confirme o horário escolhido
+5. CAMPOS_OBRIGATORIOS → Colete UM POR VEZ de forma natural:
+   • Cada SVC na agenda tem CAMPOS_OBRIGATORIOS listados
+   • Colete todos antes de confirmar
+   • Ex: "Para finalizar, preciso do seu CPF" → aguarda → "Agora seu CEP" → aguarda
+6. CEP → Se o serviço tem CEP_OBRIGATORIO, peça o CEP
+7. NOME COMPLETO → Se não tiver ainda
+8. CONFIRMA → Repita todos os dados para o cliente confirmar
+9. FINALIZA → needs_human:true com handoff_reason no formato abaixo
+
+━━━ FORMATO DO handoff_reason ━━━
+scheduling:ID:YYYY-MM-DD:HHMM:NOME|CEP|campo1=valor1|campo2=valor2
+
+REGRAS:
+- Separador principal de campos extras: | (pipe)
+- HHMM sem ':' → 11:30 = 1130, 15:00 = 1500
+- CEP: somente números (sem hífen)
+- Campos extras: chave=valor separados por |
+- Ano correto: {_ano} (hoje é {_now.strftime('%d/%m/%Y')})
+
+EXEMPLOS:
+  Com CEP e CPF: scheduling:1:2026-07-24:1130:Gabriel Henrique|74948180|cpf=71164980106
+  Com CEP sem extra: scheduling:1:2026-08-04:1500:Maria Silva|74948180
+  Sem CEP: scheduling:2:2026-08-04:0900:João Santos|sem_cep
+  Sem CEP com campo: scheduling:2:2026-08-04:0900:João Santos|sem_cep|empresa=Farmácia ABC
 
 ERROS COMUNS — NUNCA FAÇA:
 - Colocar "scheduling:..." na response
-- Confirmar sem coletar todos os campos obrigatórios
+- Confirmar sem coletar todos os CAMPOS_OBRIGATORIOS
+- Incluir CPF ou outros campos diretamente após o CEP com ':' — use '|'
 - Inventar horários que não estão na agenda
-- Usar ano errado — hoje é {_now.strftime('%d/%m/%Y')}, ano {_now.year}
-- Dizer "está ocupado" quando o dia não existe na agenda
+- Usar ano errado — ano correto: {_ano}
+- Dizer "está ocupado" quando o dia simplesmente não existe na lista
+- Repetir a pergunta de serviço se o cliente já informou
 """
 
     full_system = base_prompt + crm_block + sched_block + format_block
@@ -100,15 +118,14 @@ ERROS COMUNS — NUNCA FAÇA:
         needs_human    = bool(data.get("needs_human", False))
         confidence     = max(0.0, min(1.0, float(data.get("confidence", 0.8))))
 
-        # Correção: modelo às vezes coloca scheduling no response em vez do handoff_reason
-        if text.startswith("scheduling:") and not handoff_reason.startswith("scheduling:"):
-            handoff_reason = text
-            text           = ""
+        # Modelo às vezes coloca scheduling no response por engano
+        if text.strip().startswith("scheduling:") and not handoff_reason.startswith("scheduling:"):
+            handoff_reason = text.strip()
+            text           = "Ótimo! Vou confirmar seu agendamento agora."
             needs_human    = True
 
-        # Se response é vazio mas temos handoff de agendamento, usa mensagem padrão
         if not text and needs_human and handoff_reason.startswith("scheduling:"):
-            text = "Ótimo! Vou confirmar seu agendamento agora."
+            text = "Perfeito! Confirmando seu agendamento agora."
 
         if not text:
             text = "Pode repetir? Não entendi bem."
@@ -133,9 +150,11 @@ ERROS COMUNS — NUNCA FAÇA:
         "needs_human":    False,
         "handoff_reason": "",
     }
+    # Adiciona verificação rápida antes de chamar a API:
 
 
-# Adiciona verificação rápida antes de chamar a API:
+
+
 async def smart_extract_profile(
     message: str,
     current_profile: dict,
