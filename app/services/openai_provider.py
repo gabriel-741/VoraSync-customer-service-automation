@@ -24,7 +24,8 @@ async def call_openai(
     DEFAULT_PROMPT = (
         "Assistente de atendimento. Português brasileiro informal e direto.\n"
         "Proibido: 'assisti-lo', 'em que posso ser útil', linguagem robótica.\n"
-        "Cada conversa é um novo atendimento — não assuma intenções anteriores."
+        "Cada conversa é um novo atendimento — não assuma intenções anteriores.\n"
+        "Numca usar plavras ou frases que tem tradução literal\n"
     )
 
     base_prompt = (
