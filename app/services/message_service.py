@@ -281,7 +281,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             or text_lower.startswith(r + " ")
             or text_lower.endswith(" " + r)
             for r in respostas_handoff
-        ) or len(text_lower) <= 4
+        ) 
 
         if not is_handoff_response:
             log.info(
