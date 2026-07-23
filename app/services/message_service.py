@@ -16,7 +16,7 @@ from app.utils.logger import get_logger
 
 log = get_logger(__name__)
 
-INACTIVITY_RESET_HOURS    = 12
+INACTIVITY_RESET_HOURS    = 4
 COOLDOWN_MINUTES          = 30
 EXPLICIT_CAP              = 100
 SOFT_CAP                  = 90
@@ -227,7 +227,6 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         )
         .first()
     )
-
     if not conversation:
         conversation = Conversation(
             tenant_id=tenant.id,
@@ -257,12 +256,46 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         conversation.explicit_score       = 0
         conversation.soft_score           = 0
         conversation.consecutive_friction = 0
-        conversation.handoff_offer_count  = 0
+        conversation.handoff_offer_count  = 0   # ← reseta também o contador de ofertas
         conversation.handoff_offered      = False
         conversation.cooldown_until       = None
         _scheduling_cache.pop(tenant.id, None)
-        if conversation.state != ConversationStateEnum.human_active:
+        conversation.state = ConversationStateEnum.ai_active
+
+    # ── Reset de estado obsoleto ──
+    # Se a conversa ficou presa em awaiting_handoff_confirmation
+    # e a mensagem não parece uma resposta direta ao handoff,
+    # reseta para ai_active para não bloquear o novo atendimento.
+    if conversation.state == ConversationStateEnum.awaiting_handoff_confirmation:
+        text_lower = text.lower().strip()
+
+        respostas_handoff = {
+            "sim", "não", "nao", "pode ser", "quero", "pode",
+            "por favor", "não precisa", "nao precisa", "tudo bem",
+            "ok", "okay", "pode continuar", "continua",
+            "não quero", "nao quero"
+        }
+
+        is_handoff_response = any(
+            text_lower == r
+            or text_lower.startswith(r + " ")
+            or text_lower.endswith(" " + r)
+            for r in respostas_handoff
+        ) or len(text_lower) <= 4
+
+        if not is_handoff_response:
+            log.info(
+                "[SESSION] Estado awaiting_handoff_confirmation obsoleto — "
+                "resetando para ai_active. msg='%s'",
+                text[:40]
+            )
+
             conversation.state = ConversationStateEnum.ai_active
+            conversation.explicit_score = 0
+            conversation.soft_score = max(0, (conversation.soft_score or 0) - 30)
+            conversation.consecutive_friction = 0
+            conversation.handoff_offered = False
+            # Não zera handoff_offer_count — evita loop de novas ofertas
 
     conversation.last_activity_at = datetime.now(timezone.utc)
     db.commit()
@@ -283,6 +316,7 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         .limit(10)
         .all()
     )
+    
     recent_messages = [
         {"direction": m.direction.value, "content": m.content}
         for m in reversed(recent_rows)
