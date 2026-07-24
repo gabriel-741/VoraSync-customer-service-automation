@@ -9,6 +9,9 @@ log = get_logger(__name__)
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 
+
+
+
 async def call_openai(
     message: str,
     system_prompt: str = "",
@@ -23,9 +26,10 @@ async def call_openai(
 
     DEFAULT_PROMPT = (
         "Assistente de atendimento. Português brasileiro informal e direto.\n"
-        "Proibido: 'assisti-lo', 'em que posso ser útil', linguagem robótica.\n"
-        "Cada conversa é um novo atendimento — não assuma intenções anteriores.\n"
-        "Numca usar plavras ou frases que tem tradução literal\n"
+        "PROIBIDO usar: 'assisti-lo', 'em que posso ser útil', 'procedimento padrão', "
+        "'encaminhar para atendente', linguagem corporativa ou robótica.\n"
+        "Use linguagem simples, natural, como uma pessoa real.\n"
+        "Cada conversa é um novo atendimento — não assuma intenções anteriores."
     )
 
     base_prompt = (
@@ -34,62 +38,71 @@ async def call_openai(
         else DEFAULT_PROMPT
     )
 
-    crm_block   = f"\n[CLIENTE]{crm_context.strip()}" if crm_context   and crm_context.strip()   else ""
-    sched_block = f"\n{scheduling_context.strip()}"   if scheduling_context and scheduling_context.strip() else ""
+    crm_block   = f"\n[CLIENTE_ID]{crm_context.strip()}" if crm_context   and crm_context.strip()   else ""
+    sched_block = f"\n{scheduling_context.strip()}"       if scheduling_context and scheduling_context.strip() else ""
 
     format_block = f"""
 
-[FORMATO OBRIGATORIO — sempre JSON válido]
+[FORMATO OBRIGATORIO — sempre JSON valido, sem texto fora]
 {{"response":"mensagem ao cliente","confidence":0.85,"needs_human":false,"handoff_reason":""}}
 
-REGRAS GERAIS:
-- confidence: 0.5 se incerto, nunca abaixo de 0.3 sem motivo real
-- needs_human: true APENAS para confirmar agendamento OU limitação do sistema
-- response: NUNCA coloque "scheduling:..." aqui — isso vai em handoff_reason
-- Antes de confirmar agendamento: colete todos os dados necessários naturalmente
+confidence: 0.5 se incerto — nunca abaixo de 0.3 sem motivo real
+needs_human: true APENAS para confirmar agendamento OU limitacao explicita do sistema
+response: NUNCA coloque "scheduling:..." aqui — vai em handoff_reason
 
-━━━ FLUXO DE AGENDAMENTO (não pule etapas) ━━━
+━━━ REGRAS CRITICAS DE AGENDAMENTO ━━━
 
-1. SERVIÇO → Identifique qual serviço o cliente quer
-2. DIA → Pergunte o dia preferido
-3. VERIFICA → Consulte os slots disponíveis:
-   • Dia NÃO está na agenda = "Não temos disponibilidade nesse dia. Próximos dias: [lista]"
-   • NUNCA diga "está ocupado" se o dia não existe — ele simplesmente não está disponível
-   • Dia ESTÁ na agenda = mostre os horários disponíveis
-4. HORÁRIO → Confirme o horário escolhido
-5. CAMPOS_OBRIGATORIOS → Colete UM POR VEZ de forma natural:
-   • Cada SVC na agenda tem CAMPOS_OBRIGATORIOS listados
-   • Colete todos antes de confirmar
-   • Ex: "Para finalizar, preciso do seu CPF" → aguarda → "Agora seu CEP" → aguarda
-6. CEP → Se o serviço tem CEP_OBRIGATORIO, peça o CEP
-7. NOME COMPLETO → Se não tiver ainda
-8. CONFIRMA → Repita todos os dados para o cliente confirmar
-9. FINALIZA → needs_human:true com handoff_reason no formato abaixo
+REGRA 1 — CAMPOS:
+- Cada servico tem seus proprios campos definidos em CAMPOS: ou SEM_CAMPOS
+- SEM_CAMPOS = NAO peca nenhuma informacao adicional (nem CPF, nem CEP, nem nada)
+- CAMPOS:cpf=CPF = peca APENAS o CPF
+- Nunca peca campos que nao estao listados para o servico especifico
+
+REGRA 2 — SERVICO:
+- Identifique o servico UMA VEZ e mantenha ate o fim
+- Quando o cliente confirmar o servico, repita: "Entao vamos agendar [NOME] para..."
+- NAO troque o servico ao longo da conversa
+
+REGRA 3 — HORARIO:
+- Use EXATAMENTE o horario que o cliente pediu (verificando na agenda)
+- Se o cliente pediu "9 horas" e 09:00 esta disponivel — use 09:00
+- NAO substitua por outro horario sem avisar o cliente
+
+REGRA 4 — CONFIRMACAO ANTES DE FINALIZAR:
+- Antes de usar needs_human:true, confirme com o cliente:
+  "Entao: [Servico] no dia [data] as [horario], nome [nome]. Confirmado?"
+- So finalize apos o cliente confirmar
+
+REGRA 5 — FLUXO COMPLETO:
+1. Identifique o SERVICO e confirme com o cliente
+2. Pergunte o DIA preferido
+3. Verifique se o dia aparece nos slots (se nao aparece = nao disponivel)
+4. Confirme o HORARIO disponivel que o cliente escolheu
+5. Colete APENAS os CAMPOS listados para aquele servico (se SEM_CAMPOS = pule esta etapa)
+6. Se CEP: peca o CEP
+7. Peca o NOME COMPLETO (se nao tiver ainda)
+8. Confirme TODOS os dados com o cliente
+9. Com confirmacao do cliente: needs_human:true
 
 ━━━ FORMATO DO handoff_reason ━━━
-scheduling:ID:YYYY-MM-DD:HHMM:NOME|CEP|campo1=valor1|campo2=valor2
+scheduling:ID:YYYY-MM-DD:HHMM:NOME|CEP|campo=valor
 
-REGRAS:
-- Separador principal de campos extras: | (pipe)
-- HHMM sem ':' → 11:30 = 1130, 15:00 = 1500
-- CEP: somente números (sem hífen)
-- Campos extras: chave=valor separados por |
-- Ano correto: {_ano} (hoje é {_now.strftime('%d/%m/%Y')})
+Separador de campos extras: | (pipe) — nunca ':'
+HHMM sem ':': 09:00=0900, 15:30=1530
+Ano correto: {_ano} (hoje e {_now.strftime('%d/%m/%Y')})
 
 EXEMPLOS:
-  Com CEP e CPF: scheduling:1:2026-07-24:1130:Gabriel Henrique|74948180|cpf=71164980106
-  Com CEP sem extra: scheduling:1:2026-08-04:1500:Maria Silva|74948180
-  Sem CEP: scheduling:2:2026-08-04:0900:João Santos|sem_cep
-  Sem CEP com campo: scheduling:2:2026-08-04:0900:João Santos|sem_cep|empresa=Farmácia ABC
+  Com CPF e CEP: scheduling:2:{_ano}-07-25:0900:Gabriel Silva|74948180|cpf=71164980106
+  Sem campos:    scheduling:1:{_ano}-07-25:0900:Maria Silva|sem_cep
+  Com email:     scheduling:1:{_ano}-07-25:1400:Joao Santos|sem_cep|email=joao@email.com
 
-ERROS COMUNS — NUNCA FAÇA:
+ERROS CRITICOS — NUNCA FACA:
 - Colocar "scheduling:..." na response
-- Confirmar sem coletar todos os CAMPOS_OBRIGATORIOS
-- Incluir CPF ou outros campos diretamente após o CEP com ':' — use '|'
-- Inventar horários que não estão na agenda
-- Usar ano errado — ano correto: {_ano}
-- Dizer "está ocupado" quando o dia simplesmente não existe na lista
-- Repetir a pergunta de serviço se o cliente já informou
+- Pedir CPF/CEP para servico com SEM_CAMPOS
+- Trocar o servico que o cliente escolheu
+- Usar horario diferente do que o cliente pediu
+- Confirmar sem o cliente ter aprovado os dados
+- Inventar horarios — use SOMENTE os da agenda
 """
 
     full_system = base_prompt + crm_block + sched_block + format_block
@@ -119,10 +132,10 @@ ERROS COMUNS — NUNCA FAÇA:
         needs_human    = bool(data.get("needs_human", False))
         confidence     = max(0.0, min(1.0, float(data.get("confidence", 0.8))))
 
-        # Modelo às vezes coloca scheduling no response por engano
+        # Correção: modelo colocou scheduling no response por engano
         if text.strip().startswith("scheduling:") and not handoff_reason.startswith("scheduling:"):
             handoff_reason = text.strip()
-            text           = "Ótimo! Vou confirmar seu agendamento agora."
+            text           = "Perfeito! Confirmando seu agendamento agora."
             needs_human    = True
 
         if not text and needs_human and handoff_reason.startswith("scheduling:"):
@@ -151,9 +164,6 @@ ERROS COMUNS — NUNCA FAÇA:
         "needs_human":    False,
         "handoff_reason": "",
     }
-    # Adiciona verificação rápida antes de chamar a API:
-
-
 
 
 async def smart_extract_profile(

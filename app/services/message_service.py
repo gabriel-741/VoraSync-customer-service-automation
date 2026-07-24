@@ -499,15 +499,12 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
             customer_phone=contact.phone,
             db=db
         )
-
         if appt:
             # Sucesso — invalida cache e confirma
             _scheduling_cache.pop(tenant.id, None)
 
-
-
             svc = db.query(Service).filter(Service.id == appt.service_id).first()
-            svc_name  = svc.name if svc else "Serviço"
+            svc_name = svc.name if svc else "Serviço"
             data_hora = appt.scheduled_at.strftime("%d/%m/%Y às %H:%M")
 
             if appt.status == AppointmentStatusEnum.confirmed:
@@ -525,9 +522,44 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
                     f"Confirmaremos em breve e você receberá uma mensagem. 😊"
                 )
 
-            conversation.state           = ConversationStateEnum.ai_active
+            conversation.state = ConversationStateEnum.ai_active
             conversation.handoff_offered = False
             db.commit()
+
+            # Salva campos extras do agendamento no perfil do contato
+            if appt.extra_fields:
+                try:
+                    profile = dict(contact.profile or {})
+
+                    # Mapeamento de campos do agendamento para o perfil CRM
+                    field_map = {
+                        "nome_completo": "nome",
+                        "telefone": "telefone",
+                        "email": "email",
+                        "cpf": "cpf",
+                        "cnpj": "cnpj",
+                        "cidade_estado": "cidade",
+                        "data_nascimento": "data_nascimento",
+                    }
+
+                    for appt_key, val in appt.extra_fields.items():
+                        profile_key = field_map.get(appt_key, appt_key)
+                        profile[profile_key] = val  # sobrescreve sempre com dados novos
+
+                    contact.profile = profile
+                    db.commit()
+
+                    log.info(
+                        "[PROFILE] Dados do agendamento salvos: %s",
+                        list(appt.extra_fields.keys())
+                    )
+
+                except Exception as e:
+                    log.error(
+                        "[PROFILE] Erro ao salvar dados do agendamento: %s",
+                        e
+                    )
+
             await _send_and_save(sender, msg, tenant, conversation, contact, db)
             background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
             background_tasks.add_task(trim_old_messages, conversation.id)
@@ -536,49 +568,67 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
         else:
             # Falha — mensagem específica por código
             error_map = {
-                            "wrong_weekday":    error.message if error else "Esse serviço não atende nesse dia.",
-                            "slot_unavailable": f"Esse horário não está mais disponível. {error.message if error else ''}",
-                            "outside_radius":   f"Seu CEP está fora do raio de atendimento. {error.message if error else ''}",
-                            "cep_invalid":      "Não encontrei esse CEP. Por favor informe somente os números (ex: 74948180).",
-                            "cep_required":     "Preciso do seu CEP para verificar se atendemos na sua região.",
-                            "missing_field":    f"{error.message if error else 'Falta uma informação obrigatória.'}",
-                            "past_date":        "Essa data já passou. Qual outro dia você prefere?",
-                            "service_not_found":"Serviço não encontrado. Pode confirmar qual serviço deseja?",
-                            "invalid_format":   (
-                                "Precisei de mais informações para confirmar. "
-                                "Pode me informar: serviço, data, horário e nome completo?"
-                            ),
-                            "unknown":          "Tive um problema técnico ao confirmar. Pode tentar novamente?",
-                        }
+                "wrong_weekday": error.message if error else "Esse serviço não atende nesse dia.",
+                "slot_unavailable": f"Esse horário não está mais disponível. {error.message if error else ''}",
+                "outside_radius": f"Seu CEP está fora do raio de atendimento. {error.message if error else ''}",
+                "cep_invalid": "Não encontrei esse CEP. Por favor informe somente os números (ex: 74948180).",
+                "cep_required": "Preciso do seu CEP para verificar se atendemos na sua região.",
+                "missing_field": f"{error.message if error else 'Falta uma informação obrigatória.'}",
+                "past_date": "Essa data já passou. Qual outro dia você prefere?",
+                "service_not_found": "Serviço não encontrado. Pode confirmar qual serviço deseja?",
+                "invalid_format": (
+                    "Precisei de mais informações para confirmar. "
+                    "Pode me informar: serviço, data, horário e nome completo?"
+                ),
+                "unknown": "Tive um problema técnico ao confirmar. Pode tentar novamente?",
+            }
 
-            code    = error.code if error else "unknown"
+            code = error.code if error else "unknown"
             msg_err = error_map.get(code, "Não consegui confirmar. Pode tentar novamente?")
 
-            log.warning("[SCHEDULING] Falha [%s]: %s", code, error.message if error else "—")
+            log.warning(
+                "[SCHEDULING] Falha [%s]: %s",
+                code,
+                error.message if error else "—"
+            )
 
             # Invalida cache para forçar contexto fresco na próxima mensagem
             _scheduling_cache.pop(tenant.id, None)
 
             # Erros que podem se repetir acumulam fricção
-            loop_codes = {"outside_radius", "cep_invalid", "slot_unavailable", "unknown"}
+            loop_codes = {
+                "outside_radius",
+                "cep_invalid",
+                "slot_unavailable",
+                "unknown",
+            }
+
             if code in loop_codes:
                 conversation.soft_score = min(
-                    SOFT_CAP, (conversation.soft_score or 0) + 15
+                    SOFT_CAP,
+                    (conversation.soft_score or 0) + 15
                 )
                 conversation.consecutive_friction = (
                     (conversation.consecutive_friction or 0) + 1
                 )
                 db.commit()
 
-                total_now = (conversation.explicit_score or 0) + (conversation.soft_score or 0)
-                in_loop   = (conversation.consecutive_friction or 0) >= FRICTION_STREAK_THRESHOLD
+                total_now = (
+                    (conversation.explicit_score or 0)
+                    + (conversation.soft_score or 0)
+                )
+
+                in_loop = (
+                    (conversation.consecutive_friction or 0)
+                    >= FRICTION_STREAK_THRESHOLD
+                )
 
                 if (
                     (total_now >= HANDOFF_OFFER_SCORE_MIN or in_loop)
                     and conversation.handoff_offer_count < 1
                 ):
-                    conversation.state            = ConversationStateEnum.awaiting_handoff_confirmation
-                    conversation.handoff_offered  = True
+                    conversation.state = ConversationStateEnum.awaiting_handoff_confirmation
+                    conversation.handoff_offered = True
                     conversation.handoff_offer_count += 1
                     db.commit()
 
@@ -587,18 +637,38 @@ async def process_message(data: dict, db: Session, background_tasks: BackgroundT
                         f"Estou com dificuldades em finalizar o agendamento. "
                         f"Gostaria que um atendente te ajude a concluir? 😊"
                     )
-                    await _send_and_save(sender, handoff_msg, tenant, conversation, contact, db)
-                    background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
-                    background_tasks.add_task(trim_old_messages, conversation.id)
+
+                    await _send_and_save(
+                        sender,
+                        handoff_msg,
+                        tenant,
+                        conversation,
+                        contact,
+                        db,
+                    )
+
+                    background_tasks.add_task(
+                        update_contact_profile,
+                        contact.id,
+                        text,
+                        recent_messages[-5:]
+                    )
+
+                    background_tasks.add_task(
+                        trim_old_messages,
+                        conversation.id
+                    )
+
                     return handoff_msg
 
-            # Erros de campo faltando ou formato — não acumulam fricção, apenas orientam
             else:
+                # Erros de campo faltando ou formato — não acumulam fricção
                 db.commit()
 
             await _send_and_save(sender, msg_err, tenant, conversation, contact, db)
             background_tasks.add_task(update_contact_profile, contact.id, text, recent_messages[-5:])
             background_tasks.add_task(trim_old_messages, conversation.id)
+
             return msg_err
 
     # ── Atualiza score pós-resposta ──

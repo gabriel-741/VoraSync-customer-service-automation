@@ -621,18 +621,56 @@ textarea{resize:vertical;line-height:1.6}
       <!-- ABA AGENDA -->
       <div id="svc-panel-agenda" style="display:none;">
         <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;">
-          Selecione em quais dias da semana este servico esta disponivel. O horario segue a configuracao de funcionamento definida na aba Horario de Funcionamento.
+          Selecione em quais dias da semana este servico esta disponivel.
         </div>
         <div id="svc_weekdays_config"></div>
+
+        <div style="margin-top:20px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Modo de concorrencia</div>
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;">
+            Define como este servico se comporta quando ja existe outro agendamento no mesmo horario.
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;" id="svc_concurrency_options">
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);transition:border-color .12s;" id="cm_exclusive_label">
+              <input type="radio" name="svc_concurrency" value="exclusive" id="cm_exclusive" checked style="margin-top:3px;flex-shrink:0;">
+              <div>
+                <div style="font-size:13px;font-weight:500;">Exclusivo</div>
+                <div style="font-size:12px;color:var(--text-2);margin-top:2px;">Nenhum outro agendamento pode existir no mesmo periodo. Ex: consulta, atendimento individual.</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);transition:border-color .12s;" id="cm_same_service_label">
+              <input type="radio" name="svc_concurrency" value="same_service" id="cm_same_service" style="margin-top:3px;flex-shrink:0;">
+              <div>
+                <div style="font-size:13px;font-weight:500;">Mesmo servico</div>
+                <div style="font-size:12px;color:var(--text-2);margin-top:2px;">Bloqueia apenas se houver outro agendamento do mesmo servico. Ex: instalacao (pode ter limpeza no mesmo horario).</div>
+              </div>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);transition:border-color .12s;" id="cm_unlimited_label">
+              <input type="radio" name="svc_concurrency" value="unlimited" id="cm_unlimited" style="margin-top:3px;flex-shrink:0;">
+              <div>
+                <div style="font-size:13px;font-weight:500;">Ilimitado</div>
+                <div style="font-size:12px;color:var(--text-2);margin-top:2px;">Pode coexistir com qualquer agendamento. Ex: atendimento online, recebimento de pedidos.</div>
+              </div>
+            </label>
+          </div>
+        </div>
       </div>
 
       <!-- ABA CAMPOS EXTRAS -->
       <div id="svc-panel-campos" style="display:none;">
-        <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;">
-          Defina quais informacoes o bot deve coletar do cliente antes de confirmar o agendamento.
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;">
+          Selecione quais informacoes o bot deve coletar do cliente antes de confirmar o agendamento.
+          Deixe em branco se nao precisar de dados adicionais.
         </div>
-        <div id="svc_fields_list"></div>
-        <button class="btn btn-ghost btn-sm" onclick="addRequiredField()" style="margin-top:10px;">+ Adicionar campo</button>
+
+        <div style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Campos pre-definidos</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;" id="svc_generic_fields">
+          <!-- preenchido via JS -->
+        </div>
+
+        <div style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">Campos personalizados</div>
+        <div id="svc_custom_fields_list"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addCustomField()" style="margin-top:8px;">+ Adicionar campo personalizado</button>
       </div>
 
       <!-- ABA LOCALIZACAO -->
@@ -1307,48 +1345,229 @@ async function toggleServiceActive(id, newState) {
   catch(e) { alert('Erro: '+e.message); }
 }
 
+
+
+// ── Campos genéricos predefinidos ──
+const GENERIC_FIELDS = [
+  { key: 'nome_completo',   label: 'Nome completo',    placeholder: 'Nome completo do cliente' },
+  { key: 'telefone',        label: 'Telefone',          placeholder: '(62) 99999-9999' },
+  { key: 'email',           label: 'E-mail',            placeholder: 'email@exemplo.com' },
+  { key: 'cpf',             label: 'CPF',               placeholder: '000.000.000-00' },
+  { key: 'cnpj',            label: 'CNPJ',              placeholder: '00.000.000/0000-00' },
+  { key: 'cidade_estado',   label: 'Cidade/Estado',     placeholder: 'Ex: Goiânia/GO' },
+  { key: 'data_nascimento', label: 'Data de nascimento', placeholder: 'DD/MM/AAAA' },
+];
+
+
+let svcGenericFieldsChecked = new Set();  // chaves dos campos genéricos marcados
+let svcCustomFields        = [];          // campos personalizados adicionados
+
+function renderGenericFields() {
+  const container = document.getElementById('svc_generic_fields');
+  container.innerHTML = GENERIC_FIELDS.map(f => `
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:background .12s;"
+      onmouseenter="this.style.background='var(--surface-2)'" onmouseleave="this.style.background=''">
+      <input type="checkbox" id="gf_${f.key}"
+        ${svcGenericFieldsChecked.has(f.key) ? 'checked' : ''}
+        onchange="toggleGenericField('${f.key}', this.checked)"
+        style="width:15px;height:15px;flex-shrink:0;cursor:pointer;">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;">${esc(f.label)}</div>
+        <div style="font-size:11px;color:var(--text-3);">${esc(f.placeholder)}</div>
+      </div>
+    </label>
+  `).join('');
+}
+
+function toggleGenericField(key, checked) {
+  if (checked) svcGenericFieldsChecked.add(key);
+  else svcGenericFieldsChecked.delete(key);
+}
+
+function renderCustomFields() {
+  const container = document.getElementById('svc_custom_fields_list');
+  if (!svcCustomFields.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:4px 0;">Nenhum campo personalizado.</div>';
+    return;
+  }
+  container.innerHTML = svcCustomFields.map((f, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;">${esc(f.label)}</div>
+        <div style="font-size:11px;color:var(--text-3);">Chave: ${esc(f.key)}</div>
+      </div>
+      <button class="btn btn-danger btn-xs" onclick="removeCustomField(${i})">Remover</button>
+    </div>
+  `).join('');
+}
+
+function addCustomField() {
+  const label = prompt('Nome do campo (ex: Numero do pedido, Observacoes):')?.trim();
+  if (!label) return;
+  const key = label.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  if (!key) return alert('Nome invalido.');
+  if (svcCustomFields.some(f => f.key === key)) return alert('Campo ja existe.');
+  svcCustomFields.push({ key, label, placeholder: label, required: true });
+  renderCustomFields();
+}
+
+function removeCustomField(index) {
+  svcCustomFields.splice(index, 1);
+  renderCustomFields();
+}
+
+function buildRequiredFields() {
+  const fields = [];
+  // Campos genéricos marcados
+  for (const gf of GENERIC_FIELDS) {
+    if (svcGenericFieldsChecked.has(gf.key)) {
+      fields.push({ key: gf.key, label: gf.label, placeholder: gf.placeholder, required: true });
+    }
+  }
+  // Campos personalizados
+  for (const cf of svcCustomFields) {
+    fields.push(cf);
+  }
+  return fields;
+}
+
+function loadRequiredFieldsFromService(required_fields) {
+  const genericKeys = new Set(GENERIC_FIELDS.map(f => f.key));
+  svcGenericFieldsChecked = new Set();
+  svcCustomFields = [];
+
+  for (const f of (required_fields || [])) {
+    if (genericKeys.has(f.key)) {
+      svcGenericFieldsChecked.add(f.key);
+    } else {
+      svcCustomFields.push(f);
+    }
+  }
+}
+
+function getConcurrencyMode() {
+  const radios = document.querySelectorAll('input[name="svc_concurrency"]');
+  for (const r of radios) {
+    if (r.checked) return r.value;
+  }
+  return 'exclusive';
+}
+
+function setConcurrencyMode(mode) {
+  const radio = document.getElementById('cm_' + mode);
+  if (radio) {
+    radio.checked = true;
+    highlightConcurrencyOption(mode);
+  }
+}
+
+function highlightConcurrencyOption(mode) {
+  ['exclusive','same_service','unlimited'].forEach(m => {
+    const label = document.getElementById('cm_' + m + '_label');
+    if (label) {
+      label.style.borderColor = m === mode ? 'var(--accent)' : 'var(--border)';
+      label.style.background  = m === mode ? 'rgba(79,124,255,.06)' : '';
+    }
+  });
+}
+
+// Adiciona listeners para os radio buttons
+document.querySelectorAll('input[name="svc_concurrency"]').forEach(r => {
+  r.addEventListener('change', () => highlightConcurrencyOption(r.value));
+});
+
 function openCreateServiceModal() {
-  document.getElementById('svc_id').value='';
-  document.getElementById('svc_name').value='';
-  document.getElementById('svc_desc').value='';
-  document.getElementById('svc_duration').value='';
-  document.getElementById('svc_buffer').value='0';
-  document.getElementById('svc_price').value='';
-  document.getElementById('svc_autoconfirm').checked=true;
-  document.getElementById('serviceModalTitle').textContent='Novo Servico';
-  svcRequiredFields = [];
-  svcAvailableWeekdays = [0,1,2,3,4,5,6];
-  document.getElementById('svc_location_enabled').checked=false;
-  document.getElementById('svc_location_cep').value='';
-  document.getElementById('svc_location_radius').value='20';
-  document.getElementById('svc_location_fields').style.display='none';
+  document.getElementById('svc_id').value    = '';
+  document.getElementById('svc_name').value  = '';
+  document.getElementById('svc_desc').value  = '';
+  document.getElementById('svc_duration').value = '';
+  document.getElementById('svc_buffer').value   = '0';
+  document.getElementById('svc_price').value    = '';
+  document.getElementById('svc_autoconfirm').checked = true;
+  document.getElementById('serviceModalTitle').textContent = 'Novo Servico';
+
+  svcRequiredFields      = [];
+  svcAvailableWeekdays   = [0,1,2,3,4,5,6];
+  svcGenericFieldsChecked = new Set();
+  svcCustomFields        = [];
+
+  document.getElementById('svc_location_enabled').checked = false;
+  document.getElementById('svc_location_cep').value     = '';
+  document.getElementById('svc_location_radius').value  = '20';
+  document.getElementById('svc_location_fields').style.display = 'none';
+
+  setConcurrencyMode('exclusive');
   renderWeekdayConfig();
-  renderRequiredFields();
+  renderGenericFields();
+  renderCustomFields();
   switchServiceTab('geral');
   document.getElementById('serviceModal').classList.remove('hidden');
 }
 
 function openEditServiceModal(id) {
-  const s = servicesCache.find(x=>x.id===id); if(!s) return;
-  document.getElementById('svc_id').value=s.id;
-  document.getElementById('svc_name').value=s.name||'';
-  document.getElementById('svc_desc').value=s.description||'';
-  document.getElementById('svc_duration').value=s.duration_minutes||'';
-  document.getElementById('svc_buffer').value=s.buffer_after_minutes||0;
-  document.getElementById('svc_price').value=s.price||'';
-  document.getElementById('svc_autoconfirm').checked=s.auto_confirm!==false;
-  document.getElementById('serviceModalTitle').textContent='Editar Servico';
-  svcRequiredFields = JSON.parse(JSON.stringify(s.required_fields||[]));
-  svcAvailableWeekdays = [...(s.available_weekdays||[0,1,2,3,4,5,6])];
-  document.getElementById('svc_location_enabled').checked=!!s.location_enabled;
-  document.getElementById('svc_location_cep').value=s.location_cep||'';
-  document.getElementById('svc_location_radius').value=s.location_radius_km||20;
-  document.getElementById('svc_location_fields').style.display=s.location_enabled?'block':'none';
+  const s = servicesCache.find(x => x.id === id);
+  if (!s) return;
+
+  document.getElementById('svc_id').value    = s.id;
+  document.getElementById('svc_name').value  = s.name   || '';
+  document.getElementById('svc_desc').value  = s.description || '';
+  document.getElementById('svc_duration').value = s.duration_minutes   || '';
+  document.getElementById('svc_buffer').value   = s.buffer_after_minutes || 0;
+  document.getElementById('svc_price').value    = s.price || '';
+  document.getElementById('svc_autoconfirm').checked = s.auto_confirm !== false;
+  document.getElementById('serviceModalTitle').textContent = 'Editar Servico';
+
+  svcAvailableWeekdays = [...(s.available_weekdays || [0,1,2,3,4,5,6])];
+  loadRequiredFieldsFromService(s.required_fields || []);
+
+  document.getElementById('svc_location_enabled').checked = !!s.location_enabled;
+  document.getElementById('svc_location_cep').value    = s.location_cep || '';
+  document.getElementById('svc_location_radius').value = s.location_radius_km || 20;
+  document.getElementById('svc_location_fields').style.display = s.location_enabled ? 'block' : 'none';
+
+  setConcurrencyMode(s.concurrency_mode || 'exclusive');
   renderWeekdayConfig();
-  renderRequiredFields();
+  renderGenericFields();
+  renderCustomFields();
   switchServiceTab('geral');
   document.getElementById('serviceModal').classList.remove('hidden');
 }
+
+async function saveService() {
+  const id = document.getElementById('svc_id').value;
+  const cep = document.getElementById('svc_location_cep').value.replace(/\D/g, '');
+
+  const payload = {
+    name:                 document.getElementById('svc_name').value.trim(),
+    description:          document.getElementById('svc_desc').value.trim() || null,
+    duration_minutes:     parseInt(document.getElementById('svc_duration').value),
+    buffer_after_minutes: parseInt(document.getElementById('svc_buffer').value) || 0,
+    price:                parseFloat(document.getElementById('svc_price').value) || null,
+    auto_confirm:         document.getElementById('svc_autoconfirm').checked,
+    concurrency_mode:     getConcurrencyMode(),
+    required_fields:      buildRequiredFields(),
+    available_weekdays:   svcAvailableWeekdays,
+    location_enabled:     document.getElementById('svc_location_enabled').checked,
+    location_cep:         cep || null,
+    location_radius_km:   parseInt(document.getElementById('svc_location_radius').value) || 20,
+  };
+
+  if (!payload.name || !payload.duration_minutes) {
+    return alert('Nome e duracao sao obrigatorios.');
+  }
+
+  try {
+    if (id) await api(`/scheduling/services/${id}`, 'PATCH', payload);
+    else     await api('/scheduling/services', 'POST', payload);
+    document.getElementById('serviceModal').classList.add('hidden');
+    loadServices();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
+}
+
 
 function renderWeekdayConfig() {
   const container = document.getElementById('svc_weekdays_config');
@@ -1371,37 +1590,7 @@ function toggleWeekday(day, checked) {
   renderWeekdayConfig();
 }
 
-function renderRequiredFields() {
-  const container = document.getElementById('svc_fields_list');
-  if (!svcRequiredFields.length) {
-    container.innerHTML=`<div style="font-size:13px;color:var(--text-3);padding:12px 0;">Nenhum campo extra. O bot coleta automaticamente nome e telefone.</div>`;
-    return;
-  }
-  container.innerHTML = svcRequiredFields.map((f,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:500;">${esc(f.label)}</div>
-        <div style="font-size:11px;color:var(--text-3);">Chave: ${esc(f.key)} · ${f.required?'Obrigatorio':'Opcional'}</div>
-      </div>
-      <button class="btn btn-danger btn-xs" onclick="removeRequiredField(${i})">Remover</button>
-    </div>
-  `).join('');
-}
 
-function addRequiredField() {
-  const key   = prompt('Chave do campo (sem espacos, ex: cpf, endereco):')?.trim().toLowerCase().replace(/\s+/g,'_');
-  if (!key) return;
-  const label = prompt('Nome do campo para exibicao (ex: CPF, Endereco completo):')?.trim();
-  if (!label) return;
-  const required = confirm('Este campo e obrigatorio?');
-  svcRequiredFields.push({key, label, required, placeholder: label});
-  renderRequiredFields();
-}
-
-function removeRequiredField(index) {
-  svcRequiredFields.splice(index, 1);
-  renderRequiredFields();
-}
 
 function toggleLocationFields(checked) {
   document.getElementById('svc_location_fields').style.display = checked ? 'block' : 'none';
@@ -1422,30 +1611,7 @@ async function testLocationCep() {
   } catch(e) { el.textContent='Erro: '+e.message; }
 }
 
-async function saveService() {
-  const id = document.getElementById('svc_id').value;
-  const cep = document.getElementById('svc_location_cep').value.replace(/\D/g,'');
-  const payload = {
-    name:                 document.getElementById('svc_name').value,
-    description:          document.getElementById('svc_desc').value||null,
-    duration_minutes:     parseInt(document.getElementById('svc_duration').value),
-    buffer_after_minutes: parseInt(document.getElementById('svc_buffer').value)||0,
-    price:                parseFloat(document.getElementById('svc_price').value)||null,
-    auto_confirm:         document.getElementById('svc_autoconfirm').checked,
-    required_fields:      svcRequiredFields,
-    available_weekdays:   svcAvailableWeekdays,
-    location_enabled:     document.getElementById('svc_location_enabled').checked,
-    location_cep:         cep||null,
-    location_radius_km:   parseInt(document.getElementById('svc_location_radius').value)||20,
-  };
-  if (!payload.name||!payload.duration_minutes) return alert('Nome e duracao sao obrigatorios');
-  try {
-    if(id) await api(`/scheduling/services/${id}`,'PATCH',payload);
-    else   await api('/scheduling/services','POST',payload);
-    document.getElementById('serviceModal').classList.add('hidden');
-    loadServices();
-  } catch(e) { alert('Erro: '+e.message); }
-}
+
 
 // RULES
 async function loadRules() {

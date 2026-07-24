@@ -87,26 +87,22 @@ class Service(Base):
     buffer_after_minutes = Column(Integer, default=0)
     price                = Column(Numeric(10, 2), nullable=True)
     is_active            = Column(Boolean, default=True)
-
-    # Confirmação — por serviço
     auto_confirm         = Column(Boolean, default=True)
-
-    # Campos obrigatórios extras que o bot deve coletar
     required_fields      = Column(JSONB, default=list)
-
-    # Dias da semana disponíveis para este serviço (subset dos dias de funcionamento)
     available_weekdays   = Column(JSONB, default=lambda: [0, 1, 2, 3, 4, 5, 6])
 
-    # Raio de atendimento (opcional)
+    # exclusive | unlimited | same_service
+    concurrency_mode     = Column(String, default='exclusive')
+
     location_enabled     = Column(Boolean, default=False)
     location_cep         = Column(String, nullable=True)
     location_radius_km   = Column(Integer, default=20)
     location_lat         = Column(Float, nullable=True)
     location_lng         = Column(Float, nullable=True)
-
     created_at           = Column(DateTime, server_default=func.now())
 
     appointments = relationship("Appointment", back_populates="service")
+
 
 
 class Appointment(Base):

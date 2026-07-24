@@ -60,8 +60,9 @@ def get_available_slots(
     if weekday not in available_weekdays:
         return []
 
-    total_block = service.duration_minutes + service.buffer_after_minutes
-    rule        = get_active_rule(tenant_id, target_date, db)
+    concurrency_mode = getattr(service, 'concurrency_mode', 'exclusive') or 'exclusive'
+    total_block      = service.duration_minutes + service.buffer_after_minutes
+    rule             = get_active_rule(tenant_id, target_date, db)
     if not rule:
         return []
 
@@ -74,6 +75,7 @@ def get_available_slots(
 
     blocked: list[tuple[datetime, datetime]] = []
 
+    # Intervalos e bloqueios manuais — sempre aplicados
     for brk in day_cfg.breaks:
         blocked.append((
             datetime.combine(target_date, _parse_time(brk.start_time)),
@@ -91,16 +93,22 @@ def get_available_slots(
             datetime.combine(target_date, _parse_time(blk.end_time))
         ))
 
-    for appt in db.query(Appointment).filter(
-        Appointment.tenant_id == tenant_id,
-        Appointment.scheduled_at >= datetime.combine(target_date, time(0, 0)),
-        Appointment.scheduled_at <= datetime.combine(target_date, time(23, 59)),
-        Appointment.status.notin_([AppointmentStatusEnum.cancelled])
-    ).all():
-        appt_end = appt.scheduled_at + timedelta(
-            minutes=appt.duration_minutes + appt.buffer_minutes
-        )
-        blocked.append((appt.scheduled_at, appt_end))
+    # Agendamentos existentes — aplicados conforme modo de concorrência
+    if concurrency_mode != 'unlimited':
+        existing = db.query(Appointment).filter(
+            Appointment.tenant_id == tenant_id,
+            Appointment.scheduled_at >= datetime.combine(target_date, time(0, 0)),
+            Appointment.scheduled_at <= datetime.combine(target_date, time(23, 59)),
+            Appointment.status.notin_([AppointmentStatusEnum.cancelled])
+        ).all()
+
+        for appt in existing:
+            if concurrency_mode == 'same_service' and appt.service_id != service_id:
+                continue
+            appt_end = appt.scheduled_at + timedelta(
+                minutes=appt.duration_minutes + appt.buffer_minutes
+            )
+            blocked.append((appt.scheduled_at, appt_end))
 
     now_with_buffer = datetime.now() + timedelta(minutes=10)
     available       = []
@@ -120,8 +128,6 @@ def get_available_slots(
     return available
 
 
-
-
 def get_next_days_availability_compact(
     tenant_id: int,
     services: list,
@@ -129,49 +135,52 @@ def get_next_days_availability_compact(
     days_ahead: int,
     db: Session
 ) -> str:
-    WDAY    = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]
-    WDAY_PT = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"]
+    WDAY    = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    WDAY_PT = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
     now     = datetime.now()
     ano     = now.year
 
     lines = [
         f"[AGENDA {now.strftime('%d/%m/%Y')} {now.strftime('%H:%M')} — ANO:{ano}]",
         f"HOJE:{WDAY_PT[now.weekday()]} {now.strftime('%d/%m/%Y')}",
-        "DATAS: use sempre YYYY-MM-DD com ano " + str(ano),
-        ""
+        f"DATAS: use SEMPRE YYYY-MM-DD com ano {ano}",
+        "",
+        "SERVICOS_DISPONIVEIS:",
     ]
 
     for svc in services:
         wdays      = svc.available_weekdays or [0, 1, 2, 3, 4, 5, 6]
         wday_names = ",".join(WDAY[w] for w in sorted(wdays))
         ac         = "auto" if svc.auto_confirm else "manual"
+        cm         = getattr(svc, 'concurrency_mode', 'exclusive') or 'exclusive'
 
-        # Campos obrigatórios com chave e label
-        req = ""
-        if svc.required_fields:
+        # Campos extras — SEM_CAMPOS se não houver nenhum configurado
+        if svc.required_fields and len(svc.required_fields) > 0:
             campo_parts = []
             for f in svc.required_fields:
                 key   = f.get("key", "")
                 label = f.get("label", key)
-                campo_parts.append(f"{key}({label})")
-            req = f"|CAMPOS_OBRIGATORIOS:{','.join(campo_parts)}"
+                campo_parts.append(f"{key}={label}")
+            campos_str = f"|CAMPOS:{','.join(campo_parts)}"
+        else:
+            campos_str = "|SEM_CAMPOS"
 
-        loc = f"|CEP_OBRIGATORIO:{svc.location_radius_km}km" if svc.location_enabled else ""
+        loc = f"|CEP:{svc.location_radius_km}km" if svc.location_enabled else ""
 
         lines.append(
-            f"SVC[{svc.id}] {svc.name}|{svc.duration_minutes}min|{ac}"
-            f"|DIAS:{wday_names}{req}{loc}"
+            f"SVC[{svc.id}] {svc.name}|{svc.duration_minutes}min|{ac}|{cm}|DIAS:{wday_names}"
+            f"{campos_str}{loc}"
         )
 
     lines.append("")
-    lines.append("SLOTS(somente estes existem):")
+    lines.append("SLOTS(somente estes existem — nao invente outros):")
 
     found = False
     for i in range(days_ahead):
         d     = from_date + timedelta(days=i)
         label = (
-            f"HOJE {WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}"   if i == 0 else
-            f"AMANHA {WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}" if i == 1 else
+            f"HOJE {WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}"    if i == 0 else
+            f"AMANHA {WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}"  if i == 1 else
             f"{WDAY_PT[d.weekday()]} {d.strftime('%d/%m/%Y')}"
         )
 
@@ -189,19 +198,14 @@ def get_next_days_availability_compact(
         lines.append("SEM_SLOTS — informe ao cliente e sugira contato direto")
 
     lines.append("")
-    lines.append(
-        "CONFIRMAR: scheduling:ID:YYYY-MM-DD:HHMM:NOME|CEP|campo=valor"
-    )
-    lines.append(
-        f"EXEMPLOS: "
-        f"scheduling:1:{ano}-07-24:1130:Gabriel Silva|74948180|cpf=71164980106 | "
-        f"scheduling:2:{ano}-08-04:0900:Maria|sem_cep"
-    )
+    lines.append(f"CONFIRMAR: scheduling:ID:{ano}-MM-DD:HHMM:NOME|CEP_ou_sem_cep|campo=valor")
+    lines.append(f"EX_com_campo: scheduling:2:{ano}-07-25:0900:Gabriel Silva|74948180|cpf=71164980106")
+    lines.append(f"EX_sem_campo: scheduling:1:{ano}-07-25:0900:Maria Silva|sem_cep")
 
     return "\n".join(lines)
 
 
-# Alias para compatibilidade com imports existentes
+# Alias de compatibilidade
 get_next_days_availability = get_next_days_availability_compact
 
 

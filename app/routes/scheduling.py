@@ -34,31 +34,30 @@ async def list_services(tenant=Depends(get_current_tenant), db: Session = Depend
     services = db.query(Service).filter(Service.tenant_id == tenant.id).order_by(Service.name).all()
     return [_service_to_dict(s) for s in services]
 
-
 def _service_to_dict(s):
     return {
-        "id": s.id, "name": s.name, "description": s.description,
-        "duration_minutes": s.duration_minutes,
+        "id":                   s.id,
+        "name":                 s.name,
+        "description":          s.description,
+        "duration_minutes":     s.duration_minutes,
         "buffer_after_minutes": s.buffer_after_minutes,
-        "price": float(s.price) if s.price else None,
-        "is_active": s.is_active,
-        "auto_confirm": s.auto_confirm,
-        "required_fields": s.required_fields or [],
-        "available_weekdays": s.available_weekdays if s.available_weekdays is not None else [0,1,2,3,4,5,6],
-        "location_enabled": s.location_enabled,
-        "location_cep": s.location_cep,
-        "location_radius_km": s.location_radius_km,
-        "location_lat": s.location_lat,
-        "location_lng": s.location_lng,
+        "price":                float(s.price) if s.price else None,
+        "is_active":            s.is_active,
+        "auto_confirm":         s.auto_confirm,
+        "concurrency_mode":     getattr(s, 'concurrency_mode', 'exclusive') or 'exclusive',
+        "required_fields":      s.required_fields or [],
+        "available_weekdays":   s.available_weekdays if s.available_weekdays is not None else [0,1,2,3,4,5,6],
+        "location_enabled":     s.location_enabled,
+        "location_cep":         s.location_cep,
+        "location_radius_km":   s.location_radius_km,
+        "location_lat":         s.location_lat,
+        "location_lng":         s.location_lng,
     }
 
 
 @router.post("/services")
 async def create_service(payload: dict, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
     _require_scheduling(tenant)
-    if not payload.get("name") or not payload.get("duration_minutes"):
-        raise HTTPException(status_code=400, detail="name e duration_minutes são obrigatórios")
-
     svc = Service(
         tenant_id=tenant.id,
         name=payload["name"],
@@ -67,6 +66,7 @@ async def create_service(payload: dict, tenant=Depends(get_current_tenant), db: 
         buffer_after_minutes=int(payload.get("buffer_after_minutes", 0)),
         price=payload.get("price"),
         auto_confirm=payload.get("auto_confirm", True),
+        concurrency_mode=payload.get("concurrency_mode", "exclusive"),
         required_fields=payload.get("required_fields", []),
         available_weekdays=payload.get("available_weekdays", [0,1,2,3,4,5,6]),
         location_enabled=payload.get("location_enabled", False),
@@ -76,15 +76,6 @@ async def create_service(payload: dict, tenant=Depends(get_current_tenant), db: 
     db.add(svc)
     db.commit()
     db.refresh(svc)
-
-    # Geocodifica o CEP se localização habilitada
-    if svc.location_enabled and svc.location_cep:
-        lat, lng = await _geocode_cep(svc.location_cep)
-        if lat and lng:
-            svc.location_lat = lat
-            svc.location_lng = lng
-            db.commit()
-
     return _service_to_dict(svc)
 
 
@@ -95,24 +86,17 @@ async def update_service(service_id: int, payload: dict, tenant=Depends(get_curr
     if not svc:
         raise HTTPException(status_code=404, detail="Service not found")
 
-    for f in ["name", "description", "duration_minutes", "buffer_after_minutes",
-              "price", "is_active", "auto_confirm", "required_fields",
-              "available_weekdays", "location_enabled", "location_cep", "location_radius_km"]:
+    updatable = [
+        "name", "description", "duration_minutes", "buffer_after_minutes",
+        "price", "is_active", "auto_confirm", "concurrency_mode",
+        "required_fields", "available_weekdays",
+        "location_enabled", "location_cep", "location_radius_km"
+    ]
+    for f in updatable:
         if f in payload:
             setattr(svc, f, payload[f])
-
     db.commit()
-
-    # Re-geocodifica se CEP mudou
-    if ("location_cep" in payload or "location_enabled" in payload) and svc.location_enabled and svc.location_cep:
-        lat, lng = await _geocode_cep(svc.location_cep)
-        if lat and lng:
-            svc.location_lat = lat
-            svc.location_lng = lng
-            db.commit()
-
     return _service_to_dict(svc)
-
 
 @router.delete("/services/{service_id}")
 async def delete_service(service_id: int, tenant=Depends(get_current_tenant), db: Session = Depends(get_db)):
@@ -483,3 +467,6 @@ async def get_appointment_history(appointment_id: int, tenant=Depends(get_curren
     if not appt:
         raise HTTPException(status_code=404, detail="Not found")
     return [{"changed_by": h.changed_by, "changed_at": h.changed_at.isoformat(), "action": h.action, "notes": h.notes} for h in sorted(appt.history, key=lambda x: x.changed_at, reverse=True)]
+
+
+
